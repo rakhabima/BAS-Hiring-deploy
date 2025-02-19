@@ -1,11 +1,16 @@
 import React from 'react';
-import TestAPI from './TestAPI';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
 
 function App() {
   return (
-    <div className="App">
-      <TestAPI />
-    </div>
+    <Router>
+      <Routes>
+        {/* Default route LandingPage */}
+        <Route path="/" element={<LandingPage />} />
+        {/* dll */}
+      </Routes>
+    </Router>
   );
 }
 
