@@ -24,6 +24,12 @@ app.get('/', (req, res) => {
   res.send('BAS Hiring API is running');
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Hanya jalankan server jika tidak dijalankan di lingkungan Vercel
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+// Ekspor app untuk fungsi serverless
+module.exports = app;
