@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd server && npm install && npm run build",
+  "outputDirectory": "server/api",
+  "framework": "node",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index.js" }
+  ]
+} 
