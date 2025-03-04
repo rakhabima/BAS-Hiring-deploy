@@ -13,8 +13,8 @@ export const ColorModeContext = createContext({
 export const useColorMode = () => useContext(ColorModeContext);
 
 export const ThemeProvider = ({ children }) => {
-  // Read from localStorage or default to 'light'
-  const storedMode = localStorage.getItem('colorMode') || 'light';
+  // Read from localStorage or default to 'dark'
+  const storedMode = localStorage.getItem('colorMode') || 'dark';
   const [mode, setMode] = useState(storedMode);
 
   // Color mode context value

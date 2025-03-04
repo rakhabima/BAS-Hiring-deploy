@@ -9,6 +9,7 @@ import {
   Container,
   Drawer,
   IconButton,
+  Link,
   List,
   ListItem,
   ListItemButton,
@@ -149,15 +150,19 @@ const Navbar = () => {
             <Toolbar disableGutters>
               {/* Logo */}
               <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: { xs: 1, md: 0 } }}>
-                <img
-                  src="/assets/baslogo.png"
-                  alt="BAS Logo"
-                  style={{ 
-                    width: 100, 
-                    height: 'auto',
-                    filter: mode === 'dark' && !scrolled ? 'brightness(0) invert(1)' : 'none'
-                  }}
-                />
+                <Link href="/">
+                  <img
+                    src="/assets/baslogo.png"
+                    alt="BAS Logo"
+                    style={{ 
+                      width: 100, 
+                      height: 'auto',
+                      filter: scrolled 
+                        ? 'none'
+                        : (mode === 'dark' ? 'brightness(0) invert(1)' : 'none')
+                    }}
+                  />
+                </Link>
               </Box>
 
               {/* Desktop Navigation */}
