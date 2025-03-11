@@ -15,6 +15,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Link as MuiLink,
   Slide,
   Toolbar,
   useMediaQuery,
@@ -22,6 +23,7 @@ import {
   useTheme
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useColorMode } from './ThemeProvider';
 
 // Hide AppBar on scroll down
@@ -83,30 +85,42 @@ const Navbar = () => {
     { label: 'Kontak', href: '#contact' },
   ];
 
-  const renderMobileMenu = (
-    <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
-      <Box
-        sx={{ width: 250 }}
-        role="presentation"
-        onClick={toggleDrawer(false)}
-        onKeyDown={toggleDrawer(false)}
-      >
-        <List>
-          {menuItems.map((item) => (
-            <ListItem key={item.label} disablePadding>
-              <ListItemButton component="a" href={item.href}>
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-          <ListItem disablePadding>
-            <ListItemButton onClick={toggleColorMode}>
-              <ListItemText primary={`Beralih ke Mode ${mode === 'light' ? 'Gelap' : 'Terang'}`} />
-              {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
+  // Mobile drawer content
+  const drawerContent = (
+    <Box
+      sx={{ width: 250 }}
+      role="presentation"
+      onClick={toggleDrawer(false)}
+      onKeyDown={toggleDrawer(false)}
+    >
+      <List>
+        {menuItems.map((item) => (
+          <ListItem key={item.label} disablePadding>
+            <ListItemButton component="a" href={item.href}>
+              <ListItemText primary={item.label} />
             </ListItemButton>
           </ListItem>
-        </List>
-      </Box>
+        ))}
+        {/* Login button for mobile */}
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to="/login">
+            <ListItemText primary="Masuk" />
+          </ListItemButton>
+        </ListItem>
+        {/* Theme toggle for mobile */}
+        <ListItem disablePadding>
+          <ListItemButton onClick={toggleColorMode}>
+            <ListItemText primary={`Beralih ke Mode ${mode === 'light' ? 'Gelap' : 'Terang'}`} />
+            {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
+          </ListItemButton>
+        </ListItem>
+      </List>
+    </Box>
+  );
+
+  const renderMobileMenu = (
+    <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
+      {drawerContent}
     </Drawer>
   );
 
@@ -149,15 +163,19 @@ const Navbar = () => {
             <Toolbar disableGutters>
               {/* Logo */}
               <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: { xs: 1, md: 0 } }}>
-                <img
-                  src="/assets/baslogo.png"
-                  alt="BAS Logo"
-                  style={{ 
-                    width: 100, 
-                    height: 'auto',
-                    filter: mode === 'dark' && !scrolled ? 'brightness(0) invert(1)' : 'none'
-                  }}
-                />
+                <MuiLink href="/">
+                  <img
+                    src="/assets/baslogo.png"
+                    alt="BAS Logo"
+                    style={{ 
+                      width: 100, 
+                      height: 'auto',
+                      filter: scrolled 
+                        ? 'none'
+                        : (mode === 'dark' ? 'brightness(0) invert(1)' : 'none')
+                    }}
+                  />
+                </MuiLink>
               </Box>
 
               {/* Desktop Navigation */}
@@ -208,6 +226,8 @@ const Navbar = () => {
                     ml: 2,
                     display: { xs: 'none', sm: 'flex' } 
                   }}
+                  component={Link}
+                  to="/login"
                 >
                   Masuk
                 </Button>

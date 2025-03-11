@@ -20,6 +20,7 @@ import {
   useTheme,
 } from '@mui/material';
 import React from 'react';
+import Navbar from '../components/Navbar';
 import { useColorMode } from '../components/ThemeProvider';
 import CARESection from '../components/CARESection';
 import "../styles/Prinsip.css";
@@ -36,6 +37,7 @@ const LandingPage = () => {
         minHeight: '100vh',
       }}
     >
+      <Navbar />
       {/* HERO SECTION */}
       <Box
         id="home"
@@ -46,6 +48,9 @@ const LandingPage = () => {
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
+          backgroundImage: "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/assets/hero-image.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
         }}
       >
         <Container maxWidth="lg">
@@ -68,7 +73,7 @@ const LandingPage = () => {
             component="p"
             sx={{
               mb: 4,
-              maxWidth: '800px',
+              maxWidth: '1000px',
               mx: 'auto',
               color: theme.palette.text.secondary,
             }}
@@ -99,20 +104,6 @@ const LandingPage = () => {
               Pelajari Lebih Lanjut
             </Button>
           </Stack>
-          
-          <Box
-            component="img"
-            src="/assets/hero-image.png"
-            alt="Hero Image"
-            sx={{
-              width: '100%',
-              maxWidth: '900px',
-              borderRadius: '16px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-              transform: 'perspective(1000px) rotateX(5deg)',
-              my: 4,
-            }}
-          />
         </Container>
       </Box>
 
@@ -123,7 +114,7 @@ const LandingPage = () => {
           py: 10,
           backgroundColor: theme.palette.mode === 'dark' 
             ? 'rgba(0,0,0,0.2)' 
-            : 'rgba(255,255,255,0.7)',
+            : 'rgba(248, 249, 250, 0.9)',
         }}
       >
         <Container maxWidth="lg">
@@ -131,7 +122,7 @@ const LandingPage = () => {
             <Grid item xs={12} md={6}>
               <Box
                 component="img"
-                src="/assets/about-image.png"
+                src="/assets/about-image.jpg"
                 alt="About Us"
                 sx={{
                   width: '100%',
@@ -260,7 +251,7 @@ const LandingPage = () => {
           py: 10,
           backgroundColor: theme.palette.mode === 'dark' 
             ? 'rgba(0,0,0,0.2)' 
-            : 'rgba(255,255,255,0.7)',
+            : 'rgba(248, 249, 250, 0.9)',
         }}
       >
         <Container maxWidth="lg">
@@ -270,8 +261,9 @@ const LandingPage = () => {
                 Hubungi Kami
               </Typography>
               <Typography variant="body1" paragraph>
-                Kami siap membantu Anda menemukan solusi rekrutmen terbaik untuk perusahaan Anda.
-                Jangan ragu untuk menghubungi kami melalui berbagai channel berikut:
+              Hubungi kami untuk solusi outsourcing yang tepat dan efisien. 
+              <br />
+              Tim kami siap membantu Anda menemukan solusi terbaik dan mencapai tujuan bisnis Anda.
               </Typography>
               
               <Stack spacing={3} sx={{ mt: 4 }}>
@@ -284,7 +276,7 @@ const LandingPage = () => {
                       Telepon
                     </Typography>
                     <Typography variant="body2">
-                      +62 21 1234 5678
+                     0812 8032 2191
                     </Typography>
                   </Box>
                 </Box>
@@ -298,35 +290,7 @@ const LandingPage = () => {
                       Email
                     </Typography>
                     <Typography variant="body2">
-                      info@bashiring.com
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar sx={{ bgcolor: theme.palette.primary.main, mr: 2 }}>
-                    <InstagramIcon />
-                  </Avatar>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      Instagram
-                    </Typography>
-                    <Typography variant="body2">
-                      @bashiring
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar sx={{ bgcolor: theme.palette.primary.main, mr: 2 }}>
-                    <LinkedInIcon />
-                  </Avatar>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      LinkedIn
-                    </Typography>
-                    <Typography variant="body2">
-                      BAS Hiring Solutions
+                     office@bas-indonesia.com
                     </Typography>
                   </Box>
                 </Box>
@@ -350,11 +314,10 @@ const LandingPage = () => {
                 </Typography>
                 <Typography variant="body1" paragraph>
                   Gedung Menara BAS, Lantai 12
+                  Jl. Jendral Sudirman 
                   <br />
-                  Jl. Jendral Sudirman Kav. 45-46
-                  <br />
+                  Kav. 45-46,
                   Jakarta Selatan, 12190
-                  <br />
                   Indonesia
                 </Typography>
                 
@@ -388,19 +351,21 @@ const LandingPage = () => {
           <Grid container spacing={4}>
             <Grid item xs={12} md={4}>
               <Box sx={{ mb: 2 }}>
-                <img
-                  src="/assets/baslogo.png"
-                  alt="BAS Logo"
-                  style={{ 
-                    width: 120, 
-                    height: 'auto',
-                    filter: 'brightness(0) invert(1)'
-                  }}
-                />
+                <Link href="/">
+                  <img
+                    src="/assets/baslogo.png"
+                    alt="BAS Logo"
+                    style={{ 
+                      width: 120, 
+                      height: 'auto',
+                      filter: 'brightness(0) invert(1)'
+                    }}
+                  />
+                </Link>
               </Box>
               <Typography variant="body2" sx={{ mb: 2, opacity: 0.7 }}>
-                BAS Hiring Solutions adalah perusahaan rekrutmen terpercaya yang berfokus pada penyediaan
-                talenta berkualitas untuk berbagai industri di Indonesia.
+                BAS Hiring adalah perusahaan rekrutmen terpercaya yang berfokus pada penyediaan
+                SDM berkualitas untuk berbagai industri di Indonesia.
               </Typography>
               <Box sx={{ mt: 2 }}>
                 <IconButton color="inherit" aria-label="Instagram">
@@ -426,9 +391,6 @@ const LandingPage = () => {
                 <Link href="#" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>
                   Karir
                 </Link>
-                <Link href="#" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>
-                  Blog
-                </Link>
               </Stack>
             </Grid>
             
@@ -443,9 +405,6 @@ const LandingPage = () => {
                 <Link href="#services" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>
                   Penyediaan Tenaga
                 </Link>
-                <Link href="#services" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>
-                  Konsultasi
-                </Link>
               </Stack>
             </Grid>
             
@@ -454,14 +413,8 @@ const LandingPage = () => {
                 Support
               </Typography>
               <Stack spacing={1}>
-                <Link href="#" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>
-                  FAQ
-                </Link>
                 <Link href="#contact" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>
                   Kontak
-                </Link>
-                <Link href="#" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>
-                  Bantuan
                 </Link>
               </Stack>
             </Grid>
@@ -477,9 +430,6 @@ const LandingPage = () => {
                 <Link href="#" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>
                   Syarat & Ketentuan
                 </Link>
-                <Link href="#" color="inherit" underline="hover" sx={{ opacity: 0.7 }}>
-                  Kebijakan Cookie
-                </Link>
               </Stack>
             </Grid>
           </Grid>
@@ -487,7 +437,7 @@ const LandingPage = () => {
           <Divider sx={{ my: 4, borderColor: 'rgba(255,255,255,0.1)' }} />
           
           <Typography variant="body2" align="center" sx={{ opacity: 0.5 }}>
-            © {new Date().getFullYear()} BAS Hiring Solutions. All rights reserved.
+            © {new Date().getFullYear()} PT Barokah Amanah Sentosa. All rights reserved.
           </Typography>
         </Container>
       </Box>
