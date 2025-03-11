@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import React from 'react';
 import { useColorMode } from '../components/ThemeProvider';
-
+import CARESection from '../components/CARESection';
 import "../styles/Prinsip.css";
 
 const LandingPage = () => {
@@ -176,66 +176,8 @@ const LandingPage = () => {
         </Container>
       </Box>
 
-      {/* PRINSIP SECTION */}
-      <Box
-        id="prinsip"
-        sx={{
-          py: 10,
-          backgroundColor: theme.palette.background.default,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Typography
-            variant="h2"
-            component="h2"
-            align="center"
-            sx={{ mb: 6 }}
-          >
-            Prinsip Kami
-          </Typography>
-
-          <div className="prinsip-section" data-theme={mode}>
-            <div className="prinsip-grid">
-              <div className="prinsip-card">
-                <Typography variant="h6" gutterBottom>
-                  Commitment
-                </Typography>
-                <Typography variant="body2">
-                  Selalu berusaha memberikan yang terbaik dan tepat waktu
-                  untuk semua kebutuhan klien.
-                </Typography>
-              </div>
-              <div className="prinsip-card">
-                <Typography variant="h6" gutterBottom>
-                  Reliability
-                </Typography>
-                <Typography variant="body2">
-                  Layanan yang dapat diandalkan dan transparan dalam setiap
-                  proses pengerjaan.
-                </Typography>
-              </div>
-              <div className="prinsip-card">
-                <Typography variant="h6" gutterBottom>
-                  Competent
-                </Typography>
-                <Typography variant="body2">
-                  Didukung oleh tim profesional dan kandidat berkualitas sesuai
-                  kebutuhan klien.
-                </Typography>
-              </div>
-              <div className="prinsip-card">
-                <Typography variant="h6" gutterBottom>
-                  Adaptive
-                </Typography>
-                <Typography variant="body2">
-                  Siap beradaptasi dengan perubahan kebutuhan dan perkembangan
-                  industri.
-                </Typography>
-              </div>
-            </div>
-          </div>
-        </Container>
-      </Box>
+      {/* PRINSIP/CARE SECTION */}
+      <CARESection />
 
       {/* SERVICES SECTION */}
       <Box
