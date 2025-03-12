@@ -4,7 +4,13 @@ import {
     Typography, 
     Button, 
     Grid,
+    Card,
+    CardContent,
+    IconButton,
 } from '@mui/material';
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
+import { useColorMode } from '../components/ThemeProvider';
 
 const details = {
   C: {
@@ -42,49 +48,92 @@ const textAnimation = {
       '0%': { transform: 'scale(0.5)', opacity: 0 },
       '100%': { transform: 'scale(1)', opacity: 1 }
     },
-    animation: 'growEffect 0.5s ease-out forwards'
+    animation: 'growEffect 1s ease-out forwards'
   };
 
 const CARESection = () => {
   const [activeLetter, setActiveLetter] = useState('C');
   const [animationTrigger, setAnimationTrigger] = useState(0);
+  const letters = ['C', 'A', 'R', 'E'];
+  const currentIndex = letters.indexOf(activeLetter);
 
   const handleLetterClick = (letter) => {
     setActiveLetter(letter);
     setAnimationTrigger(new Date().getTime());
   };
 
+  const handleNext = () => {
+    const nextIndex = (currentIndex + 1) % letters.length;
+    setActiveLetter(letters[nextIndex]);
+    setAnimationTrigger(new Date().getTime());
+  };
+
+  const handlePrev = () => {
+    const prevIndex = (currentIndex - 1 + letters.length) % letters.length;
+    setActiveLetter(letters[prevIndex]);
+    setAnimationTrigger(new Date().getTime());
+  };
+
   return (
-    <Box sx={{ textAlign: 'center', my: 4 }}>
-      <Grid container spacing={2} justifyContent="center">
-        {'CARE'.split('').map((letter) => (
-          <Grid item key={letter}>
-            <Button
-              onClick={() => handleLetterClick(letter)}
-              sx={{
-                fontSize: '3.5rem',
-                color: activeLetter === letter ? 'primary.main' : 'grey.500',
-                fontWeight: activeLetter === letter ? 'bold' : 'normal',
-                minWidth: '64px',
-                minHeight: '64px',
-                ...(activeLetter === letter && useAnimation)
-              }}
-            >
-              {letter}
-            </Button>
-          </Grid>
-        ))}
-      </Grid>
-      {activeLetter && (
-        <Box key={animationTrigger} sx={{ mt: 3, ...textAnimation}}>
-          <Typography variant="h4" sx={{ fontSize: '2rem', fontWeight: 'bold', color: 'primary.main' }}>
-            {details[activeLetter].title}
-          </Typography>
-          <Typography variant="h6" sx={{ mt: 1, fontSize: '1.25rem', fontWeight: 'normal'}}>
-            {details[activeLetter].description}
-          </Typography>
-        </Box>
-      )}
+    <Box sx={{ 
+      position: 'relative', 
+      textAlign: 'center', 
+      my: 7, 
+      px: 2, 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center'
+      }}
+    >
+      <Card sx={{ maxWidth: 1000, textAlign: 'center', p: 3, boxShadow: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', my: -13, mb: 5, px: 2 }}>
+        <Typography variant="h3" component="h3" sx={{ fontWeight: 'bold' }}>
+          Tentang BAS
+        </Typography>
+      </Card>  
+      <Typography variant="h4" sx={{ mb: 2 }}>
+        Prinsip Utama Kesuksesan Kami
+      </Typography>
+      <Typography sx={{ mb: 4, maxWidth: 1000 }}>
+        Organisasi yang baik memiliki nilai-nilai yang tertanam kuat sebagai pedoman dalam tugasnya. BAS merumuskan empat nilai perusahaan yang dirangkum menjadi C.A.R.E.
+      </Typography>
+      <Box sx={{ maxWidth: 800, position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+        <IconButton onClick={handlePrev} sx={{ mr: 2 }}>
+          <ArrowBackIosIcon />
+        </IconButton>
+        <Card sx={{ width: '100%', boxShadow: 3, textAlign: 'center' }}>
+          <CardContent>
+            <Grid container spacing={2} justifyContent="center">
+              {letters.map((letter) => (
+                <Grid item key={letter}>
+                  <Button
+                    onClick={() => handleLetterClick(letter)}
+                    sx={{
+                      fontSize: '3rem',
+                      color: activeLetter === letter ? 'primary.main' : 'grey.500',
+                      fontWeight: activeLetter === letter ? 'bold' : 'normal',
+                      ...(activeLetter === letter && useAnimation)
+                    }}
+                  >
+                    {letter}
+                  </Button>
+                </Grid>
+              ))}
+            </Grid>
+            <Box key={animationTrigger} sx={{ ...textAnimation, mt: 2 }}>
+              <Typography variant="h4" sx={{fontSize: '2rem', fontWeight: 'bold', color: 'primary.main' }}>
+                {details[activeLetter].title}
+              </Typography>
+              <Typography sx={{fontSize: '1rem', mt: 1 }}>
+                {details[activeLetter].description}
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+        <IconButton onClick={handleNext} sx={{ ml: 2 }}>
+          <ArrowForwardIosIcon />
+        </IconButton>
+      </Box>
     </Box>
   );
 };

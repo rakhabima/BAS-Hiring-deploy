@@ -111,7 +111,7 @@ const LandingPage = () => {
       <Box
         id="about"
         sx={{
-          py: 10,
+          py: 15,
           backgroundColor: theme.palette.mode === 'dark' 
             ? 'rgba(0,0,0,0.2)' 
             : 'rgba(248, 249, 250, 0.9)',
