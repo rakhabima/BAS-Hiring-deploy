@@ -19,15 +19,33 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import React from 'react';
-import Navbar from '../components/Navbar';
-import { useColorMode } from '../components/ThemeProvider';
+import React, { useEffect } from 'react';
 import CARESection from '../components/CARESection';
+import { useColorMode } from '../components/ThemeProvider';
 import "../styles/Prinsip.css";
 
-const LandingPage = () => {
+const LandingPage = ({ section }) => {
   const theme = useTheme();
   const { mode } = useColorMode();
+
+  useEffect(() => {
+    // Scroll to top when component mounts
+    window.scrollTo(0, 0);
+
+    // If a section is specified, scroll to that section after a short delay
+    if (section) {
+      const scrollToSection = () => {
+        const element = document.getElementById(section);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      };
+      
+      // Add a small delay to ensure the page is fully loaded
+      const timeoutId = setTimeout(scrollToSection, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [section]);
 
   return (
     <Box
@@ -35,13 +53,15 @@ const LandingPage = () => {
         flexGrow: 1,
         background: theme.palette.background.gradient,
         minHeight: '100vh',
+        width: '100%',
+        overflowX: 'hidden',
       }}
     >
-      <Navbar />
       {/* HERO SECTION */}
       <Box
         id="home"
         sx={{
+          minHeight: '70vh',
           pt: { xs: 10, md: 15 },
           pb: { xs: 8, md: 12 },
           px: 2,
@@ -50,7 +70,12 @@ const LandingPage = () => {
           overflow: 'hidden',
           backgroundImage: "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/assets/hero-image.jpg')",
           backgroundSize: 'cover',
-          backgroundPosition: 'center'
+          backgroundPosition: 'center',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         <Container maxWidth="lg">

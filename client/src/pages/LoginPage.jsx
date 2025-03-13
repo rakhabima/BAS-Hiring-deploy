@@ -48,6 +48,7 @@ const LoginPage = () => {
     try {
       // Use the auth service to login
       const response = await authService.login({ email, password });
+      console.log('Login successful:', response);
       
       // Store user info in localStorage if rememberMe is checked
       if (rememberMe) {
@@ -56,7 +57,14 @@ const LoginPage = () => {
         localStorage.removeItem('userEmail');
       }
       
-      // Redirect based on user role
+      // Store user data in localStorage for the Navbar to access
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      // Redirect to home page for all users regardless of role
+      navigate('/home');
+      
+      /* 
+      // Previous role-based navigation logic
       const { role } = response.user;
       
       if (role === 'ADMIN') {
@@ -72,6 +80,7 @@ const LoginPage = () => {
       } else {
         navigate('/');
       }
+      */
     } catch (error) {
       console.error('Login error:', error);
       setError(true);
