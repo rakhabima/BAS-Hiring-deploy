@@ -1,27 +1,38 @@
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import AppsIcon from '@mui/icons-material/Apps';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import BusinessIcon from '@mui/icons-material/Business';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import CloseIcon from '@mui/icons-material/Close';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
+import InfoIcon from '@mui/icons-material/Info';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
+import PeopleIcon from '@mui/icons-material/People';
+import WorkIcon from '@mui/icons-material/Work';
 import {
-    AppBar,
-    Box,
-    Button,
-    Container,
-    Drawer,
-    IconButton,
-    List,
-    ListItem,
-    ListItemButton,
-    ListItemText,
-    Menu,
-    MenuItem,
-    Link as MuiLink,
-    Slide,
-    Toolbar,
-    useMediaQuery,
-    useScrollTrigger,
-    useTheme
+  AppBar,
+  Box,
+  Button,
+  Container,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Link as MuiLink,
+  Slide,
+  Toolbar,
+  Typography,
+  useMediaQuery,
+  useScrollTrigger,
+  useTheme
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -40,11 +51,55 @@ function HideOnScroll(props) {
   );
 }
 
+// Define sidebar navigation items based on role
+const getSidebarItems = (role) => {
+  switch(role) {
+    case 'ADMIN':
+      return [
+        { label: 'Karyawan', icon: <PeopleIcon />, path: '/admin/employees' },
+        { label: 'Staf Internal', icon: <PeopleIcon />, path: '/admin/internal-staff' },
+        { label: 'Publikasi Layanan', icon: <BusinessIcon />, path: '/admin/service-publications' },
+        { label: 'Publikasi Lowongan', icon: <WorkIcon />, path: '/admin/job-publications' }
+      ];
+    case 'RECRUITER':
+      return [
+        { label: 'Publikasi Lowongan', icon: <WorkIcon />, path: '/recruiter/job-publications' },
+        { label: 'Kandidat', icon: <PeopleIcon />, path: '/recruiter/candidates' },
+        { label: 'Karyawan', icon: <PeopleIcon />, path: '/recruiter/employees' },
+        { label: 'Penjadwalan', icon: <CalendarMonthIcon />, path: '/recruiter/scheduling' }
+      ];
+    case 'GENERAL_MANAGER':
+      return [
+        { label: 'Staf Internal', icon: <PeopleIcon />, path: '/gm/internal-staff' },
+        { label: 'Vendor', icon: <BusinessIcon />, path: '/gm/vendors' },
+        { label: 'Publikasi Layanan', icon: <BusinessIcon />, path: '/gm/service-publications' },
+        { label: 'Publikasi Lowongan', icon: <WorkIcon />, path: '/gm/job-publications' }
+      ];
+    case 'CANDIDATE':
+      return [
+        { label: 'Portal Informasi', icon: <InfoIcon />, path: '/candidate/information-portal' }
+      ];
+    case 'KOORDINATOR_LAPANGAN':
+      return [
+        { label: 'Karyawan', icon: <PeopleIcon />, path: '/korlap/employees' }
+      ];
+    case 'KARYAWAN':
+      return [
+        { label: 'Penugasan', icon: <AssignmentIcon />, path: '/karyawan/assignments' }
+      ];
+    case 'VENDOR':
+    case 'GUEST':
+    default:
+      return []; // No sidebar items for VENDOR/GUEST
+  }
+};
+
 const Navbar = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { mode, toggleColorMode } = useColorMode();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -121,6 +176,9 @@ const Navbar = () => {
       setIsLoggedIn(false);
       setUserRole('GUEST');
       
+      // Close sidebar if open
+      setSidebarOpen(false);
+      
       // Redirect to home page
       navigate('/home');
       
@@ -136,6 +194,10 @@ const Navbar = () => {
       return;
     }
     setDrawerOpen(open);
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   const menuItems = [
@@ -154,26 +216,13 @@ const Navbar = () => {
   // Dashboard link based on user role - now always returns /home
   const getDashboardLink = () => {
     return '/home';
-    
-    /* Previous role-based logic
-    if (!userRole) return '/';
-    
-    switch(userRole) {
-      case 'ADMIN':
-        return '/admin/dashboard';
-      case 'RECRUITER':
-        return '/recruiter/dashboard';
-      case 'GENERAL_MANAGER':
-        return '/gm/dashboard';
-      case 'CANDIDATE':
-        return '/candidate/dashboard';
-      case 'KOORDINATOR_LAPANGAN':
-        return '/korlap/dashboard';
-      default:
-        return '/';
-    }
-    */
   };
+
+  // Get the sidebar navigation items based on role
+  const sidebarItems = getSidebarItems(userRole);
+
+  // Should show sidebar button?
+  const shouldShowSidebarButton = isLoggedIn && sidebarItems.length > 0;
 
   // Mobile drawer content
   const drawerContent = (
@@ -229,9 +278,81 @@ const Navbar = () => {
     </Box>
   );
 
+  // Sidebar content based on user role
+  const sidebarContent = (
+    <Box
+      sx={{ 
+        width: 280,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+      role="presentation"
+    >
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        p: 2
+      }}>
+        <Typography variant="h6">Menu</Typography>
+        <IconButton onClick={toggleSidebar}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <Divider />
+      <Box sx={{ p: 2 }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+          {userRole}
+        </Typography>
+      </Box>
+      <Divider />
+      <List sx={{ flexGrow: 1 }}>
+        {sidebarItems.map((item) => (
+          <ListItem key={item.label} disablePadding>
+            <ListItemButton component={Link} to={item.path} onClick={toggleSidebar}>
+              <ListItemIcon>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={item.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+      <Divider />
+      <Box sx={{ p: 2 }}>
+        <Button 
+          variant="outlined" 
+          fullWidth 
+          startIcon={<LogoutIcon />}
+          onClick={handleLogout}
+          sx={{ mt: 1 }}
+        >
+          Keluar
+        </Button>
+      </Box>
+    </Box>
+  );
+
   const renderMobileMenu = (
     <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
       {drawerContent}
+    </Drawer>
+  );
+
+  const renderSidebar = (
+    <Drawer 
+      anchor="right" 
+      open={sidebarOpen} 
+      onClose={toggleSidebar}
+      sx={{
+        '& .MuiDrawer-paper': {
+          width: { xs: '80%', sm: 280 },
+          boxSizing: 'border-box',
+        },
+      }}
+    >
+      {sidebarContent}
     </Drawer>
   );
 
@@ -334,6 +455,25 @@ const Navbar = () => {
                   {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
                 </IconButton>
 
+                {/* Sidebar button - only show if logged in and role has sidebar items */}
+                {shouldShowSidebarButton && (
+                  <IconButton
+                    size="large"
+                    edge="end"
+                    aria-label="open sidebar menu"
+                    onClick={toggleSidebar}
+                    color="inherit"
+                    sx={{ 
+                      ml: 1,
+                      color: scrolled 
+                        ? theme.palette.text.primary 
+                        : (mode === 'dark' ? '#fff' : '#000')
+                    }}
+                  >
+                    <AppsIcon />
+                  </IconButton>
+                )}
+
                 {/* Login/Profile button */}
                 {isLoggedIn ? (
                   <IconButton
@@ -395,6 +535,7 @@ const Navbar = () => {
       <Toolbar />
       {renderMobileMenu}
       {renderMenu}
+      {renderSidebar}
     </>
   );
 };
