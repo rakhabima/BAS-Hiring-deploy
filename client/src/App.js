@@ -7,11 +7,29 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import CreateAccountPage from './pages/admin/CreateAccountPage';
+import InternalStaffPage from './pages/admin/InternalStaffPage';
 
 // Protected Route component to check if user is authenticated
 const ProtectedRoute = ({ element }) => {
   const isAuthenticated = localStorage.getItem('user') !== null;
   return isAuthenticated ? element : <Navigate to="/login" />;
+};
+
+// Admin Route component to check if user is authenticated and has ADMIN role
+const AdminRoute = ({ element }) => {
+  const isAuthenticated = localStorage.getItem('user') !== null;
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (user.role !== 'ADMIN') {
+    return <Navigate to="/home" />;
+  }
+  
+  return element;
 };
 
 // Wrapper component to conditionally render Navbar
@@ -53,6 +71,10 @@ const AppContent = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          
+          {/* Admin routes */}
+          <Route path="/admin/internal-staff" element={<AdminRoute element={<InternalStaffPage />} />} />
+          <Route path="/admin/create-account" element={<AdminRoute element={<CreateAccountPage />} />} />
           
           {/* Protected Dashboard routes */}
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<div>Admin Dashboard</div>} />} />
