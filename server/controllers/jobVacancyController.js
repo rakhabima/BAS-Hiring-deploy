@@ -1,4 +1,4 @@
-import { createJobVacancy, updateJobVacancy } from "../service/jobVacancyService.js";
+import { createJobVacancy, updateJobVacancy } from "../services/jobVacancyService.js";
 
 export const createJobVacancyController = async (req, res) => {
   try {
