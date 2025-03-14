@@ -7,6 +7,7 @@ import express from "express";
 import connectDB from "./db/connectDb.js";
 import authRoute from "./routes/auth.js";
 import guestRoute from "./routes/guest.js";
+import outsourceRoute from "./routes/outsourcing.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,6 +35,7 @@ app.get("/", (req, res) => {
 // Routes
 app.use("/auth", authRoute);
 app.use("/guest", guestRoute);
+app.use("/outsource", outsourceRoute);
 
 // Middleware penanganan error
 app.use((err, req, res, next) => {
