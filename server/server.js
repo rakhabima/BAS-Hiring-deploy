@@ -7,6 +7,7 @@ import express from "express";
 import connectDB from "./db/connectDb.js";
 import authRoute from "./routes/auth.js";
 import guestRoute from "./routes/guest.js";
+import jobVacancyRoute from "./routes/jobVacancy.js";
 import outsourceRoute from "./routes/outsourcing.js";
 
 const app = express();
@@ -35,6 +36,7 @@ app.get("/", (req, res) => {
 // Routes
 app.use("/auth", authRoute);
 app.use("/guest", guestRoute);
+app.use("/jobVacancy", jobVacancyRoute);
 app.use("/outsource", outsourceRoute);
 
 // Middleware penanganan error
