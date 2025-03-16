@@ -2,6 +2,7 @@ import { Box } from '@mui/material';
 import React from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import NotificationSnackbar from './components/NotificationSnackbar';
 import ThemeProvider from './components/ThemeProvider';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import LandingPage from './pages/LandingPage';
@@ -94,6 +95,7 @@ const AppContent = () => {
 function App() {
   return (
     <ThemeProvider>
+      <NotificationSnackbar />
       <Router>
         <AppContent />
       </Router>

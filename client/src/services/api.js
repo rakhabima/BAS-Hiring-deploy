@@ -1,5 +1,16 @@
 import axios from 'axios';
 
+// Create custom event types for notifications
+export const SHOW_NOTIFICATION = 'SHOW_NOTIFICATION';
+
+// Helper function to show notifications
+const showNotification = (message, severity) => {
+  const event = new CustomEvent(SHOW_NOTIFICATION, {
+    detail: { message, severity }
+  });
+  window.dispatchEvent(event);
+};
+
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5555';
 
 console.log('API URL configured as:', API_URL);
@@ -44,8 +55,24 @@ export const authService = {
         ...userData,
         isPublicRegistration: true // Ensure CANDIDATE role
       });
+      
+      // Show success notification
+      showNotification('Registrasi berhasil! Silakan login.', 'success');
+      
       return response.data;
     } catch (error) {
+      // Show error notification
+      let errorMsg = 'Registrasi gagal. Silakan coba lagi.';
+      
+      if (error.response) {
+        if (error.response.status === 409) {
+          errorMsg = 'Email sudah terdaftar. Silakan gunakan email lain.';
+        } else if (error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+      }
+      
+      showNotification(errorMsg, 'error');
       throw error;
     }
   },
@@ -75,6 +102,9 @@ export const authService = {
       // Proceed with real login
       const response = await api.post(logEndpoint('/auth/login'), credentials);
       
+      // Show success notification
+      showNotification('Login berhasil! Selamat datang.', 'success');
+      
       // Ensure user data is properly formatted
       // If server response doesn't match expected format, adapt it here
       if (response.data && !response.data.user && response.data.uuid) {
@@ -93,7 +123,18 @@ export const authService = {
       console.log('API login response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('API login error:', error.response || error);
+      // Show error notification
+      let errorMsg = 'Login gagal. Silakan coba lagi.';
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMsg = 'Email atau kata sandi salah.';
+        } else if (error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+      }
+      
+      showNotification(errorMsg, 'error');
       throw error;
     }
   },
@@ -110,12 +151,15 @@ export const authService = {
       // Set role to GUEST
       localStorage.setItem('userRole', 'GUEST');
       
-      // Clear any session cookies by setting them to expire
+      // Clear cookies
       document.cookie.split(";").forEach((c) => {
         document.cookie = c
           .replace(/^ +/, "")
           .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
+      
+      // Show success notification
+      showNotification('Logout berhasil. Sampai jumpa!', 'success');
       
       return response.data;
     } catch (error) {
@@ -130,6 +174,8 @@ export const authService = {
           .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
       
+      // Show error notification
+      showNotification('Terjadi kesalahan saat logout.', 'error');
       throw error;
     }
   },
