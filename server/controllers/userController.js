@@ -1,4 +1,4 @@
-import { createUserService, getAllUserService, updateUserService, getUserByUUIDService, updateUserService, deleteUserService, updateUserStatusService } from "../services/userService.js";
+import { createUserService, getAllUsersService, updateUserService, getUserByUUIDService, deleteUserService, updateUserStatusService } from "../services/userService.js";
 
 // Controller untuk membuat user baru
 export const createUser = async (req, res) => {
@@ -47,7 +47,7 @@ export const createUser = async (req, res) => {
 // Controller untuk mendapatkan semua user
 export const getAllUsers = async (req, res) => {
     try {
-        const users = await getAllUserService();
+        const users = await getAllUsersService();
 
         return res.status(200).json({
             success: true,

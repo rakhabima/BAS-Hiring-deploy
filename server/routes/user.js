@@ -6,7 +6,7 @@ import { createUser, getAllUsers, getUserByUUID, updateUser, deleteUser, updateU
 const router = express.Router();
 
 router.post("/", createUser);
-router.get("/", getAllUsers);
+router.get("/all", getAllUsers);
 router.get("/uuid/:uuid", getUserByUUID);
 router.put("/:id", updateUser);
 router.delete("/:id", deleteUser);
