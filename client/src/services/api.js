@@ -81,16 +81,16 @@ export const authService = {
   login: async (credentials) => {
     try {
       console.log('Login attempt:', credentials.email);
-      
+
       // Check if this is a mock account first (for development only)
       const mockStaffList = localStorage.getItem('mockStaffList');
       if (mockStaffList) {
         try {
           const staffList = JSON.parse(mockStaffList);
-          const matchingUser = staffList.find(user => 
+          const matchingUser = staffList.find(user =>
             user.email === credentials.email
           );
-          
+
           if (matchingUser) {
             console.log('Found matching mock user, checking if backend auth fails');
           }
@@ -98,7 +98,7 @@ export const authService = {
           console.error('Error parsing mock staff list:', error);
         }
       }
-      
+
       // Proceed with real login
       const response = await api.post(logEndpoint('/auth/login'), credentials);
       
@@ -119,7 +119,7 @@ export const authService = {
           ...response.data
         };
       }
-      
+
       console.log('API login response:', response.data);
       return response.data;
     } catch (error) {
@@ -143,15 +143,15 @@ export const authService = {
   logout: async () => {
     try {
       const response = await api.post(logEndpoint('/auth/logout'));
-      
+
       // Clear localStorage
       localStorage.removeItem('user');
       localStorage.removeItem('userEmail');
-      
+
       // Set role to GUEST
       localStorage.setItem('userRole', 'GUEST');
       
-      // Clear cookies
+      // Clear any session cookies by setting them to expire
       document.cookie.split(";").forEach((c) => {
         document.cookie = c
           .replace(/^ +/, "")
@@ -167,7 +167,7 @@ export const authService = {
       localStorage.removeItem('user');
       localStorage.removeItem('userEmail');
       localStorage.setItem('userRole', 'GUEST');
-      
+
       document.cookie.split(";").forEach((c) => {
         document.cookie = c
           .replace(/^ +/, "")
@@ -184,7 +184,7 @@ export const authService = {
   createAccount: async (userData) => {
     try {
       console.log('Creating staff account with data:', userData);
-      
+
       // PRIORITY 1: Use the same endpoint as registration since we know it works
       // But with isPublicRegistration: false to indicate admin-created account
       try {
@@ -198,13 +198,13 @@ export const authService = {
           isInternalStaff: true,
           createdBy: userData.createdBy || 'admin'
         });
-        
+
         console.log('Staff account creation successful:', response.data);
         return response.data;
       } catch (primaryError) {
         console.error('Primary endpoint failed:', primaryError.response?.data || primaryError.message);
         console.log('Trying fallback endpoints...');
-        
+
         // If the primary approach fails, try the fallback endpoints
         const possibleEndpoints = [
           '/auth/create-staff',
@@ -213,10 +213,10 @@ export const authService = {
           '/auth/signup/staff',
           '/auth/register-staff'
         ];
-        
+
         let successResponse = null;
         let errorDetails = [];
-        
+
         // Try each endpoint
         for (const endpoint of possibleEndpoints) {
           try {
@@ -237,11 +237,11 @@ export const authService = {
             // Continue to the next endpoint
           }
         }
-        
+
         if (successResponse) {
           return successResponse.data;
         }
-        
+
         // If all backend endpoints failed, throw a clear error
         console.error('All account creation endpoints failed:', errorDetails);
         throw new Error('Could not create account. Database connection issue or endpoint not implemented.');
@@ -253,4 +253,85 @@ export const authService = {
   }
 };
 
-export default api; 
+// User services (connecting to the backend user routes)
+export const userService = {
+  // Create a new user
+  createUser: async (userData) => {
+    try {
+      console.log('Creating user with data:', userData);
+      const response = await api.post(logEndpoint('/user'), userData);
+      console.log('User creation successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  },
+
+  // Get all users
+  getAllUsers: async () => {
+    try {
+      console.log('Fetching all users');
+      const response = await api.get(logEndpoint('/user/all'));
+      console.log('Fetched users:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+  },
+
+  // Get user by UUID
+  getUserByUUID: async (uuid) => {
+    try {
+      console.log(`Fetching user with UUID: ${uuid}`);
+      const response = await api.get(logEndpoint(`/user/uuid/${uuid}`));
+      console.log('Fetched user:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching user with UUID ${uuid}:`, error);
+      throw error;
+    }
+  },
+
+  // Update user
+  updateUser: async (id, userData) => {
+    try {
+      console.log(`Updating user with ID: ${id}`, userData);
+      const response = await api.put(logEndpoint(`/user/${id}`), userData);
+      console.log('User update successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating user with ID ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete user
+  deleteUser: async (id) => {
+    try {
+      console.log(`Deleting user with ID: ${id}`);
+      const response = await api.delete(logEndpoint(`/user/${id}`));
+      console.log('User deletion successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting user with ID ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Update user status
+  updateUserStatus: async (id, statusData) => {
+    try {
+      console.log(`Updating status for user with ID: ${id}`, statusData);
+      const response = await api.patch(logEndpoint(`/user/${id}/status`), statusData);
+      console.log('User status update successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating status for user with ID ${id}:`, error);
+      throw error;
+    }
+  }
+};
+
+export default api;
