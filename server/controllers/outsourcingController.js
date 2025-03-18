@@ -1,5 +1,4 @@
-import OutsourcingServiceModel from "../models/outsourcingServiceModel.js";
-import { createOutsourcingService, getAllOutsourcingServices, updateOutsourcingService } from "../services/outsourcingService.js";
+import { createOutsourcingService, getAllOutsourcingServices, getOutsourcingServiceById, softDeleteOutsourcingService, updateOutsourcingService } from "../services/outsourcingService.js";
 
 export const createOutsourcing = async (req, res) => {
     try {
@@ -123,22 +122,49 @@ export const getAllOutsourcing = async (req, res) => {
     }
 };
 
+export const getOutsourcingById = async (req, res) => {
+    try {
+        const { uuid } = req.params;
+        
+        // Call service to get the outsourcing service by ID
+        const service = await getOutsourcingServiceById(uuid);
+        
+        // If service not found or deleted
+        if (!service) {
+            return res.status(404).json({ message: "Layanan outsourcing tidak ditemukan" });
+        }
+        
+        // Return success response
+        res.status(200).json({
+            message: "Berhasil mengambil data layanan outsourcing",
+            service
+        });
+    } catch (error) {
+        console.error("Error getting outsourcing service:", error);
+        // Handle errors
+        res.status(500).json({
+            message: "Terjadi kesalahan saat mengambil data layanan outsourcing",
+            error: error.message
+        });
+    }
+};
+
 export const deleteOutsourcing = async (req, res) => {
     try {
         const { uuid } = req.params;
         
-        // Find and delete the outsourcing service
-        const deletedService = await OutsourcingServiceModel.findOneAndDelete({ uuid });
+        // Perform soft delete instead of permanent delete
+        const softDeletedService = await softDeleteOutsourcingService(uuid);
         
         // If service not found
-        if (!deletedService) {
+        if (!softDeletedService) {
             return res.status(404).json({ message: "Layanan outsourcing tidak ditemukan" });
         }
         
         // Return success response
         res.status(200).json({
             message: "Layanan outsourcing berhasil dihapus",
-            deletedService
+            deletedService: softDeletedService
         });
     } catch (error) {
         console.error("Error deleting outsourcing service:", error);

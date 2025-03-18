@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { createOutsourcing, deleteOutsourcing, getAllOutsourcing, updateOutsourcing } from "../controllers/outsourcingController.js";
+import { createOutsourcing, deleteOutsourcing, getAllOutsourcing, getOutsourcingById, updateOutsourcing } from "../controllers/outsourcingController.js";
 
 const router = express.Router();
 
@@ -23,6 +23,7 @@ const upload = multer({
 router.post("/create", upload.single('imageUrl'), createOutsourcing);
 router.put("/update/:uuid", upload.single('imageUrl'), updateOutsourcing);
 router.get("/all", getAllOutsourcing);
+router.get("/:uuid", getOutsourcingById);
 router.delete("/delete/:uuid", deleteOutsourcing);
 
 export default router;

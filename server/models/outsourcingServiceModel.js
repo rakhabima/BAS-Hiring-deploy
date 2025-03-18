@@ -40,6 +40,14 @@ const outsourcingServiceSchema = new mongoose.Schema({
     },
     price: {
         type: Number
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deletedAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true
