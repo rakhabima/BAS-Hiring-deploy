@@ -376,11 +376,20 @@ export const outsourcingService = {
     try {
       const formData = new FormData();
       
+      // Log the incoming data for debugging
+      console.log('Updating service with data:', JSON.stringify(serviceData));
+      
       // Append text fields
       for (const key in serviceData) {
         if (key !== 'imageUrl' && serviceData[key] !== undefined) {
-          // Convert boolean values to strings for FormData
-          if (typeof serviceData[key] === 'boolean') {
+          // Explicitly handle availabilityStatus to ensure it's properly converted
+          if (key === 'availabilityStatus') {
+            const boolValue = serviceData[key] === true || serviceData[key] === 'true';
+            formData.append(key, boolValue.toString());
+            console.log(`Setting availabilityStatus in form: ${boolValue} (${typeof boolValue})`);
+          }
+          // Handle other boolean values
+          else if (typeof serviceData[key] === 'boolean') {
             formData.append(key, serviceData[key].toString());
           } else {
             formData.append(key, serviceData[key]);
@@ -391,6 +400,11 @@ export const outsourcingService = {
       // Append file if it exists
       if (serviceData.imageUrl instanceof File) {
         formData.append('imageUrl', serviceData.imageUrl);
+      }
+      
+      // Log form data entries for debugging
+      for (let pair of formData.entries()) {
+        console.log(`Form data: ${pair[0]}: ${pair[1]}`);
       }
       
       const response = await api.put(logEndpoint(`/outsource/update/${uuid}`), formData, {

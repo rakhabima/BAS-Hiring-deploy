@@ -53,19 +53,32 @@ export const updateOutsourcing = async (req, res) => {
         const { uuid } = req.params;
         const updateData = { ...req.body };
         
+        console.log('Update request received with data:', updateData);
+        
         // Handle file upload if present
         if (req.file) {
             updateData.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
         }
         
-        // Convert string boolean to actual boolean if present
-        if (updateData.availabilityStatus !== undefined) {
-            updateData.availabilityStatus = updateData.availabilityStatus === 'true' || updateData.availabilityStatus === true;
+        // Convert availabilityStatus string to boolean no matter what
+        if ('availabilityStatus' in updateData) {
+            // Ensure proper conversion to boolean - handle various string representations
+            const availabilityValue = updateData.availabilityStatus;
+            updateData.availabilityStatus = (
+                availabilityValue === true || 
+                availabilityValue === 'true' || 
+                availabilityValue === 'True' ||
+                availabilityValue === '1'
+            );
+            
+            console.log(`Converted availabilityStatus from ${availabilityValue} to ${updateData.availabilityStatus}`);
         }
         
         // Convert numeric fields if present
         if (updateData.capacity) updateData.capacity = Number(updateData.capacity);
         if (updateData.price) updateData.price = Number(updateData.price);
+
+        console.log('Final update data:', updateData);
 
         // Call service to update
         const updatedService = await updateOutsourcingService(uuid, updateData);

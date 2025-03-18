@@ -110,9 +110,12 @@ const EditServicePage = () => {
     
     // For availabilityStatus, convert string 'true'/'false' to boolean
     if (name === 'availabilityStatus') {
+      const boolValue = value === 'true' || value === true;
+      console.log(`Changing availability status: ${value} (${typeof value}) -> ${boolValue} (${typeof boolValue})`);
+      
       setFormData({
         ...formData,
-        [name]: value === 'true',
+        [name]: boolValue,
       });
     } else {
       setFormData({
