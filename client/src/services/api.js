@@ -334,4 +334,100 @@ export const userService = {
   }
 };
 
+// Outsourcing services
+export const outsourcingService = {
+  // Create a new outsourcing service publication
+  createOutsourcingService: async (serviceData) => {
+    try {
+      const formData = new FormData();
+      
+      // Append text fields
+      for (const key in serviceData) {
+        if (key !== 'imageUrl' && serviceData[key] !== undefined) {
+          // Convert boolean values to strings for FormData
+          if (typeof serviceData[key] === 'boolean') {
+            formData.append(key, serviceData[key].toString());
+          } else {
+            formData.append(key, serviceData[key]);
+          }
+        }
+      }
+      
+      // Append file if it exists
+      if (serviceData.imageUrl instanceof File) {
+        formData.append('imageUrl', serviceData.imageUrl);
+      }
+      
+      const response = await api.post(logEndpoint('/outsource/create'), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      showNotification('Layanan outsourcing berhasil dibuat', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal membuat layanan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Update an existing outsourcing service
+  updateOutsourcingService: async (uuid, serviceData) => {
+    try {
+      const formData = new FormData();
+      
+      // Append text fields
+      for (const key in serviceData) {
+        if (key !== 'imageUrl' && serviceData[key] !== undefined) {
+          // Convert boolean values to strings for FormData
+          if (typeof serviceData[key] === 'boolean') {
+            formData.append(key, serviceData[key].toString());
+          } else {
+            formData.append(key, serviceData[key]);
+          }
+        }
+      }
+      
+      // Append file if it exists
+      if (serviceData.imageUrl instanceof File) {
+        formData.append('imageUrl', serviceData.imageUrl);
+      }
+      
+      const response = await api.put(logEndpoint(`/outsource/update/${uuid}`), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      showNotification('Layanan outsourcing berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui layanan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get all outsourcing services
+  getAllOutsourcingServices: async () => {
+    try {
+      const response = await api.get(logEndpoint('/outsource/all'));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil daftar layanan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Delete an outsourcing service
+  deleteOutsourcingService: async (uuid) => {
+    try {
+      const response = await api.delete(logEndpoint(`/outsource/delete/${uuid}`));
+      showNotification('Layanan outsourcing berhasil dihapus', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal menghapus layanan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  }
+};
+
 export default api;
