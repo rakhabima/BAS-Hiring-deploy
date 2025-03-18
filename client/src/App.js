@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CreateAccountPage from './pages/admin/CreateAccountPage';
 import InternalStaffPage from './pages/admin/InternalStaffPage';
+import UserDetailPage from './pages/admin/UserDetailPage';
 
 // Protected Route component to check if user is authenticated
 const ProtectedRoute = ({ element }) => {
@@ -75,6 +76,7 @@ const AppContent = () => {
           {/* Admin routes */}
           <Route path="/admin/internal-staff" element={<AdminRoute element={<InternalStaffPage />} />} />
           <Route path="/admin/create-account" element={<AdminRoute element={<CreateAccountPage />} />} />
+          <Route path="/admin/staff/:uuid" element={<AdminRoute element={<UserDetailPage />} />} />
           
           {/* Protected Dashboard routes */}
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<div>Admin Dashboard</div>} />} />

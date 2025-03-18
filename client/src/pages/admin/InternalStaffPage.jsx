@@ -1,4 +1,8 @@
-import { Add as AddIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Person as PersonIcon,
+  Delete as DeleteIcon,
+} from '@mui/icons-material';
 import {
   Box,
   Button,
@@ -12,17 +16,26 @@ import {
   TableRow,
   Typography,
   useTheme,
-  CircularProgress
+  CircularProgress,
+  Avatar,
+  Chip,
+  IconButton,
+  Tooltip,
+  alpha
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { userService } from '../../services/api';
 
 const InternalStaffPage = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Determine if we're in dark mode
+  const isDarkMode = theme.palette.mode === 'dark';
 
   useEffect(() => {
     // Fungsi untuk mengambil data staff dari API
@@ -62,9 +75,10 @@ const InternalStaffPage = () => {
         if (usersArray && usersArray.length > 0) {
           // Filter hanya pengguna dengan peran staff internal (bukan CANDIDATE)
           const staffUsers = usersArray.filter(user =>
-            user && user.role && 
-            user.role !== 'CANDIDATE' && 
+            user && user.role &&
+            user.role !== 'CANDIDATE' &&
             user.role !== 'GUEST' &&
+            user.role !== 'KARYAWAN' &&
             user.role !== 'ADMIN'
           );
 
@@ -87,12 +101,31 @@ const InternalStaffPage = () => {
   }, []);
 
   const getRoleName = (role) => {
-    switch(role) {
+    switch (role) {
       case 'RECRUITER': return 'Recruiter';
       case 'GENERAL_MANAGER': return 'General Manager';
       case 'KOORDINATOR_LAPANGAN': return 'Koordinator Lapangan';
-      case 'KARYAWAN': return 'Karyawan';
       default: return role;
+    }
+  };
+
+  // Handle view button click
+  const handleViewClick = (uuid) => {
+    navigate(`/admin/staff/${uuid}`);
+  };
+
+  // Handle delete button click
+  const handleDeleteClick = async (id, name) => {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus akun ${name}?`)) {
+      try {
+        await userService.deleteUser(id);
+        // Refresh the list after deletion
+        setStaffList(staffList.filter(staff => staff.uuid !== id));
+        alert('Akun berhasil dihapus');
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Gagal menghapus akun. Silakan coba lagi nanti.');
+      }
     }
   };
 
@@ -113,6 +146,7 @@ const InternalStaffPage = () => {
             '&:hover': {
               backgroundColor: theme.palette.primary.dark,
             },
+            borderRadius: '8px',
           }}
         >
           Tambah Akun
@@ -126,6 +160,9 @@ const InternalStaffPage = () => {
           display: 'flex',
           flexDirection: 'column',
           minHeight: '70vh',
+          background: isDarkMode ? theme.palette.background.paper : '#fff',
+          borderRadius: '16px',
+          overflow: 'hidden',
         }}
       >
         {loading ? (
@@ -138,31 +175,148 @@ const InternalStaffPage = () => {
             <Typography variant="body1" color="error">{error}</Typography>
           </Box>
         ) : staffList.length > 0 ? (
-          <TableContainer>
-            <Table>
-              <TableHead>
+              <TableContainer sx={{ borderRadius: '16px', overflow: 'hidden' }}>
+                <Table sx={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <TableHead
+                    sx={{
+                      bgcolor: isDarkMode
+                        ? alpha(theme.palette.primary.main, 0.1)
+                        : 'aliceblue'
+                    }}
+                  >
                 <TableRow>
-                  <TableCell><strong>Nama</strong></TableCell>
+                      <TableCell sx={{ borderTopLeftRadius: '16px' }}><strong>Nama Staf</strong></TableCell>
+                      <TableCell><strong>Posisi Kerja</strong></TableCell>
                   <TableCell><strong>Email</strong></TableCell>
-                  <TableCell><strong>Posisi</strong></TableCell>
-                  <TableCell><strong>Tanggal Dibuat</strong></TableCell>
+                      <TableCell><strong>Status</strong></TableCell>
+                      <TableCell align="center" sx={{ borderTopRightRadius: '16px' }}><strong>Aksi</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {staffList.map((staff) => (
-                  <TableRow key={staff.uuid}>
-                    <TableCell>{staff.name}</TableCell>
-                    <TableCell>{staff.email}</TableCell>
-                    <TableCell>{getRoleName(staff.role)}</TableCell>
-                    <TableCell>
-                      {new Date(staff.createdAt).toLocaleDateString('id-ID', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                    {staffList.map((staff, index) => {
+                      const isLastRow = index === staffList.length - 1;
+
+                      return (
+                        <TableRow
+                          key={staff.uuid}
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: isDarkMode
+                                ? alpha(theme.palette.action.hover, 0.1)
+                                : theme.palette.action.hover,
+                            },
+                            borderBottom: `1px solid ${isDarkMode
+                              ? alpha(theme.palette.divider, 0.3)
+                              : theme.palette.divider}`,
+                            backgroundColor: isDarkMode
+                              ? (index % 2 === 0
+                                ? alpha(theme.palette.action.hover, 0.05)
+                                : 'transparent')
+                              : (index % 2 === 0
+                                ? alpha(theme.palette.action.hover, 0.02)
+                                : 'transparent')
+                          }}
+                        >
+                          <TableCell sx={{ borderBottomLeftRadius: isLastRow ? '16px' : 0 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Avatar sx={{
+                                bgcolor: isDarkMode ? alpha(theme.palette.grey[500], 0.25) : 'lightgray',
+                                mr: 2,
+                                color: isDarkMode ? theme.palette.text.primary : 'inherit'
+                              }}>
+                                <PersonIcon />
+                              </Avatar>
+                              {staff.name}
+                            </Box>
+                          </TableCell>
+                          <TableCell>{getRoleName(staff.role)}</TableCell>
+                          <TableCell>{staff.email}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={staff.status ? "Aktif" : "Nonaktif"}
+                              sx={{
+                                bgcolor: isDarkMode
+                                  ? (staff.status
+                                    ? alpha(theme.palette.success.main, 0.2)
+                                    : alpha(theme.palette.error.main, 0.2))
+                                  : (staff.status
+                                    ? '#edf7ed'
+                                    : '#fdeded'),
+                                color: isDarkMode
+                                  ? (staff.status
+                                    ? theme.palette.success.light
+                                    : theme.palette.error.light)
+                                  : (staff.status
+                                    ? '#1e4620'
+                                    : '#ab2626'),
+                                borderRadius: '16px',
+                                border: isDarkMode
+                                  ? (staff.status
+                                    ? `1px solid ${alpha(theme.palette.success.main, 0.5)}`
+                                    : `1px solid ${alpha(theme.palette.error.main, 0.5)}`)
+                                  : (staff.status
+                                    ? '1px solid #b7dfb9'
+                                    : '1px solid #f5c8c7'),
+                                fontSize: '0.75rem',
+                                height: '28px'
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ borderBottomRightRadius: isLastRow ? '16px' : 0 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                              <Tooltip
+                                title="Lihat Detail Staff"
+                                arrow
+                                placement="top"
+                              >
+                                <Button
+                                  variant="text"
+                                  size="small"
+                                  onClick={() => handleViewClick(staff.uuid)}
+                                  sx={{
+                                    borderRadius: '4px',
+                                    textTransform: 'none',
+                                    fontWeight: 'bold',
+                                    color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+                                    '&:hover': {
+                                      backgroundColor: isDarkMode
+                                        ? alpha(theme.palette.primary.main, 0.1)
+                                        : alpha(theme.palette.primary.main, 0.1),
+                                    },
+                                    transition: 'all 0.2s ease-in-out',
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  Lihat
+                                </Button>
+                              </Tooltip>
+
+                              <Tooltip
+                                title="Hapus Staff"
+                                arrow
+                                placement="top"
+                              >
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleDeleteClick(staff.uuid, staff.name)}
+                                  sx={{
+                                    '&:hover': {
+                                      backgroundColor: isDarkMode
+                                        ? alpha(theme.palette.error.main, 0.1)
+                                        : alpha(theme.palette.error.main, 0.1),
+                                    },
+                                    transition: 'all 0.2s ease-in-out',
+                                  }}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
               </TableBody>
             </Table>
           </TableContainer>
@@ -178,4 +332,4 @@ const InternalStaffPage = () => {
   );
 };
 
-export default InternalStaffPage; 
+export default InternalStaffPage;
