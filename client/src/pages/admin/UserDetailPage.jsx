@@ -13,12 +13,23 @@ import {
     CardContent,
     Chip,
     IconButton,
-    useTheme
+    useTheme,
+    TextField,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle
 } from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
+    Save as SaveIcon
 } from '@mui/icons-material';
 import { userService } from '../../services/api';
 
@@ -29,6 +40,18 @@ const UserDetailPage = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [editMode, setEditMode] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        role: '',
+        status: true
+    });
+    const [saving, setSaving] = useState(false);
+
+    // Determine if we're in dark mode
+    const isDarkMode = theme.palette.mode === 'dark';
 
     useEffect(() => {
         const fetchUserDetails = async () => {
@@ -40,8 +63,20 @@ const UserDetailPage = () => {
                 // Handle different response structures
                 if (response && response.data) {
                     setUser(response.data);
+                    setFormData({
+                        name: response.data.name || '',
+                        email: response.data.email || '',
+                        role: response.data.role || '',
+                        status: response.data.status !== undefined ? response.data.status : true
+                    });
                 } else if (response && response.uuid) {
                     setUser(response);
+                    setFormData({
+                        name: response.name || '',
+                        email: response.email || '',
+                        role: response.role || '',
+                        status: response.status !== undefined ? response.status : true
+                    });
                 } else {
                     console.error('Unexpected user data structure:', response);
                     setError('Format data tidak sesuai dengan yang diharapkan');
@@ -63,6 +98,75 @@ const UserDetailPage = () => {
         navigate(-1);
     };
 
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({
+            ...formData,
+            [name]: value
+        });
+    };
+
+    const handleStatusChange = (e) => {
+        setFormData({
+            ...formData,
+            status: e.target.value === 'true'
+        });
+    };
+
+    const toggleEditMode = () => {
+        if (editMode) {
+            // Reset form data to original values if canceling edit
+            setFormData({
+                name: user.name || '',
+                email: user.email || '',
+                role: user.role || '',
+                status: user.status
+            });
+        }
+        setEditMode(!editMode);
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const updatedUser = await userService.updateUser(user.uuid, formData);
+            console.log('User updated:', updatedUser);
+
+            // Update the local user state with new data
+            setUser({
+                ...user,
+                ...formData
+            });
+
+            setEditMode(false);
+            // Show success message or notification here
+        } catch (error) {
+            console.error('Error updating user:', error);
+            // Show error message or notification here
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        try {
+            await userService.deleteUser(user.uuid);
+            navigate('/admin/internal-staff', { replace: true });
+            // Show success notification if needed
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            // Show error notification
+        }
+    };
+
+    const openDeleteDialog = () => {
+        setDeleteDialogOpen(true);
+    };
+
+    const closeDeleteDialog = () => {
+        setDeleteDialogOpen(false);
+    };
+
     const getRoleName = (role) => {
         switch (role) {
             case 'RECRUITER': return 'Recruiter';
@@ -82,7 +186,6 @@ const UserDetailPage = () => {
         }
     };
 
-
     return (
         <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
             <Box sx={{ mb: 4 }}>
@@ -94,7 +197,7 @@ const UserDetailPage = () => {
                     Kembali
                 </Button>
                 <Typography variant="h4" component="h1" gutterBottom>
-                    Detail Staf
+                    {editMode ? 'Edit Akun' : 'Detail Staf'}
                 </Typography>
             </Box>
 
@@ -126,62 +229,148 @@ const UserDetailPage = () => {
                     </Button>
                 </Paper>
             ) : user ? (
-                <Card elevation={3}>
-                    <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                            <Box>
-                                <Typography variant="h5" component="h2" sx={{ ml: 1}}>
-                                    {user.name}
-                                </Typography>
-                                <Chip
-                                    label={getRoleName(user.role)}
-                                    sx={{
-                                        bgcolor: getRoleColor(user.role),
-                                        color: 'white',
-                                        mt: 1
-                                    }}
-                                />
-                            </Box>
-                            <Box sx={{ ml: 'auto' }}>
-                                <IconButton
+                editMode ? (
+                    <Card elevation={3}>
+                        <CardContent>
+                            <Typography variant="h6" component="h2" mb={3}>
+                                Detail Akun
+                            </Typography>
+
+                            <Grid container spacing={3}>
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Nama"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleInputChange}
+                                        margin="normal"
+                                        variant="outlined"
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleInputChange}
+                                        margin="normal"
+                                        variant="outlined"
+                                    />
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth margin="normal">
+                                        <InputLabel>Posisi Kerja</InputLabel>
+                                        <Select
+                                            value={formData.role}
+                                            name="role"
+                                            label="Posisi Kerja"
+                                            onChange={handleInputChange}
+                                        >
+                                            <MenuItem value="RECRUITER">Recruiter</MenuItem>
+                                            <MenuItem value="GENERAL_MANAGER">General Manager</MenuItem>
+                                            <MenuItem value="KOORDINATOR_LAPANGAN">Koordinator Lapangan</MenuItem>
+                                            <MenuItem value="KARYAWAN">Karyawan</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth margin="normal">
+                                        <InputLabel>Status</InputLabel>
+                                        <Select
+                                            value={formData.status.toString()}
+                                            name="status"
+                                            label="Status"
+                                            onChange={handleStatusChange}
+                                        >
+                                            <MenuItem value="true">Aktif</MenuItem>
+                                            <MenuItem value="false">Tidak Aktif</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                            </Grid>
+
+                            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                                <Button
+                                    variant="outlined"
+                                    onClick={toggleEditMode}
+                                    sx={{ mr: 2 }}
+                                    disabled={saving}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    variant="contained"
                                     color="primary"
-                                    onClick={() => navigate(`/admin/staff/edit/${user.uuid}`)}
-                                    sx={{ mr: 1 }}
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
                                 >
-                                    <EditIcon />
-                                </IconButton>
-                                <IconButton
-                                    color="error"
-                                >
-                                    <DeleteIcon />
-                                </IconButton>
+                                    Simpan
+                                </Button>
                             </Box>
-                        </Box>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card elevation={3}>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                                <Box>
+                                    <Typography variant="h5" component="h2" sx={{ ml: 1 }}>
+                                        {user.name}
+                                    </Typography>
+                                    <Chip
+                                        label={getRoleName(user.role)}
+                                        sx={{
+                                            bgcolor: getRoleColor(user.role),
+                                            color: 'white',
+                                            mt: 1
+                                        }}
+                                    />
+                                </Box>
+                                <Box sx={{ ml: 'auto' }}>
+                                    <IconButton
+                                        color="primary"
+                                        onClick={toggleEditMode}
+                                        sx={{ mr: 1 }}
+                                    >
+                                        <EditIcon />
+                                    </IconButton>
+                                    <IconButton
+                                        color="error"
+                                        onClick={openDeleteDialog}
+                                    >
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </Box>
+                            </Box>
 
-                        <Divider sx={{ my: 3 }} />
+                            <Divider sx={{ my: 3 }} />
 
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="subtitle2" color="textSecondary">
-                                    Email
-                                </Typography>
-                                <Typography variant="body1" sx={{ mb: 2 }}>
-                                    {user.email}
-                                </Typography>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} md={6}>
+                                    <Typography variant="subtitle2" color="textSecondary">
+                                        Email
+                                    </Typography>
+                                    <Typography variant="body1" sx={{ mb: 2 }}>
+                                        {user.email}
+                                    </Typography>
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <Typography variant="subtitle2" color="textSecondary">
+                                        Status
+                                    </Typography>
+                                    <Chip
+                                        label={user.status ? "Aktif" : "Tidak Aktif"}
+                                        color={user.status ? "success" : "error"}
+                                        size="small"
+                                    />
+                                </Grid>
                             </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="subtitle2" color="textSecondary">
-                                    Status
-                                </Typography>
-                                <Chip
-                                    label={user.status ? "Aktif" : "Tidak Aktif"}
-                                    color={user.status ? "success" : "error"}
-                                    size="small"
-                                />
-                            </Grid>
-                        </Grid>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )
             ) : (
                 <Paper
                     elevation={3}
@@ -207,6 +396,25 @@ const UserDetailPage = () => {
                     </Button>
                 </Paper>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={closeDeleteDialog}
+            >
+                <DialogTitle>Hapus Akun</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Apakah Anda yakin ingin menghapus akun {user?.name}? Tindakan ini tidak dapat dibatalkan.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeDeleteDialog}>Batal</Button>
+                    <Button onClick={handleDelete} color="error" autoFocus>
+                        Hapus
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 };

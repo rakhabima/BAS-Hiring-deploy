@@ -88,10 +88,18 @@ export const getUserByUUID = async (req, res) => {
 // Controller untuk memperbarui data user
 export const updateUser = async (req, res) => {
     try {
-        const { id } = req.params;
-        const updateData = req.body;
+        const { uuid } = req.params;  // Get UUID from the route parameters
+        const updateData = req.body;  // Get update data from request body
 
-        const updatedUser = await updateUserService(id, updateData);
+        // Ensure that at least one field is provided to update
+        if (!updateData.name && !updateData.email && !updateData.role && !updateData.status) {
+            return res.status(400).json({
+                success: false,
+                message: "Harap sertakan data yang ingin diperbarui (name, email, role, atau status)"
+            });
+        }
+
+        const updatedUser = await updateUserService(uuid, updateData);  // Pass UUID to service
 
         return res.status(200).json({
             success: true,

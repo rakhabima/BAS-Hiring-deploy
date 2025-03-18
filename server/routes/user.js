@@ -7,8 +7,8 @@ const router = express.Router();
 
 router.post("/", createUser);
 router.get("/all", getAllUsers);
-router.get("/uuid/:uuid", getUserByUUID);
-router.put("/:id", updateUser);
+router.get("/:uuid", getUserByUUID);
+router.put("/:uuid", updateUser);
 router.delete("/:id", deleteUser);
 router.patch("/:id/status", updateUserStatus);
 

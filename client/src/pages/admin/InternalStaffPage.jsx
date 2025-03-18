@@ -38,29 +38,27 @@ const InternalStaffPage = () => {
   const isDarkMode = theme.palette.mode === 'dark';
 
   useEffect(() => {
-    // Fungsi untuk mengambil data staff dari API
+    // Function to fetch staff data from API
     const fetchStaffList = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // Menggunakan userService.getAllUsers() untuk mendapatkan daftar pengguna
+        // Use userService.getAllUsers() to get user list
         const response = await userService.getAllUsers();
         console.log('API Response:', response);
 
-        // Berdasarkan screenshot, data respons tampaknya ada dalam format objek
-        // dengan properti 'data' yang berisi array pengguna
         let usersArray = [];
 
-        // Periksa berbagai kemungkinan struktur data
+        // Check various possible data structures
         if (Array.isArray(response)) {
-          // Jika response langsung berupa array
+          // If response is directly an array
           usersArray = response;
         } else if (response && response.data && Array.isArray(response.data)) {
-          // Jika response memiliki property data berupa array
+          // If response has a data property that is an array
           usersArray = response.data;
         } else if (response && typeof response === 'object') {
-          // Coba temukan array di dalam objek response
+          // Try to find an array inside the response object
           for (const key in response) {
             if (Array.isArray(response[key])) {
               usersArray = response[key];
@@ -71,9 +69,9 @@ const InternalStaffPage = () => {
 
         console.log('Extracted users array:', usersArray);
 
-        // Pastikan usersArray berisi data yang valid
+        // Make sure usersArray contains valid data
         if (usersArray && usersArray.length > 0) {
-          // Filter hanya pengguna dengan peran staff internal (bukan CANDIDATE)
+          // Filter only internal staff users (not CANDIDATE)
           const staffUsers = usersArray.filter(user =>
             user && user.role &&
             user.role !== 'CANDIDATE' &&
@@ -85,7 +83,7 @@ const InternalStaffPage = () => {
           console.log('Filtered staff users:', staffUsers);
           setStaffList(staffUsers);
         } else {
-          // Jika tidak ada data yang valid, set sebagai array kosong
+          // If no valid data, set as empty array
           console.log('No valid users data found');
           setStaffList([]);
         }
@@ -175,148 +173,157 @@ const InternalStaffPage = () => {
             <Typography variant="body1" color="error">{error}</Typography>
           </Box>
         ) : staffList.length > 0 ? (
-              <TableContainer sx={{ borderRadius: '16px', overflow: 'hidden' }}>
-                <Table sx={{ borderCollapse: 'separate', borderSpacing: 0 }}>
-                  <TableHead
-                    sx={{
-                      bgcolor: isDarkMode
-                        ? alpha(theme.palette.primary.main, 0.1)
-                        : 'aliceblue'
-                    }}
-                  >
+          <TableContainer sx={{ borderRadius: '16px', overflow: 'hidden' }}>
+            <Table sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+              <TableHead
+                sx={{
+                  bgcolor: isDarkMode
+                    ? alpha(theme.palette.primary.main, 0.1)
+                    : 'aliceblue'
+                }}
+              >
                 <TableRow>
-                      <TableCell sx={{ borderTopLeftRadius: '16px' }}><strong>Nama Staf</strong></TableCell>
-                      <TableCell><strong>Posisi Kerja</strong></TableCell>
-                  <TableCell><strong>Email</strong></TableCell>
-                      <TableCell><strong>Status</strong></TableCell>
-                      <TableCell align="center" sx={{ borderTopRightRadius: '16px' }}><strong>Aksi</strong></TableCell>
+                  <TableCell width="25%" sx={{ borderTopLeftRadius: '16px' }}><strong>Nama Staf</strong></TableCell>
+                  <TableCell width="20%"><strong>Posisi Kerja</strong></TableCell>
+                      <TableCell width="20%"><strong>Email</strong></TableCell>
+                  <TableCell width="15%" sx={{ textAlign: 'center'}}><strong>Status</strong></TableCell>
+                  <TableCell width="15%" align="center" sx={{ borderTopRightRadius: '16px' }}><strong>Aksi</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                    {staffList.map((staff, index) => {
-                      const isLastRow = index === staffList.length - 1;
+                {staffList.map((staff, index) => {
+                  const isLastRow = index === staffList.length - 1;
 
-                      return (
-                        <TableRow
-                          key={staff.uuid}
+                  return (
+                    <TableRow
+                      key={staff.uuid}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: isDarkMode
+                            ? alpha(theme.palette.action.hover, 0.1)
+                            : theme.palette.action.hover,
+                        },
+                        borderBottom: `1px solid ${isDarkMode
+                          ? alpha(theme.palette.divider, 0.3)
+                          : theme.palette.divider}`,
+                        backgroundColor: isDarkMode
+                          ? (index % 2 === 0
+                            ? alpha(theme.palette.action.hover, 0.05)
+                            : 'transparent')
+                          : (index % 2 === 0
+                            ? alpha(theme.palette.action.hover, 0.02)
+                            : 'transparent')
+                      }}
+                    >
+                      <TableCell width="25%" sx={{ borderBottomLeftRadius: isLastRow ? '16px' : 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Avatar sx={{
+                            bgcolor: isDarkMode ? alpha(theme.palette.grey[500], 0.25) : 'lightgray',
+                            mr: 2,
+                            color: isDarkMode ? theme.palette.text.primary : 'inherit'
+                          }}>
+                            <PersonIcon />
+                          </Avatar>
+                          {staff.name}
+                        </Box>
+                      </TableCell>
+                      <TableCell width="20%">{getRoleName(staff.role)}</TableCell>
+                      <TableCell width="25%">{staff.email}</TableCell>
+                      <TableCell
+                        sx={{
+                          width: '15%',
+                          padding: '16px',
+                          textAlign: 'center'  // Center align for better appearance
+                        }}
+                      >
+                        <Chip
+                          label={staff.status ? "Aktif" : "Tidak Aktif"}
                           sx={{
-                            '&:hover': {
-                              backgroundColor: isDarkMode
-                                ? alpha(theme.palette.action.hover, 0.1)
-                                : theme.palette.action.hover,
-                            },
-                            borderBottom: `1px solid ${isDarkMode
-                              ? alpha(theme.palette.divider, 0.3)
-                              : theme.palette.divider}`,
-                            backgroundColor: isDarkMode
-                              ? (index % 2 === 0
-                                ? alpha(theme.palette.action.hover, 0.05)
-                                : 'transparent')
-                              : (index % 2 === 0
-                                ? alpha(theme.palette.action.hover, 0.02)
-                                : 'transparent')
+                            bgcolor: isDarkMode
+                              ? (staff.status
+                                ? alpha(theme.palette.success.main, 0.2)
+                                : alpha(theme.palette.error.main, 0.2))
+                              : (staff.status
+                                ? '#edf7ed'
+                                : '#fdeded'),
+                            color: isDarkMode
+                              ? (staff.status
+                                ? theme.palette.success.light
+                                : theme.palette.error.light)
+                              : (staff.status
+                                ? '#1e4620'
+                                : '#ab2626'),
+                            borderRadius: '16px',
+                            border: isDarkMode
+                              ? (staff.status
+                                ? `1px solid ${alpha(theme.palette.success.main, 0.5)}`
+                                : `1px solid ${alpha(theme.palette.error.main, 0.5)}`)
+                              : (staff.status
+                                ? '1px solid #b7dfb9'
+                                : '1px solid #f5c8c7'),
+                            fontSize: '0.75rem',
+                            height: '28px',
+                            minWidth: '100px',  // Increased minimum width
+                            padding: '0 12px',  // Add horizontal padding
+                            width: 'auto'      // Allow it to grow based on content
                           }}
-                        >
-                          <TableCell sx={{ borderBottomLeftRadius: isLastRow ? '16px' : 0 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Avatar sx={{
-                                bgcolor: isDarkMode ? alpha(theme.palette.grey[500], 0.25) : 'lightgray',
-                                mr: 2,
-                                color: isDarkMode ? theme.palette.text.primary : 'inherit'
-                              }}>
-                                <PersonIcon />
-                              </Avatar>
-                              {staff.name}
-                            </Box>
-                          </TableCell>
-                          <TableCell>{getRoleName(staff.role)}</TableCell>
-                          <TableCell>{staff.email}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={staff.status ? "Aktif" : "Nonaktif"}
+                        />
+                      </TableCell>
+                      <TableCell width="15%" sx={{ borderBottomRightRadius: isLastRow ? '16px' : 0 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                          <Tooltip
+                            title="Lihat Detail Staff"
+                            arrow
+                            placement="top"
+                          >
+                            <Button
+                              variant="text"
+                              size="small"
+                              onClick={() => handleViewClick(staff.uuid)}
                               sx={{
-                                bgcolor: isDarkMode
-                                  ? (staff.status
-                                    ? alpha(theme.palette.success.main, 0.2)
-                                    : alpha(theme.palette.error.main, 0.2))
-                                  : (staff.status
-                                    ? '#edf7ed'
-                                    : '#fdeded'),
-                                color: isDarkMode
-                                  ? (staff.status
-                                    ? theme.palette.success.light
-                                    : theme.palette.error.light)
-                                  : (staff.status
-                                    ? '#1e4620'
-                                    : '#ab2626'),
-                                borderRadius: '16px',
-                                border: isDarkMode
-                                  ? (staff.status
-                                    ? `1px solid ${alpha(theme.palette.success.main, 0.5)}`
-                                    : `1px solid ${alpha(theme.palette.error.main, 0.5)}`)
-                                  : (staff.status
-                                    ? '1px solid #b7dfb9'
-                                    : '1px solid #f5c8c7'),
-                                fontSize: '0.75rem',
-                                height: '28px'
+                                borderRadius: '4px',
+                                textTransform: 'none',
+                                fontWeight: 'bold',
+                                color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
+                                '&:hover': {
+                                  backgroundColor: isDarkMode
+                                    ? alpha(theme.palette.primary.main, 0.1)
+                                    : alpha(theme.palette.primary.main, 0.1),
+                                },
+                                transition: 'all 0.2s ease-in-out',
+                                minWidth: 0,
                               }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ borderBottomRightRadius: isLastRow ? '16px' : 0 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                              <Tooltip
-                                title="Lihat Detail Staff"
-                                arrow
-                                placement="top"
-                              >
-                                <Button
-                                  variant="text"
-                                  size="small"
-                                  onClick={() => handleViewClick(staff.uuid)}
-                                  sx={{
-                                    borderRadius: '4px',
-                                    textTransform: 'none',
-                                    fontWeight: 'bold',
-                                    color: isDarkMode ? theme.palette.primary.light : theme.palette.primary.main,
-                                    '&:hover': {
-                                      backgroundColor: isDarkMode
-                                        ? alpha(theme.palette.primary.main, 0.1)
-                                        : alpha(theme.palette.primary.main, 0.1),
-                                    },
-                                    transition: 'all 0.2s ease-in-out',
-                                    minWidth: 0,
-                                  }}
-                                >
-                                  Lihat
-                                </Button>
-                              </Tooltip>
+                            >
+                              Lihat
+                            </Button>
+                          </Tooltip>
 
-                              <Tooltip
-                                title="Hapus Staff"
-                                arrow
-                                placement="top"
-                              >
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => handleDeleteClick(staff.uuid, staff.name)}
-                                  sx={{
-                                    '&:hover': {
-                                      backgroundColor: isDarkMode
-                                        ? alpha(theme.palette.error.main, 0.1)
-                                        : alpha(theme.palette.error.main, 0.1),
-                                    },
-                                    transition: 'all 0.2s ease-in-out',
-                                  }}
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                          <Tooltip
+                            title="Hapus Staff"
+                            arrow
+                            placement="top"
+                          >
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteClick(staff.uuid, staff.name)}
+                              sx={{
+                                '&:hover': {
+                                  backgroundColor: isDarkMode
+                                    ? alpha(theme.palette.error.main, 0.1)
+                                    : alpha(theme.palette.error.main, 0.1),
+                                },
+                                transition: 'all 0.2s ease-in-out',
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>

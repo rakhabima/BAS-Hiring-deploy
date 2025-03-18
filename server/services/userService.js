@@ -52,8 +52,8 @@ export const getUserByUUIDService = async (uuid) => {
     }
 };
 
-// Meng-update data user
-export const updateUserService = async (userId, updateData) => {
+// Meng-update data user berdasarkan UUID
+export const updateUserService = async (uuid, updateData) => {
     try {
         // Jika ada update password, hash password baru
         if (updateData.password) {
@@ -61,8 +61,8 @@ export const updateUserService = async (userId, updateData) => {
             updateData.password = await bcrypt.hash(updateData.password, salt);
         }
 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
+        const updatedUser = await User.findOneAndUpdate(
+            { uuid },  // Use uuid for finding the user
             { $set: updateData },
             { new: true, runValidators: true }
         ).select("-password");
@@ -76,6 +76,7 @@ export const updateUserService = async (userId, updateData) => {
         throw error;
     }
 };
+
 
 // Menghapus user berdasarkan UUID
 export const deleteUserService = async (userId) => {

@@ -239,7 +239,7 @@ export const userService = {
   getUserByUUID: async (uuid) => {
     try {
       console.log(`Fetching user with UUID: ${uuid}`);
-      const response = await api.get(logEndpoint(`/user/uuid/${uuid}`));
+      const response = await api.get(logEndpoint(`/user/${uuid}`));
       console.log('Fetched user:', response.data);
       return response.data;
     } catch (error) {
