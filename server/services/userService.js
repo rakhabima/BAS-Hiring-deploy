@@ -32,7 +32,9 @@ export const createUserService = async (userData) => {
 // Mengambil data seluruh user yang ada
 export const getAllUsersService = async () => {
     try {
-        const users = await User.find({}, { password: 0 }); // Exclude password field
+        const users = await User.find(
+            { isDeleted: false },
+            { password: 0 }); // Exclude password field
         return users;
     } catch (error) {
         throw error;
@@ -79,32 +81,21 @@ export const updateUserService = async (uuid, updateData) => {
 
 
 // Menghapus user berdasarkan UUID
-export const deleteUserService = async (userId) => {
+export const deleteUserService = async (uuid) => {
     try {
-        const result = await User.findByIdAndDelete(userId);
+        const result = await User.findOneAndUpdate(
+            { uuid },
+            {
+                isDeleted: true,
+            },
+            { new: true }
+        );
+
         if (!result) {
             throw new Error("User tidak ditemukan");
         }
+
         return { message: "User berhasil dihapus" };
-    } catch (error) {
-        throw error;
-    }
-};
-
-// Meng-update status user
-export const updateUserStatusService = async (userId, status) => {
-    try {
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { $set: { status } },
-            { new: true }
-        ).select("-password");
-
-        if (!updatedUser) {
-            throw new Error("User tidak ditemukan");
-        }
-
-        return updatedUser;
     } catch (error) {
         throw error;
     }

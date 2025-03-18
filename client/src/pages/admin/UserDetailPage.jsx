@@ -23,7 +23,9 @@ import {
     DialogActions,
     DialogContent,
     DialogContentText,
-    DialogTitle
+    DialogTitle,
+    Snackbar,
+    Alert
 } from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
@@ -49,6 +51,11 @@ const UserDetailPage = () => {
         status: true
     });
     const [saving, setSaving] = useState(false);
+
+    // State for alert/snackbar
+    const [alertOpen, setAlertOpen] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
+    const [alertSeverity, setAlertSeverity] = useState('success'); // 'success' or 'error'
 
     // Determine if we're in dark mode
     const isDarkMode = theme.palette.mode === 'dark';
@@ -126,6 +133,21 @@ const UserDetailPage = () => {
         setEditMode(!editMode);
     };
 
+    // Show alert
+    const showAlert = (message, severity = 'success') => {
+        setAlertMessage(message);
+        setAlertSeverity(severity);
+        setAlertOpen(true);
+    };
+
+    // Close alert
+    const handleCloseAlert = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setAlertOpen(false);
+    };
+
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -139,10 +161,14 @@ const UserDetailPage = () => {
             });
 
             setEditMode(false);
-            // Show success message or notification here
+
+            // Show success message
+            showAlert(`Akun ${formData.name} berhasil diperbarui!`, 'success');
         } catch (error) {
             console.error('Error updating user:', error);
-            // Show error message or notification here
+
+            // Show error message
+            showAlert('Gagal memperbarui akun. Silakan coba lagi nanti.', 'error');
         } finally {
             setSaving(false);
         }
@@ -151,11 +177,22 @@ const UserDetailPage = () => {
     const handleDelete = async () => {
         try {
             await userService.deleteUser(user.uuid);
-            navigate('/admin/internal-staff', { replace: true });
-            // Show success notification if needed
+
+            // Show success message
+            showAlert(`Akun ${user.name} berhasil dihapus!`, 'success');
+
+            // Navigate after a short delay to allow the user to see the success message
+            setTimeout(() => {
+                navigate('/admin/internal-staff', { replace: true });
+            }, 1500);
         } catch (error) {
             console.error('Error deleting user:', error);
-            // Show error notification
+
+            // Show error message
+            showAlert('Gagal menghapus akun. Silakan coba lagi nanti.', 'error');
+
+            // Close the dialog
+            closeDeleteDialog();
         }
     };
 
@@ -415,6 +452,22 @@ const UserDetailPage = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Alert/Snackbar */}
+            <Snackbar
+                open={alertOpen}
+                autoHideDuration={6000}
+                onClose={handleCloseAlert}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={handleCloseAlert}
+                    severity={alertSeverity}
+                    sx={{ width: '100%' }}
+                >
+                    {alertMessage}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 };

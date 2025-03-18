@@ -2,6 +2,7 @@ import {
   Add as AddIcon,
   Person as PersonIcon,
   Delete as DeleteIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import {
   Box,
@@ -21,7 +22,14 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  alpha
+  alpha,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -33,6 +41,15 @@ const InternalStaffPage = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // State for delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState(null);
+
+  // State for alert/snackbar
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertSeverity, setAlertSeverity] = useState('success'); // 'success' or 'error'
 
   // Determine if we're in dark mode
   const isDarkMode = theme.palette.mode === 'dark';
@@ -46,19 +63,15 @@ const InternalStaffPage = () => {
       try {
         // Use userService.getAllUsers() to get user list
         const response = await userService.getAllUsers();
-        console.log('API Response:', response);
 
         let usersArray = [];
 
         // Check various possible data structures
         if (Array.isArray(response)) {
-          // If response is directly an array
           usersArray = response;
         } else if (response && response.data && Array.isArray(response.data)) {
-          // If response has a data property that is an array
           usersArray = response.data;
         } else if (response && typeof response === 'object') {
-          // Try to find an array inside the response object
           for (const key in response) {
             if (Array.isArray(response[key])) {
               usersArray = response[key];
@@ -66,8 +79,6 @@ const InternalStaffPage = () => {
             }
           }
         }
-
-        console.log('Extracted users array:', usersArray);
 
         // Make sure usersArray contains valid data
         if (usersArray && usersArray.length > 0) {
@@ -80,11 +91,8 @@ const InternalStaffPage = () => {
             user.role !== 'ADMIN'
           );
 
-          console.log('Filtered staff users:', staffUsers);
           setStaffList(staffUsers);
         } else {
-          // If no valid data, set as empty array
-          console.log('No valid users data found');
           setStaffList([]);
         }
       } catch (error) {
@@ -112,18 +120,48 @@ const InternalStaffPage = () => {
     navigate(`/admin/staff/${uuid}`);
   };
 
+  // Open delete dialog
+  const openDeleteDialog = (staff) => {
+    setStaffToDelete(staff);
+    setDeleteDialogOpen(true);
+  };
+
+  // Close delete dialog
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setStaffToDelete(null);
+  };
+
+  // Show alert
+  const showAlert = (message, severity = 'success') => {
+    setAlertMessage(message);
+    setAlertSeverity(severity);
+    setAlertOpen(true);
+  };
+
+  // Close alert
+  const handleCloseAlert = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setAlertOpen(false);
+  };
+
   // Handle delete button click
-  const handleDeleteClick = async (id, name) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus akun ${name}?`)) {
-      try {
-        await userService.deleteUser(id);
-        // Refresh the list after deletion
-        setStaffList(staffList.filter(staff => staff.uuid !== id));
-        alert('Akun berhasil dihapus');
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        alert('Gagal menghapus akun. Silakan coba lagi nanti.');
-      }
+  const handleDelete = async () => {
+    try {
+      await userService.deleteUser(staffToDelete.uuid);
+      // Refresh the list after deletion
+      setStaffList(staffList.filter(staff => staff.uuid !== staffToDelete.uuid));
+
+      // Show success message using Material UI Alert
+      showAlert(`Akun ${staffToDelete.name} berhasil dihapus!`, 'success');
+
+      // Close the dialog
+      closeDeleteDialog();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      showAlert('Gagal menghapus akun. Silakan coba lagi nanti.', 'error');
     }
   };
 
@@ -173,8 +211,15 @@ const InternalStaffPage = () => {
             <Typography variant="body1" color="error">{error}</Typography>
           </Box>
         ) : staffList.length > 0 ? (
-          <TableContainer sx={{ borderRadius: '16px', overflow: 'hidden' }}>
-            <Table sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+          <TableContainer component={Box} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
+            <Table sx={{ tableLayout: 'fixed', width: '100%' }}>
+              <colgroup>
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '30%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '15%' }} />
+              </colgroup>
               <TableHead
                 sx={{
                   bgcolor: isDarkMode
@@ -183,11 +228,21 @@ const InternalStaffPage = () => {
                 }}
               >
                 <TableRow>
-                  <TableCell width="25%" sx={{ borderTopLeftRadius: '16px' }}><strong>Nama Staf</strong></TableCell>
-                  <TableCell width="20%"><strong>Posisi Kerja</strong></TableCell>
-                      <TableCell width="20%"><strong>Email</strong></TableCell>
-                  <TableCell width="15%" sx={{ textAlign: 'center'}}><strong>Status</strong></TableCell>
-                  <TableCell width="15%" align="center" sx={{ borderTopRightRadius: '16px' }}><strong>Aksi</strong></TableCell>
+                  <TableCell sx={{ fontWeight: 600, borderTopLeftRadius: '16px', padding: '16px' }}>
+                    Nama Staf
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, padding: '16px' }}>
+                    Posisi Kerja
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, padding: '16px' }}>
+                    Email
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, padding: '16px', textAlign: 'center' }}>
+                    Status
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, padding: '16px', textAlign: 'center', borderTopRightRadius: '16px' }}>
+                    Aksi
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -215,7 +270,13 @@ const InternalStaffPage = () => {
                             : 'transparent')
                       }}
                     >
-                      <TableCell width="25%" sx={{ borderBottomLeftRadius: isLastRow ? '16px' : 0 }}>
+                      <TableCell sx={{
+                        padding: '16px',
+                        borderBottomLeftRadius: isLastRow ? '16px' : 0,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Avatar sx={{
                             bgcolor: isDarkMode ? alpha(theme.palette.grey[500], 0.25) : 'lightgray',
@@ -227,15 +288,23 @@ const InternalStaffPage = () => {
                           {staff.name}
                         </Box>
                       </TableCell>
-                      <TableCell width="20%">{getRoleName(staff.role)}</TableCell>
-                      <TableCell width="25%">{staff.email}</TableCell>
-                      <TableCell
-                        sx={{
-                          width: '15%',
-                          padding: '16px',
-                          textAlign: 'center'  // Center align for better appearance
-                        }}
-                      >
+                      <TableCell sx={{
+                        padding: '16px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {getRoleName(staff.role)}
+                      </TableCell>
+                      <TableCell sx={{
+                        padding: '16px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {staff.email}
+                      </TableCell>
+                      <TableCell sx={{ padding: '16px', textAlign: 'center' }}>
                         <Chip
                           label={staff.status ? "Aktif" : "Tidak Aktif"}
                           sx={{
@@ -263,13 +332,18 @@ const InternalStaffPage = () => {
                                 : '1px solid #f5c8c7'),
                             fontSize: '0.75rem',
                             height: '28px',
-                            minWidth: '100px',  // Increased minimum width
-                            padding: '0 12px',  // Add horizontal padding
-                            width: 'auto'      // Allow it to grow based on content
+                            minWidth: '100px',
+                            padding: '0 12px',
+                            display: 'inline-flex',
+                            justifyContent: 'center'
                           }}
                         />
                       </TableCell>
-                      <TableCell width="15%" sx={{ borderBottomRightRadius: isLastRow ? '16px' : 0 }}>
+                      <TableCell sx={{
+                        padding: '16px',
+                        textAlign: 'center',
+                        borderBottomRightRadius: isLastRow ? '16px' : 0
+                      }}>
                         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
                           <Tooltip
                             title="Lihat Detail Staff"
@@ -306,7 +380,7 @@ const InternalStaffPage = () => {
                             <IconButton
                               size="small"
                               color="error"
-                              onClick={() => handleDeleteClick(staff.uuid, staff.name)}
+                              onClick={() => openDeleteDialog(staff)}
                               sx={{
                                 '&:hover': {
                                   backgroundColor: isDarkMode
@@ -335,6 +409,41 @@ const InternalStaffPage = () => {
           </Box>
         )}
       </Paper>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={closeDeleteDialog}
+      >
+        <DialogTitle>Hapus Akun</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Apakah Anda yakin ingin menghapus akun {staffToDelete?.name}? Tindakan ini tidak dapat dibatalkan.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteDialog}>Batal</Button>
+          <Button onClick={handleDelete} color="error" autoFocus>
+            Hapus
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Alert/Snackbar - Matching the CreateAccountPage style */}
+      <Snackbar
+        open={alertOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleCloseAlert}
+          severity={alertSeverity}
+          sx={{ width: '100%' }}
+        >
+          {alertMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

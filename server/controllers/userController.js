@@ -1,4 +1,4 @@
-import { createUserService, getAllUsersService, updateUserService, getUserByUUIDService, deleteUserService, updateUserStatusService } from "../services/userService.js";
+import { createUserService, getAllUsersService, updateUserService, getUserByUUIDService, deleteUserService } from "../services/userService.js";
 
 // Controller untuk membuat user baru
 export const createUser = async (req, res) => {
@@ -128,8 +128,8 @@ export const updateUser = async (req, res) => {
 // Controller untuk menghapus user
 export const deleteUser = async (req, res) => {
     try {
-        const { id } = req.params;
-        const result = await deleteUserService(id);
+        const { uuid } = req.params;
+        const result = await deleteUserService(uuid); // Changed from id to uuid
 
         return res.status(200).json({
             success: true,
@@ -140,36 +140,6 @@ export const deleteUser = async (req, res) => {
         return res.status(error.message.includes("tidak ditemukan") ? 404 : 500).json({
             success: false,
             message: error.message || "Gagal menghapus user",
-            error: error.message
-        });
-    }
-};
-
-// Controller untuk mengupdate status user
-export const updateUserStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-
-        if (status === undefined) {
-            return res.status(400).json({
-                success: false,
-                message: "Status harus disertakan"
-            });
-        }
-
-        const updatedUser = await updateUserStatusService(id, status);
-
-        return res.status(200).json({
-            success: true,
-            message: `User berhasil ${status ? 'diaktifkan' : 'dinonaktifkan'}`,
-            data: updatedUser
-        });
-    } catch (error) {
-        console.error("Error updating user status:", error);
-        return res.status(error.message.includes("tidak ditemukan") ? 404 : 500).json({
-            success: false,
-            message: error.message || "Gagal memperbarui status user",
             error: error.message
         });
     }
