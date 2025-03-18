@@ -2,13 +2,20 @@ import { Box } from '@mui/material';
 import React from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import NotificationSnackbar from './components/NotificationSnackbar';
 import ThemeProvider from './components/ThemeProvider';
+import CreateAccountPage from './pages/admin/CreateAccountPage';
+import CreateServicePage from './pages/admin/CreateServicePage';
+import EditServicePage from './pages/admin/EditServicePage';
+import InternalStaffPage from './pages/admin/InternalStaffPage';
+import ServiceDetailPage from './pages/admin/ServiceDetailPage';
+import ServicePublicationsPage from './pages/admin/ServicePublicationsPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import PublicServiceDetailPage from './pages/PublicServiceDetailPage';
+import PublicServiceListPage from './pages/PublicServiceListPage';
 import RegisterPage from './pages/RegisterPage';
-import CreateAccountPage from './pages/admin/CreateAccountPage';
-import InternalStaffPage from './pages/admin/InternalStaffPage';
 
 // Protected Route component to check if user is authenticated
 const ProtectedRoute = ({ element }) => {
@@ -26,6 +33,22 @@ const AdminRoute = ({ element }) => {
   
   const user = JSON.parse(localStorage.getItem('user'));
   if (user.role !== 'ADMIN') {
+    return <Navigate to="/home" />;
+  }
+  
+  return element;
+};
+
+// GM Route component to check if user is authenticated and has GENERAL_MANAGER role
+const GMRoute = ({ element }) => {
+  const isAuthenticated = localStorage.getItem('user') !== null;
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (user.role !== 'GENERAL_MANAGER') {
     return <Navigate to="/home" />;
   }
   
@@ -67,6 +90,10 @@ const AppContent = () => {
           <Route path="/careers" element={<LandingPage section="prinsip" />} />
           <Route path="/contact" element={<LandingPage section="contact" />} />
 
+          {/* Public Service pages - accessible to all users */}
+          <Route path="/layanan" element={<PublicServiceListPage />} />
+          <Route path="/layanan/:id" element={<PublicServiceDetailPage />} />
+
           {/* Auth routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -80,6 +107,13 @@ const AppContent = () => {
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<div>Admin Dashboard</div>} />} />
           <Route path="/recruiter/dashboard" element={<ProtectedRoute element={<div>Recruiter Dashboard</div>} />} />
           <Route path="/gm/dashboard" element={<ProtectedRoute element={<div>General Manager Dashboard</div>} />} />
+          
+          {/* GM Routes - Service Publications */}
+          <Route path="/gm/service-publications" element={<GMRoute element={<ServicePublicationsPage />} />} />
+          <Route path="/gm/service-publications/create" element={<GMRoute element={<CreateServicePage />} />} />
+          <Route path="/gm/service-publications/edit/:id" element={<GMRoute element={<EditServicePage />} />} />
+          <Route path="/gm/service-publications/detail/:id" element={<GMRoute element={<ServiceDetailPage />} />} />
+          
           <Route path="/candidate/dashboard" element={<ProtectedRoute element={<div>Candidate Dashboard</div>} />} />
           <Route path="/korlap/dashboard" element={<ProtectedRoute element={<div>Koordinator Lapangan Dashboard</div>} />} />
           
@@ -94,6 +128,7 @@ const AppContent = () => {
 function App() {
   return (
     <ThemeProvider>
+      <NotificationSnackbar />
       <Router>
         <AppContent />
       </Router>

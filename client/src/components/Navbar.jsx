@@ -58,7 +58,6 @@ const getSidebarItems = (role) => {
       return [
         { label: 'Karyawan', icon: <PeopleIcon />, path: '/admin/employees' },
         { label: 'Staf Internal', icon: <PeopleIcon />, path: '/admin/internal-staff' },
-        { label: 'Publikasi Layanan', icon: <BusinessIcon />, path: '/admin/service-publications' },
         { label: 'Publikasi Lowongan', icon: <WorkIcon />, path: '/admin/job-publications' }
       ];
     case 'RECRUITER':
@@ -203,13 +202,17 @@ const Navbar = () => {
   const menuItems = [
     { label: 'Beranda', href: '#home', path: '/home' },
     { label: 'Tentang Kami', href: '#about', path: '/about' },
-    { label: 'Layanan', href: '#services', path: '/services' },
+    { label: 'Layanan', href: '#services', path: '/layanan' },
     { label: 'Karir', href: '#prinsip', path: '/careers' },
     { label: 'Kontak', href: '#contact', path: '/contact' },
   ];
 
   // Use path or href based on login status
   const getMenuItemDestination = (item) => {
+    // Always use path for Layanan, use login-based routing for others
+    if (item.label === 'Layanan') {
+      return item.path;
+    }
     return isLoggedIn ? item.path : item.href;
   };
 
@@ -235,7 +238,7 @@ const Navbar = () => {
       <List>
         {menuItems.map((item) => (
           <ListItem key={item.label} disablePadding>
-            {isLoggedIn ? (
+            {isLoggedIn || item.label === 'Layanan' ? (
               <ListItemButton component={Link} to={item.path}>
                 <ListItemText primary={item.label} />
               </ListItemButton>
@@ -421,9 +424,9 @@ const Navbar = () => {
                     <Button
                       key={item.label}
                       color="inherit"
-                      component={isLoggedIn ? Link : 'a'}
-                      to={isLoggedIn ? item.path : undefined}
-                      href={isLoggedIn ? undefined : item.href}
+                      component={(isLoggedIn || item.label === 'Layanan') ? Link : 'a'}
+                      to={(isLoggedIn || item.label === 'Layanan') ? item.path : undefined}
+                      href={(isLoggedIn || item.label === 'Layanan') ? undefined : item.href}
                       sx={{ 
                         mx: 1,
                         color: scrolled 

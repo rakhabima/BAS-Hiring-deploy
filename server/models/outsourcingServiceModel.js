@@ -11,6 +11,10 @@ const outsourcingServiceSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    serviceType: {
+        type: String,
+        required: true
+    },
     description: {
         type: String,
         required: true
