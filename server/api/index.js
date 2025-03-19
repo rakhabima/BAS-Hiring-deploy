@@ -1,12 +1,11 @@
-// Simplified serverless handler for Vercel
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import express from 'express';
-import serverless from 'serverless-http';
+// CommonJS serverless handler for Vercel
+const express = require('express');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const serverless = require('serverless-http');
 
 // Initialize
-dotenv.config();
+require('dotenv').config();
 const app = express();
 
 // Middleware
@@ -57,6 +56,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Use serverless handler for Vercel
-const handler = serverless(app);
-export default handler; 
+// Export as serverless handler
+module.exports = serverless(app); 
