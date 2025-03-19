@@ -63,4 +63,4 @@ const jobPostingSchema = new mongoose.Schema({
 
 const JobPosting = mongoose.model("JobPosting", jobPostingSchema);
 
-export default JobPosting;
+export default JobPosting; 

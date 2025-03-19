@@ -1,15 +1,15 @@
 import { ArrowBack, Business, LocationOn, MonetizationOn, People, Work as WorkIcon } from '@mui/icons-material';
 import {
-    Box,
-    Button,
-    Chip,
-    CircularProgress,
-    Container,
-    Divider,
-    Grid,
-    IconButton,
-    Paper,
-    Typography,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Container,
+  Divider,
+  Grid,
+  IconButton,
+  Paper,
+  Typography,
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -174,7 +174,7 @@ const PublicServiceDetailPage = () => {
                 color="primary"
                 size="large"
                 fullWidth
-                onClick={() => window.location.href='mailto:info@barakahamanahsentosa.com?subject=Permintaan Layanan: ' + service.serviceName}
+                onClick={() => navigate('/layanan/request')}
               >
                 Hubungi Kami
               </Button>

@@ -1,3 +1,4 @@
+import OutsourcingRequest from "../models/outsourcingRequestModel.js";
 import { createOutsourcingService, getAllOutsourcingServices, getOutsourcingServiceById, softDeleteOutsourcingService, updateOutsourcingService } from "../services/outsourcingService.js";
 
 export const createOutsourcing = async (req, res) => {
@@ -174,4 +175,47 @@ export const deleteOutsourcing = async (req, res) => {
             error: error.message
         });
     }
+};
+
+export const createOutsourcingRequest = async (req, res) => {
+  try {
+    // Extract fields from request body
+    const { vendorName, contactInfo, email, location, serviceType, message, quantity = 1 } = req.body;
+
+    // Validate input
+    if (!vendorName || !contactInfo || !email || !location || !message) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Semua field harus diisi' 
+      });
+    }
+
+    // Create outsourcing request in database
+    const outsourcingRequest = new OutsourcingRequest({
+      vendorName,
+      contactInfo,
+      email,
+      location,
+      message,
+      serviceType,
+      quantity: parseInt(quantity) || 1,
+      submission: new Date(), // Use current date as submission date
+      status: "PENDING"
+    });
+
+    await outsourcingRequest.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Permintaan layanan outsourcing berhasil dibuat',
+      data: outsourcingRequest
+    });
+  } catch (error) {
+    console.error('Error creating outsourcing request:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat membuat permintaan layanan',
+      error: error.message
+    });
+  }
 };

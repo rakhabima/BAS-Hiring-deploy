@@ -1,6 +1,7 @@
 import { Delete as DeleteIcon, LocationOn, Search as SearchIcon, Work as WorkIcon } from '@mui/icons-material';
 import {
   Box,
+  Button,
   Card,
   CardActionArea,
   CardContent,
@@ -125,6 +126,24 @@ const PublicServiceListPage = () => {
         <Typography variant="subtitle1" color="text.secondary">
           Lihat berbagai layanan outsourcing yang kami sediakan untuk memenuhi kebutuhan bisnis Anda
         </Typography>
+      </Box>
+
+      {/* Request Button */}
+      <Box mb={4} display="flex" justifyContent="flex-end">
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          onClick={() => navigate('/layanan/request')}
+          sx={{ 
+            px: 3,
+            py: 1,
+            borderRadius: '8px',
+            boxShadow: theme.shadows[3]
+          }}
+        >
+          Ajukan Permintaan Layanan
+        </Button>
       </Box>
 
       {/* Search and filters */}

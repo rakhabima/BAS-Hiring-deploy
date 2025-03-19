@@ -371,6 +371,18 @@ export const outsourcingService = {
     }
   },
   
+  // Submit outsourcing service request
+  submitOutsourcingRequest: async (requestData) => {
+    try {
+      const response = await api.post(logEndpoint('/outsource/request'), requestData);
+      showNotification('Permintaan layanan outsourcing berhasil dikirim', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengirim permintaan layanan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
   // Update an existing outsourcing service
   updateOutsourcingService: async (uuid, serviceData) => {
     try {

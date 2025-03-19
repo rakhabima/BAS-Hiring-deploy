@@ -16,6 +16,11 @@ import {
   Box,
   Button,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   Drawer,
   IconButton,
@@ -103,6 +108,7 @@ const Navbar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -161,8 +167,19 @@ const Navbar = () => {
     setAnchorEl(null);
   };
 
+  const confirmLogout = () => {
+    setLogoutDialogOpen(true);
+    // Close any open menus
+    handleMenuClose();
+  };
+
+  const cancelLogout = () => {
+    setLogoutDialogOpen(false);
+  };
+
   const handleLogout = async () => {
     try {
+      setLogoutDialogOpen(false);
       await authService.logout();
       // Clear any stored user data
       localStorage.removeItem('user');
@@ -262,7 +279,7 @@ const Navbar = () => {
         {/* Logout button for mobile (only if logged in) */}
         {isLoggedIn && (
           <ListItem disablePadding>
-            <ListItemButton onClick={handleLogout}>
+            <ListItemButton onClick={confirmLogout}>
               <ListItemText primary="Keluar" />
               <LogoutIcon />
             </ListItemButton>
@@ -326,7 +343,7 @@ const Navbar = () => {
           variant="outlined" 
           fullWidth 
           startIcon={<LogoutIcon />}
-          onClick={handleLogout}
+          onClick={confirmLogout}
           sx={{ mt: 1 }}
         >
           Keluar
@@ -373,7 +390,7 @@ const Navbar = () => {
       onClose={handleMenuClose}
     >
       <MenuItem component={Link} to={getDashboardLink()} onClick={handleMenuClose}>Dashboard</MenuItem>
-      <MenuItem onClick={handleLogout}>Keluar</MenuItem>
+      <MenuItem onClick={confirmLogout}>Keluar</MenuItem>
     </Menu>
   );
 
@@ -536,6 +553,27 @@ const Navbar = () => {
       {renderMobileMenu}
       {renderMenu}
       {renderSidebar}
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={cancelLogout}
+      >
+        <DialogTitle>Konfirmasi Keluar</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Apakah Anda yakin ingin keluar dari akun Anda?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelLogout} color="inherit">
+            Batal
+          </Button>
+          <Button onClick={handleLogout} color="primary" variant="contained">
+            Ya, Keluar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

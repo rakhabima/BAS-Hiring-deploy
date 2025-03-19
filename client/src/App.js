@@ -13,6 +13,9 @@ import ServicePublicationsPage from './pages/admin/ServicePublicationsPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import OutsourcingRequestPage from './pages/public/OutsourcingRequestPage';
+import PublicJobDetailPage from './pages/public/PublicJobDetailPage';
+import PublicJobListPage from './pages/public/PublicJobListPage';
 import PublicServiceDetailPage from './pages/PublicServiceDetailPage';
 import PublicServiceListPage from './pages/PublicServiceListPage';
 import CreateJobPage from './pages/recruiter/CreateJobPage';
@@ -153,8 +156,9 @@ const AppContent = () => {
           <Route path="/contact" element={<LandingPage section="contact" />} />
 
           {/* Public Service pages - accessible to all users */}
-          <Route path="/layanan" element={<PublicServiceListPage />} />
+          <Route path="/layanan/request" element={<OutsourcingRequestPage />} />
           <Route path="/layanan/:id" element={<PublicServiceDetailPage />} />
+          <Route path="/layanan" element={<PublicServiceListPage />} />
 
           {/* Auth routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -190,6 +194,10 @@ const AppContent = () => {
           <Route path="/recruiter/job-publications/create" element={<RecruiterRoute element={<CreateJobPage />} />} />
           <Route path="/recruiter/job-publications/edit/:id" element={<RecruiterRoute element={<EditJobPage />} />} />
           <Route path="/recruiter/job-publications/:id" element={<RecruiterRoute element={<JobDetailPage />} />} />
+          
+          {/* Public Job Vacancy Routes */}
+          <Route path="/lowongan" element={<PublicJobListPage />} />
+          <Route path="/lowongan/:id" element={<PublicJobDetailPage />} />
           
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
