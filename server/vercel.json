@@ -4,15 +4,6 @@
   "outputDirectory": "api",
   "installCommand": "npm install",
   "framework": null,
-  "builds": [
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["**"]
-      }
-    }
-  ],
   "routes": [
     {
       "src": "/(.*)",
