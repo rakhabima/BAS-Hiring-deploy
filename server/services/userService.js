@@ -32,7 +32,9 @@ export const createUserService = async (userData) => {
 // Mengambil data seluruh user yang ada
 export const getAllUsersService = async () => {
     try {
-        const users = await User.find({}, { password: 0 }); // Exclude password field
+        const users = await User.find(
+            { isDeleted: false },
+            { password: 0 }); // Exclude password field
         return users;
     } catch (error) {
         throw error;
@@ -52,8 +54,8 @@ export const getUserByUUIDService = async (uuid) => {
     }
 };
 
-// Meng-update data user
-export const updateUserService = async (userId, updateData) => {
+// Meng-update data user berdasarkan UUID
+export const updateUserService = async (uuid, updateData) => {
     try {
         // Jika ada update password, hash password baru
         if (updateData.password) {
@@ -61,8 +63,8 @@ export const updateUserService = async (userId, updateData) => {
             updateData.password = await bcrypt.hash(updateData.password, salt);
         }
 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
+        const updatedUser = await User.findOneAndUpdate(
+            { uuid },  // Use uuid for finding the user
             { $set: updateData },
             { new: true, runValidators: true }
         ).select("-password");
@@ -77,33 +79,23 @@ export const updateUserService = async (userId, updateData) => {
     }
 };
 
+
 // Menghapus user berdasarkan UUID
-export const deleteUserService = async (userId) => {
+export const deleteUserService = async (uuid) => {
     try {
-        const result = await User.findByIdAndDelete(userId);
+        const result = await User.findOneAndUpdate(
+            { uuid },
+            {
+                isDeleted: true,
+            },
+            { new: true }
+        );
+
         if (!result) {
             throw new Error("User tidak ditemukan");
         }
+
         return { message: "User berhasil dihapus" };
-    } catch (error) {
-        throw error;
-    }
-};
-
-// Meng-update status user
-export const updateUserStatusService = async (userId, status) => {
-    try {
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { $set: { status } },
-            { new: true }
-        ).select("-password");
-
-        if (!updatedUser) {
-            throw new Error("User tidak ditemukan");
-        }
-
-        return updatedUser;
     } catch (error) {
         throw error;
     }

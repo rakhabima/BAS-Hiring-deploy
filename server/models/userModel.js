@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema({
     status: {
         type: Boolean,
         default: true
+    }, 
+    isDeleted: {
+        type: Boolean,
+        default: false
     }
 });
 

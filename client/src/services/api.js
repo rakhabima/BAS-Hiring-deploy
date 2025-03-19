@@ -285,7 +285,7 @@ export const userService = {
   getUserByUUID: async (uuid) => {
     try {
       console.log(`Fetching user with UUID: ${uuid}`);
-      const response = await api.get(logEndpoint(`/user/uuid/${uuid}`));
+      const response = await api.get(logEndpoint(`/user/${uuid}`));
       console.log('Fetched user:', response.data);
       return response.data;
     } catch (error) {
@@ -319,19 +319,6 @@ export const userService = {
       throw error;
     }
   },
-
-  // Update user status
-  updateUserStatus: async (id, statusData) => {
-    try {
-      console.log(`Updating status for user with ID: ${id}`, statusData);
-      const response = await api.patch(logEndpoint(`/user/${id}/status`), statusData);
-      console.log('User status update successful:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating status for user with ID ${id}:`, error);
-      throw error;
-    }
-  }
 };
 
 // Outsourcing services

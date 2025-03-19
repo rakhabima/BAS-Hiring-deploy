@@ -23,6 +23,9 @@ import EditJobPage from './pages/recruiter/EditJobPage';
 import JobDetailPage from './pages/recruiter/JobDetailPage';
 import JobPublicationsPage from './pages/recruiter/JobPublicationsPage';
 import RegisterPage from './pages/RegisterPage';
+import CreateAccountPage from './pages/admin/CreateAccountPage';
+import InternalStaffPage from './pages/admin/InternalStaffPage';
+import UserDetailPage from './pages/admin/UserDetailPage';
 
 // ScrollToTop component that handles URL hash fragments for scrolling to sections
 function ScrollToTop() {
@@ -168,6 +171,7 @@ const AppContent = () => {
           {/* Admin routes */}
           <Route path="/admin/internal-staff" element={<AdminRoute element={<InternalStaffPage />} />} />
           <Route path="/admin/create-account" element={<AdminRoute element={<CreateAccountPage />} />} />
+          <Route path="/admin/staff/:uuid" element={<AdminRoute element={<UserDetailPage />} />} />
           
           {/* Protected Dashboard routes */}
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<div>Admin Dashboard</div>} />} />
