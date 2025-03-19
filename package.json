@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node monolithic.js",
-    "build": "cd client && npm install && npm run build",
+    "build": "echo 'Installing client dependencies' && cd client && npm install --legacy-peer-deps && echo 'Building client' && CI=false npm run build && cd .. && echo 'Build completed'",
     "dev": "nodemon monolithic.js"
   },
   "engines": {
