@@ -16,6 +16,11 @@ import {
   Box,
   Button,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   Drawer,
   IconButton,
@@ -58,7 +63,6 @@ const getSidebarItems = (role) => {
       return [
         { label: 'Karyawan', icon: <PeopleIcon />, path: '/admin/employees' },
         { label: 'Staf Internal', icon: <PeopleIcon />, path: '/admin/internal-staff' },
-        { label: 'Publikasi Layanan', icon: <BusinessIcon />, path: '/admin/service-publications' },
         { label: 'Publikasi Lowongan', icon: <WorkIcon />, path: '/admin/job-publications' }
       ];
     case 'RECRUITER':
@@ -104,6 +108,7 @@ const Navbar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -162,8 +167,19 @@ const Navbar = () => {
     setAnchorEl(null);
   };
 
+  const confirmLogout = () => {
+    setLogoutDialogOpen(true);
+    // Close any open menus
+    handleMenuClose();
+  };
+
+  const cancelLogout = () => {
+    setLogoutDialogOpen(false);
+  };
+
   const handleLogout = async () => {
     try {
+      setLogoutDialogOpen(false);
       await authService.logout();
       // Clear any stored user data
       localStorage.removeItem('user');
@@ -202,14 +218,22 @@ const Navbar = () => {
 
   const menuItems = [
     { label: 'Beranda', href: '#home', path: '/home' },
-    { label: 'Tentang Kami', href: '#about', path: '/about' },
-    { label: 'Layanan', href: '#services', path: '/services' },
-    { label: 'Karir', href: '#prinsip', path: '/careers' },
-    { label: 'Kontak', href: '#contact', path: '/contact' },
+    { label: 'Tentang Kami', href: '#about', path: '/home#about' },
+    { label: 'Layanan', href: '#services', path: '/layanan' },
+    { label: 'Karir', href: '#prinsip', path: '/lowongan' },
+    { label: 'Kontak', href: '#contact', path: '/home#contact' },
   ];
 
   // Use path or href based on login status
   const getMenuItemDestination = (item) => {
+    // Always use path for Layanan and Karir, use login-based routing for others
+    if (item.label === 'Layanan' || item.label === 'Karir') {
+      return item.path;
+    }
+    // For home-based links (Beranda, Tentang Kami, Kontak), always use path to ensure proper navigation
+    if (item.label === 'Beranda' || item.label === 'Tentang Kami' || item.label === 'Kontak') {
+      return item.path;
+    }
     return isLoggedIn ? item.path : item.href;
   };
 
@@ -235,15 +259,9 @@ const Navbar = () => {
       <List>
         {menuItems.map((item) => (
           <ListItem key={item.label} disablePadding>
-            {isLoggedIn ? (
-              <ListItemButton component={Link} to={item.path}>
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            ) : (
-              <ListItemButton component="a" href={item.href}>
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            )}
+            <ListItemButton component={Link} to={getMenuItemDestination(item)}>
+              <ListItemText primary={item.label} />
+            </ListItemButton>
           </ListItem>
         ))}
         {/* Login/Dashboard button for mobile */}
@@ -261,7 +279,7 @@ const Navbar = () => {
         {/* Logout button for mobile (only if logged in) */}
         {isLoggedIn && (
           <ListItem disablePadding>
-            <ListItemButton onClick={handleLogout}>
+            <ListItemButton onClick={confirmLogout}>
               <ListItemText primary="Keluar" />
               <LogoutIcon />
             </ListItemButton>
@@ -325,7 +343,7 @@ const Navbar = () => {
           variant="outlined" 
           fullWidth 
           startIcon={<LogoutIcon />}
-          onClick={handleLogout}
+          onClick={confirmLogout}
           sx={{ mt: 1 }}
         >
           Keluar
@@ -372,7 +390,7 @@ const Navbar = () => {
       onClose={handleMenuClose}
     >
       <MenuItem component={Link} to={getDashboardLink()} onClick={handleMenuClose}>Dashboard</MenuItem>
-      <MenuItem onClick={handleLogout}>Keluar</MenuItem>
+      <MenuItem onClick={confirmLogout}>Keluar</MenuItem>
     </Menu>
   );
 
@@ -421,9 +439,8 @@ const Navbar = () => {
                     <Button
                       key={item.label}
                       color="inherit"
-                      component={isLoggedIn ? Link : 'a'}
-                      to={isLoggedIn ? item.path : undefined}
-                      href={isLoggedIn ? undefined : item.href}
+                      component={Link}
+                      to={getMenuItemDestination(item)}
                       sx={{ 
                         mx: 1,
                         color: scrolled 
@@ -536,6 +553,27 @@ const Navbar = () => {
       {renderMobileMenu}
       {renderMenu}
       {renderSidebar}
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={cancelLogout}
+      >
+        <DialogTitle>Konfirmasi Keluar</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Apakah Anda yakin ingin keluar dari akun Anda?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelLogout} color="inherit">
+            Batal
+          </Button>
+          <Button onClick={handleLogout} color="primary" variant="contained">
+            Ya, Keluar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

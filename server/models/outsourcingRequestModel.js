@@ -23,9 +23,9 @@ const outsourcingRequestSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    schedule: {
+    submission: {
         type: Date,
-        required: true
+        default: Date.now
     },
     message: {
         type: String

@@ -11,6 +11,10 @@ const outsourcingServiceSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    serviceType: {
+        type: String,
+        required: true
+    },
     description: {
         type: String,
         required: true
@@ -36,6 +40,14 @@ const outsourcingServiceSchema = new mongoose.Schema({
     },
     price: {
         type: Number
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deletedAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true

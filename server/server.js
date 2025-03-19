@@ -9,7 +9,6 @@ import authRoute from "./routes/auth.js";
 import guestRoute from "./routes/guest.js";
 import jobVacancyRoute from "./routes/jobVacancy.js";
 import outsourceRoute from "./routes/outsourcing.js";
-import userRoute from "./routes/user.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,7 +38,6 @@ app.use("/auth", authRoute);
 app.use("/guest", guestRoute);
 app.use("/jobVacancy", jobVacancyRoute);
 app.use("/outsource", outsourceRoute);
-app.use("/user", userRoute);
 
 // Middleware penanganan error
 app.use((err, req, res, next) => {

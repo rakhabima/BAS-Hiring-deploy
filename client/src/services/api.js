@@ -1,5 +1,16 @@
 import axios from 'axios';
 
+// Create custom event types for notifications
+export const SHOW_NOTIFICATION = 'SHOW_NOTIFICATION';
+
+// Helper function to show notifications
+const showNotification = (message, severity) => {
+  const event = new CustomEvent(SHOW_NOTIFICATION, {
+    detail: { message, severity }
+  });
+  window.dispatchEvent(event);
+};
+
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5555';
 
 console.log('API URL configured as:', API_URL);
@@ -44,8 +55,24 @@ export const authService = {
         ...userData,
         isPublicRegistration: true // Ensure CANDIDATE role
       });
+      
+      // Show success notification
+      showNotification('Registrasi berhasil! Silakan login.', 'success');
+      
       return response.data;
     } catch (error) {
+      // Show error notification
+      let errorMsg = 'Registrasi gagal. Silakan coba lagi.';
+      
+      if (error.response) {
+        if (error.response.status === 409) {
+          errorMsg = 'Email sudah terdaftar. Silakan gunakan email lain.';
+        } else if (error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+      }
+      
+      showNotification(errorMsg, 'error');
       throw error;
     }
   },
@@ -74,7 +101,10 @@ export const authService = {
 
       // Proceed with real login
       const response = await api.post(logEndpoint('/auth/login'), credentials);
-
+      
+      // Show success notification
+      showNotification('Login berhasil! Selamat datang.', 'success');
+      
       // Ensure user data is properly formatted
       // If server response doesn't match expected format, adapt it here
       if (response.data && !response.data.user && response.data.uuid) {
@@ -93,7 +123,18 @@ export const authService = {
       console.log('API login response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('API login error:', error.response || error);
+      // Show error notification
+      let errorMsg = 'Login gagal. Silakan coba lagi.';
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMsg = 'Email atau kata sandi salah.';
+        } else if (error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+      }
+      
+      showNotification(errorMsg, 'error');
       throw error;
     }
   },
@@ -109,14 +150,17 @@ export const authService = {
 
       // Set role to GUEST
       localStorage.setItem('userRole', 'GUEST');
-
+      
       // Clear any session cookies by setting them to expire
       document.cookie.split(";").forEach((c) => {
         document.cookie = c
           .replace(/^ +/, "")
           .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
-
+      
+      // Show success notification
+      showNotification('Logout berhasil. Sampai jumpa!', 'success');
+      
       return response.data;
     } catch (error) {
       // Even if API call fails, still clear client-side data
@@ -129,7 +173,9 @@ export const authService = {
           .replace(/^ +/, "")
           .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
-
+      
+      // Show error notification
+      showNotification('Terjadi kesalahan saat logout.', 'error');
       throw error;
     }
   },
@@ -273,6 +319,249 @@ export const userService = {
       throw error;
     }
   },
+};
+
+// Outsourcing services
+export const outsourcingService = {
+  // Create a new outsourcing service publication
+  createOutsourcingService: async (serviceData) => {
+    try {
+      const formData = new FormData();
+      
+      // Append text fields
+      for (const key in serviceData) {
+        if (key !== 'imageUrl' && serviceData[key] !== undefined) {
+          // Convert boolean values to strings for FormData
+          if (typeof serviceData[key] === 'boolean') {
+            formData.append(key, serviceData[key].toString());
+          } else {
+            formData.append(key, serviceData[key]);
+          }
+        }
+      }
+      
+      // Append file if it exists
+      if (serviceData.imageUrl instanceof File) {
+        formData.append('imageUrl', serviceData.imageUrl);
+      }
+      
+      const response = await api.post(logEndpoint('/outsource/create'), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      showNotification('Layanan outsourcing berhasil dibuat', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal membuat layanan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Submit outsourcing service request
+  submitOutsourcingRequest: async (requestData) => {
+    try {
+      const response = await api.post(logEndpoint('/outsource/request'), requestData);
+      showNotification('Permintaan layanan outsourcing berhasil dikirim', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengirim permintaan layanan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Update an existing outsourcing service
+  updateOutsourcingService: async (uuid, serviceData) => {
+    try {
+      const formData = new FormData();
+      
+      // Log the incoming data for debugging
+      console.log('Updating service with data:', JSON.stringify(serviceData));
+      
+      // Append text fields
+      for (const key in serviceData) {
+        if (key !== 'imageUrl' && serviceData[key] !== undefined) {
+          // Explicitly handle availabilityStatus to ensure it's properly converted
+          if (key === 'availabilityStatus') {
+            const boolValue = serviceData[key] === true || serviceData[key] === 'true';
+            formData.append(key, boolValue.toString());
+            console.log(`Setting availabilityStatus in form: ${boolValue} (${typeof boolValue})`);
+          }
+          // Handle other boolean values
+          else if (typeof serviceData[key] === 'boolean') {
+            formData.append(key, serviceData[key].toString());
+          } else {
+            formData.append(key, serviceData[key]);
+          }
+        }
+      }
+      
+      // Append file if it exists
+      if (serviceData.imageUrl instanceof File) {
+        formData.append('imageUrl', serviceData.imageUrl);
+      }
+      
+      // Log form data entries for debugging
+      for (let pair of formData.entries()) {
+        console.log(`Form data: ${pair[0]}: ${pair[1]}`);
+      }
+      
+      const response = await api.put(logEndpoint(`/outsource/update/${uuid}`), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      showNotification('Layanan outsourcing berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui layanan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get all outsourcing services
+  getAllOutsourcingServices: async () => {
+    try {
+      const response = await api.get(logEndpoint('/outsource/all'));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil daftar layanan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Delete an outsourcing service
+  deleteOutsourcingService: async (uuid) => {
+    try {
+      const response = await api.delete(logEndpoint(`/outsource/delete/${uuid}`));
+      showNotification('Layanan outsourcing berhasil dihapus', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal menghapus layanan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  }
+};
+
+// Job Vacancy services
+export const jobVacancyService = {
+  // Create a new job vacancy
+  createJobVacancy: async (jobData) => {
+    try {
+      const formData = new FormData();
+      
+      // Append text fields
+      for (const key in jobData) {
+        if (key !== 'imageUrl' && jobData[key] !== undefined) {
+          formData.append(key, jobData[key]);
+        }
+      }
+      
+      // Append file if it exists
+      if (jobData.imageUrl instanceof File) {
+        formData.append('imageUrl', jobData.imageUrl);
+      }
+      
+      const response = await api.post(logEndpoint('/jobVacancy/create'), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      showNotification('Lowongan pekerjaan berhasil dibuat', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal membuat lowongan pekerjaan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Update an existing job vacancy
+  updateJobVacancy: async (uuid, jobData) => {
+    try {
+      const formData = new FormData();
+      
+      // Append text fields
+      for (const key in jobData) {
+        if (key !== 'imageUrl' && jobData[key] !== undefined) {
+          formData.append(key, jobData[key]);
+        }
+      }
+      
+      // Append file if it exists
+      if (jobData.imageUrl instanceof File) {
+        formData.append('imageUrl', jobData.imageUrl);
+      }
+      
+      const response = await api.put(logEndpoint(`/jobVacancy/update/${uuid}`), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      showNotification('Lowongan pekerjaan berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui lowongan pekerjaan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get all job vacancies
+  getAllJobVacancies: async () => {
+    try {
+      const response = await api.get(logEndpoint('/jobVacancy/all'));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil daftar lowongan pekerjaan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get a specific job vacancy by ID
+  getJobVacancyById: async (uuid) => {
+    try {
+      console.log(`Fetching job vacancy details for ID: ${uuid}`);
+      const response = await api.get(logEndpoint(`/jobVacancy/${uuid}`));
+      
+      // Add additional logging to debug
+      console.log('Job vacancy fetch response:', response.data);
+      
+      // Validate response data - handle both potential response formats
+      if (!response.data) {
+        console.warn('Empty response from job vacancy API');
+        return { data: null };
+      }
+      
+      // Some APIs might return data directly, others might nest it in a data property
+      if (response.data.data) {
+        return response.data;
+      } else if (response.data) {
+        // If the data is directly in response.data, wrap it
+        return { data: response.data };
+      }
+      
+      return { data: null };
+    } catch (error) {
+      console.error('Error fetching job vacancy details:', error);
+      console.error('Response:', error.response?.data);
+      console.error('Status:', error.response?.status);
+      
+      // Don't show notification for this error as it might be in a public page
+      // but still throw the error for component handling
+      throw error;
+    }
+  },
+  
+  // Delete a job vacancy
+  deleteJobVacancy: async (uuid) => {
+    try {
+      const response = await api.delete(logEndpoint(`/jobVacancy/delete/${uuid}`));
+      showNotification('Lowongan pekerjaan berhasil dihapus', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal menghapus lowongan pekerjaan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  }
 };
 
 export default api;
