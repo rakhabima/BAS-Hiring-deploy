@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 5000;
 // CORS configuration for Vercel frontend
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "https://bas-hiring.vercel.app",
+    origin: process.env.CLIENT_URL || "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
@@ -26,10 +26,7 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// Connect to MongoDB at startup (Railway has persistent connections)
-connectDB();
-
-// Health check route
+// Health check route - MUST be before DB connection to avoid healthcheck failures
 app.get("/", (req, res) => {
   res.status(200).json({ 
     status: "ok", 
@@ -37,6 +34,14 @@ app.get("/", (req, res) => {
     environment: process.env.NODE_ENV || 'development'
   });
 });
+
+// Connect to MongoDB after healthcheck route is defined
+try {
+  connectDB();
+} catch (error) {
+  console.error("Initial MongoDB connection error:", error);
+  // Continue server startup even if DB connection fails
+}
 
 // Routes
 app.use("/auth", authRoute);

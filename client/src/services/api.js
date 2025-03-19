@@ -11,19 +11,23 @@ const showNotification = (message, severity) => {
   window.dispatchEvent(event);
 };
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5555';
+// Determine base URL - use relative path if monolithic deployment, or environment variable
+const isMonolithicDeployment = window.location.hostname.includes('railway.app');
+const API_BASE_URL = isMonolithicDeployment 
+  ? '/api' 
+  : process.env.REACT_APP_API_URL || 'http://localhost:5555';
 
-console.log('API URL configured as:', API_URL);
+console.log('API URL configured as:', API_BASE_URL);
 
 // Helper to log API URLs for debugging
 const logEndpoint = (endpoint) => {
-  console.log(`API call to: ${API_URL}${endpoint}`);
+  console.log(`API call to: ${API_BASE_URL}${endpoint}`);
   return endpoint;
 };
 
 // Create an axios instance with default config
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   withCredentials: true, // Important for cookies
   headers: {
     'Content-Type': 'application/json',
