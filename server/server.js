@@ -14,10 +14,10 @@ import userRoute from "./routes/user.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS untuk semua route
+// CORS configuration for Vercel frontend
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: process.env.CLIENT_URL || "https://bas-hiring.vercel.app",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
@@ -26,32 +26,24 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// Koneksi ke MongoDB - only connect for routes that need it
-// Don't connect on initial server startup
-// connectDB();
+// Connect to MongoDB at startup (Railway has persistent connections)
+connectDB();
 
 // Health check route
 app.get("/", (req, res) => {
-  res.status(200).json({ status: "ok", message: "BAS Hiring API is running" });
+  res.status(200).json({ 
+    status: "ok", 
+    message: "BAS Hiring API is running on Railway",
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
-// Connect to MongoDB before handling authenticated routes
-const dbMiddleware = async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (error) {
-    console.error("Database connection error:", error);
-    res.status(500).json({ status: "error", message: "Database connection failed" });
-  }
-};
-
 // Routes
-app.use("/auth", dbMiddleware, authRoute);
-app.use("/guest", dbMiddleware, guestRoute);
-app.use("/jobVacancy", dbMiddleware, jobVacancyRoute);
-app.use("/outsource", dbMiddleware, outsourceRoute);
-app.use("/user", dbMiddleware, userRoute);
+app.use("/auth", authRoute);
+app.use("/guest", guestRoute);
+app.use("/jobVacancy", jobVacancyRoute);
+app.use("/outsource", outsourceRoute);
+app.use("/user", userRoute);
 
 // Middleware penanganan error
 app.use((err, req, res, next) => {
