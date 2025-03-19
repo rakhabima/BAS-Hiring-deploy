@@ -201,16 +201,20 @@ const Navbar = () => {
 
   const menuItems = [
     { label: 'Beranda', href: '#home', path: '/home' },
-    { label: 'Tentang Kami', href: '#about', path: '/about' },
+    { label: 'Tentang Kami', href: '#about', path: '/home#about' },
     { label: 'Layanan', href: '#services', path: '/layanan' },
-    { label: 'Karir', href: '#prinsip', path: '/careers' },
-    { label: 'Kontak', href: '#contact', path: '/contact' },
+    { label: 'Karir', href: '#prinsip', path: '/lowongan' },
+    { label: 'Kontak', href: '#contact', path: '/home#contact' },
   ];
 
   // Use path or href based on login status
   const getMenuItemDestination = (item) => {
-    // Always use path for Layanan, use login-based routing for others
-    if (item.label === 'Layanan') {
+    // Always use path for Layanan and Karir, use login-based routing for others
+    if (item.label === 'Layanan' || item.label === 'Karir') {
+      return item.path;
+    }
+    // For home-based links (Beranda, Tentang Kami, Kontak), always use path to ensure proper navigation
+    if (item.label === 'Beranda' || item.label === 'Tentang Kami' || item.label === 'Kontak') {
       return item.path;
     }
     return isLoggedIn ? item.path : item.href;
@@ -238,15 +242,9 @@ const Navbar = () => {
       <List>
         {menuItems.map((item) => (
           <ListItem key={item.label} disablePadding>
-            {isLoggedIn || item.label === 'Layanan' ? (
-              <ListItemButton component={Link} to={item.path}>
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            ) : (
-              <ListItemButton component="a" href={item.href}>
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            )}
+            <ListItemButton component={Link} to={getMenuItemDestination(item)}>
+              <ListItemText primary={item.label} />
+            </ListItemButton>
           </ListItem>
         ))}
         {/* Login/Dashboard button for mobile */}
@@ -424,9 +422,8 @@ const Navbar = () => {
                     <Button
                       key={item.label}
                       color="inherit"
-                      component={(isLoggedIn || item.label === 'Layanan') ? Link : 'a'}
-                      to={(isLoggedIn || item.label === 'Layanan') ? item.path : undefined}
-                      href={(isLoggedIn || item.label === 'Layanan') ? undefined : item.href}
+                      component={Link}
+                      to={getMenuItemDestination(item)}
                       sx={{ 
                         mx: 1,
                         color: scrolled 

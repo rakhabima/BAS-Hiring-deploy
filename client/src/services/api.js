@@ -444,4 +444,125 @@ export const outsourcingService = {
   }
 };
 
+// Job Vacancy services
+export const jobVacancyService = {
+  // Create a new job vacancy
+  createJobVacancy: async (jobData) => {
+    try {
+      const formData = new FormData();
+      
+      // Append text fields
+      for (const key in jobData) {
+        if (key !== 'imageUrl' && jobData[key] !== undefined) {
+          formData.append(key, jobData[key]);
+        }
+      }
+      
+      // Append file if it exists
+      if (jobData.imageUrl instanceof File) {
+        formData.append('imageUrl', jobData.imageUrl);
+      }
+      
+      const response = await api.post(logEndpoint('/jobVacancy/create'), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      showNotification('Lowongan pekerjaan berhasil dibuat', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal membuat lowongan pekerjaan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Update an existing job vacancy
+  updateJobVacancy: async (uuid, jobData) => {
+    try {
+      const formData = new FormData();
+      
+      // Append text fields
+      for (const key in jobData) {
+        if (key !== 'imageUrl' && jobData[key] !== undefined) {
+          formData.append(key, jobData[key]);
+        }
+      }
+      
+      // Append file if it exists
+      if (jobData.imageUrl instanceof File) {
+        formData.append('imageUrl', jobData.imageUrl);
+      }
+      
+      const response = await api.put(logEndpoint(`/jobVacancy/update/${uuid}`), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      showNotification('Lowongan pekerjaan berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui lowongan pekerjaan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get all job vacancies
+  getAllJobVacancies: async () => {
+    try {
+      const response = await api.get(logEndpoint('/jobVacancy/all'));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil daftar lowongan pekerjaan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get a specific job vacancy by ID
+  getJobVacancyById: async (uuid) => {
+    try {
+      console.log(`Fetching job vacancy details for ID: ${uuid}`);
+      const response = await api.get(logEndpoint(`/jobVacancy/${uuid}`));
+      
+      // Add additional logging to debug
+      console.log('Job vacancy fetch response:', response.data);
+      
+      // Validate response data - handle both potential response formats
+      if (!response.data) {
+        console.warn('Empty response from job vacancy API');
+        return { data: null };
+      }
+      
+      // Some APIs might return data directly, others might nest it in a data property
+      if (response.data.data) {
+        return response.data;
+      } else if (response.data) {
+        // If the data is directly in response.data, wrap it
+        return { data: response.data };
+      }
+      
+      return { data: null };
+    } catch (error) {
+      console.error('Error fetching job vacancy details:', error);
+      console.error('Response:', error.response?.data);
+      console.error('Status:', error.response?.status);
+      
+      // Don't show notification for this error as it might be in a public page
+      // but still throw the error for component handling
+      throw error;
+    }
+  },
+  
+  // Delete a job vacancy
+  deleteJobVacancy: async (uuid) => {
+    try {
+      const response = await api.delete(logEndpoint(`/jobVacancy/delete/${uuid}`));
+      showNotification('Lowongan pekerjaan berhasil dihapus', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal menghapus lowongan pekerjaan: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  }
+};
+
 export default api;

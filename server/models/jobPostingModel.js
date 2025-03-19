@@ -33,6 +33,10 @@ const jobPostingSchema = new mongoose.Schema({
         enum: ["FULL_TIME", "PART_TIME", "CONTRACT"],
         required: true
     },
+    jobPosition: {
+        type: String,
+        required: true
+    },
     deadline: {
         type: Date,
         required: true
@@ -41,6 +45,17 @@ const jobPostingSchema = new mongoose.Schema({
         type: String,
         ref: "User",
         required: true
+    },
+    imageUrl: {
+        type: String
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deletedAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true
@@ -48,4 +63,4 @@ const jobPostingSchema = new mongoose.Schema({
 
 const JobPosting = mongoose.model("JobPosting", jobPostingSchema);
 
-export default JobPosting; 
+export default JobPosting;

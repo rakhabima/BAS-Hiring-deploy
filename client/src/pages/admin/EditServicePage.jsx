@@ -1,18 +1,22 @@
 import { ArrowBack, CloudUpload } from '@mui/icons-material';
 import {
-    Box,
-    Button,
-    CircularProgress,
-    Container,
-    FormControl,
-    Grid,
-    IconButton,
-    InputLabel,
-    MenuItem,
-    Paper,
-    Select,
-    TextField,
-    Typography,
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  Grid,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  TextField,
+  Typography,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import React, { useEffect, useState } from 'react';
@@ -58,6 +62,7 @@ const EditServicePage = () => {
   });
   const [imagePreview, setImagePreview] = useState('/assets/baslogo.png');
   const [errors, setErrors] = useState({});
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   // Check user role
   useEffect(() => {
@@ -180,6 +185,11 @@ const EditServicePage = () => {
       return;
     }
 
+    // Open confirmation dialog instead of saving immediately
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmSave = async () => {
     setLoading(true);
 
     try {
@@ -190,6 +200,7 @@ const EditServicePage = () => {
       console.error('Error updating service:', error);
     } finally {
       setLoading(false);
+      setConfirmDialogOpen(false);
     }
   };
 
@@ -365,6 +376,30 @@ const EditServicePage = () => {
             </Grid>
           </Grid>
         </form>
+
+        {/* Confirmation Dialog */}
+        <Dialog
+          open={confirmDialogOpen}
+          onClose={() => setConfirmDialogOpen(false)}
+          aria-labelledby="confirm-dialog-title"
+        >
+          <DialogTitle id="confirm-dialog-title">
+            Konfirmasi Perubahan
+          </DialogTitle>
+          <DialogContent>
+            <Typography>
+              Apakah Anda yakin ingin menyimpan perubahan pada layanan ini?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDialogOpen(false)} color="primary">
+              Batal
+            </Button>
+            <Button onClick={handleConfirmSave} color="primary" variant="contained" autoFocus>
+              Simpan Perubahan
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
     </Container>
   );
