@@ -1,22 +1,22 @@
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import {
-    Alert,
-    Box,
-    Button,
-    Container,
-    FormControl,
-    FormHelperText,
-    Grid,
-    IconButton,
-    InputAdornment,
-    InputLabel,
-    MenuItem,
-    Paper,
-    Select,
-    Snackbar,
-    TextField,
-    Typography,
-    useTheme
+  Alert,
+  Box,
+  Button,
+  Container,
+  FormControl,
+  FormHelperText,
+  Grid,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Snackbar,
+  TextField,
+  Typography,
+  useTheme
 } from '@mui/material';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -203,6 +203,17 @@ const CreateAccountPage = () => {
     { value: 'KOORDINATOR_LAPANGAN', label: 'Koordinator Lapangan' },
     { value: 'KARYAWAN', label: 'Karyawan' }
   ];
+
+  // Development helper function to reset mock data (hidden in production)
+  const resetMockData = () => {
+    if (process.env.NODE_ENV === 'development') {
+      localStorage.removeItem('mockStaffList');
+      console.log('Mock staff list has been reset');
+      // Show success message
+      setError(true);
+      setErrorMessage('Mock staff list has been reset for development');
+    }
+  };
 
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>

@@ -1,5 +1,5 @@
-import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
+import User from "../models/userModel.js";
 
 
 export const createUserService = async (userData) => {
@@ -32,11 +32,23 @@ export const createUserService = async (userData) => {
 // Mengambil data seluruh user yang ada
 export const getAllUsersService = async () => {
     try {
+        console.log('Fetching all users from database...');
+        // Get all internal staff users who aren't deleted
+        // Include roles ADMIN, RECRUITER, GENERAL_MANAGER, KOORDINATOR_LAPANGAN only
         const users = await User.find(
-            { isDeleted: false },
-            { password: 0 }); // Exclude password field
+            { 
+                isDeleted: false,
+                role: { 
+                    $in: ['ADMIN', 'RECRUITER', 'GENERAL_MANAGER', 'KOORDINATOR_LAPANGAN'] 
+                }
+            }, 
+            { password: 0 }
+        ); // Exclude password field
+        
+        console.log(`Found ${users.length} internal staff users`);
         return users;
     } catch (error) {
+        console.error('Error in getAllUsersService:', error);
         throw error;
     }
 };
@@ -57,11 +69,26 @@ export const getUserByUUIDService = async (uuid) => {
 // Meng-update data user berdasarkan UUID
 export const updateUserService = async (uuid, updateData) => {
     try {
+        console.log(`Updating user with UUID: ${uuid}`, updateData);
+        
+        // First check if the user exists
+        const existingUser = await User.findOne({ uuid });
+        if (!existingUser) {
+            throw new Error("User tidak ditemukan");
+        }
+
         // Jika ada update password, hash password baru
         if (updateData.password) {
             const salt = await bcrypt.genSalt(10);
             updateData.password = await bcrypt.hash(updateData.password, salt);
         }
+
+        // Make sure status is properly handled as a boolean
+        if (updateData.status !== undefined) {
+            updateData.status = Boolean(updateData.status);
+        }
+
+        console.log(`User found, applying updates:`, updateData);
 
         const updatedUser = await User.findOneAndUpdate(
             { uuid },  // Use uuid for finding the user
@@ -69,12 +96,11 @@ export const updateUserService = async (uuid, updateData) => {
             { new: true, runValidators: true }
         ).select("-password");
 
-        if (!updatedUser) {
-            throw new Error("User tidak ditemukan");
-        }
+        console.log(`User updated successfully:`, updatedUser);
 
         return updatedUser;
     } catch (error) {
+        console.error(`Error in updateUserService:`, error);
         throw error;
     }
 };
@@ -83,20 +109,34 @@ export const updateUserService = async (uuid, updateData) => {
 // Menghapus user berdasarkan UUID
 export const deleteUserService = async (uuid) => {
     try {
+        console.log(`Deleting user with UUID: ${uuid}`);
+        
+        // First check if the user exists
+        const existingUser = await User.findOne({ uuid });
+        if (!existingUser) {
+            throw new Error("User tidak ditemukan");
+        }
+        
+        // Update the user to mark as deleted
         const result = await User.findOneAndUpdate(
             { uuid },
-            {
-                isDeleted: true,
-            },
+            { isDeleted: true },
             { new: true }
         );
 
-        if (!result) {
-            throw new Error("User tidak ditemukan");
-        }
+        console.log(`User deleted successfully. Updated record:`, result);
 
-        return { message: "User berhasil dihapus" };
+        return { 
+            message: "User berhasil dihapus",
+            data: {
+                uuid: result.uuid,
+                name: result.name,
+                email: result.email,
+                isDeleted: result.isDeleted
+            }
+        };
     } catch (error) {
+        console.error(`Error in deleteUserService:`, error);
         throw error;
     }
 };

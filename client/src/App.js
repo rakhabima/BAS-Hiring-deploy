@@ -10,6 +10,7 @@ import EditServicePage from './pages/admin/EditServicePage';
 import InternalStaffPage from './pages/admin/InternalStaffPage';
 import ServiceDetailPage from './pages/admin/ServiceDetailPage';
 import ServicePublicationsPage from './pages/admin/ServicePublicationsPage';
+import UserDetailPage from './pages/admin/UserDetailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
@@ -23,9 +24,6 @@ import EditJobPage from './pages/recruiter/EditJobPage';
 import JobDetailPage from './pages/recruiter/JobDetailPage';
 import JobPublicationsPage from './pages/recruiter/JobPublicationsPage';
 import RegisterPage from './pages/RegisterPage';
-import CreateAccountPage from './pages/admin/CreateAccountPage';
-import InternalStaffPage from './pages/admin/InternalStaffPage';
-import UserDetailPage from './pages/admin/UserDetailPage';
 
 // ScrollToTop component that handles URL hash fragments for scrolling to sections
 function ScrollToTop() {

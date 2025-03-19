@@ -1,38 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Container,
+    ArrowBack as ArrowBackIcon,
+    Delete as DeleteIcon,
+    Edit as EditIcon,
+    Save as SaveIcon
+} from '@mui/icons-material';
+import {
+    Alert,
     Box,
-    Paper,
-    Typography,
     Button,
-    Grid,
-    Divider,
-    CircularProgress,
     Card,
     CardContent,
     Chip,
-    IconButton,
-    useTheme,
-    TextField,
-    MenuItem,
-    Select,
-    FormControl,
-    InputLabel,
+    CircularProgress,
+    Container,
     Dialog,
     DialogActions,
     DialogContent,
     DialogContentText,
     DialogTitle,
+    Divider,
+    FormControl,
+    Grid,
+    IconButton,
+    InputLabel,
+    MenuItem,
+    Paper,
+    Select,
     Snackbar,
-    Alert
+    TextField,
+    Typography,
+    useTheme
 } from '@mui/material';
-import {
-    ArrowBack as ArrowBackIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
-    Save as SaveIcon
-} from '@mui/icons-material';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { userService } from '../../services/api';
 
 const UserDetailPage = () => {
@@ -63,34 +63,54 @@ const UserDetailPage = () => {
     useEffect(() => {
         const fetchUserDetails = async () => {
             setLoading(true);
+            setError(null);
+            
             try {
+                console.log('Fetching details for user with UUID:', uuid);
                 const response = await userService.getUserByUUID(uuid);
-                console.log('User details:', response);
+                console.log('User details response:', response);
 
+                let userData = null;
+                
                 // Handle different response structures
-                if (response && response.data) {
-                    setUser(response.data);
-                    setFormData({
-                        name: response.data.name || '',
-                        email: response.data.email || '',
-                        role: response.data.role || '',
-                        status: response.data.status !== undefined ? response.data.status : true
-                    });
+                if (response && response.success && response.data) {
+                    // Standard API response with success flag and data field
+                    userData = response.data;
+                    console.log('Using data from success response:', userData);
+                } else if (response && response.data) {
+                    // Nested data structure
+                    userData = response.data;
+                    console.log('Using nested data:', userData);
                 } else if (response && response.uuid) {
-                    setUser(response);
-                    setFormData({
-                        name: response.name || '',
-                        email: response.email || '',
-                        role: response.role || '',
-                        status: response.status !== undefined ? response.status : true
-                    });
+                    // Direct user object
+                    userData = response;
+                    console.log('Using direct user object:', userData);
                 } else {
-                    console.error('Unexpected user data structure:', response);
-                    setError('Format data tidak sesuai dengan yang diharapkan');
+                    console.error('Unexpected response structure:', response);
+                    throw new Error('Unexpected data structure received from server');
                 }
+                
+                if (!userData) {
+                    throw new Error('No user data found in response');
+                }
+                
+                // Set user data
+                setUser(userData);
+                
+                // Set form data with proper defaults
+                setFormData({
+                    name: userData.name || '',
+                    email: userData.email || '',
+                    role: userData.role || '',
+                    status: userData.status !== undefined ? userData.status : true
+                });
+                
+                console.log('User data successfully loaded');
             } catch (err) {
-                console.error('Error fetching user details:', err);
-                setError('Gagal memuat detail pengguna. Silakan coba lagi nanti.');
+                console.error('Detailed error when fetching user details:', err);
+                console.error('Error response data:', err.response?.data);
+                console.error('Error message:', err.message);
+                setError('Gagal memuat data. Silakan coba lagi nanti.');
             } finally {
                 setLoading(false);
             }

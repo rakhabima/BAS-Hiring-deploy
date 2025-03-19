@@ -1,35 +1,34 @@
 import {
   Add as AddIcon,
-  Person as PersonIcon,
   Delete as DeleteIcon,
-  Close as CloseIcon
+  Person as PersonIcon
 } from '@mui/icons-material';
 import {
+  Alert,
+  alpha,
+  Avatar,
   Box,
   Button,
+  Chip,
+  CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  IconButton,
   Paper,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Typography,
-  useTheme,
-  CircularProgress,
-  Avatar,
-  Chip,
-  IconButton,
   Tooltip,
-  alpha,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Snackbar,
-  Alert
+  Typography,
+  useTheme
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -61,24 +60,32 @@ const InternalStaffPage = () => {
       setError(null);
 
       try {
+        console.log('Fetching internal staff list');
         // Use userService.getAllUsers() to get user list
         const response = await userService.getAllUsers();
+        console.log('Response from getAllUsers:', response);
 
         let usersArray = [];
 
         // Check various possible data structures
         if (Array.isArray(response)) {
+          console.log('Response is an array');
           usersArray = response;
         } else if (response && response.data && Array.isArray(response.data)) {
+          console.log('Response has data array property');
           usersArray = response.data;
         } else if (response && typeof response === 'object') {
+          console.log('Response is an object, looking for array properties');
           for (const key in response) {
             if (Array.isArray(response[key])) {
+              console.log(`Found array in property: ${key}`);
               usersArray = response[key];
               break;
             }
           }
         }
+
+        console.log('Processing users array:', usersArray);
 
         // Make sure usersArray contains valid data
         if (usersArray && usersArray.length > 0) {
@@ -91,8 +98,10 @@ const InternalStaffPage = () => {
             user.role !== 'ADMIN'
           );
 
+          console.log('Filtered staff users:', staffUsers);
           setStaffList(staffUsers);
         } else {
+          console.log('No users found or empty array');
           setStaffList([]);
         }
       } catch (error) {
@@ -117,6 +126,7 @@ const InternalStaffPage = () => {
 
   // Handle view button click
   const handleViewClick = (uuid) => {
+    console.log(`Navigating to user detail page for UUID: ${uuid}`);
     navigate(`/admin/staff/${uuid}`);
   };
 
