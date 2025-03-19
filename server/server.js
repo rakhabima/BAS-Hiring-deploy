@@ -26,20 +26,32 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// Koneksi ke MongoDB
-connectDB();
+// Koneksi ke MongoDB - only connect for routes that need it
+// Don't connect on initial server startup
+// connectDB();
 
 // Health check route
 app.get("/", (req, res) => {
   res.status(200).json({ status: "ok", message: "BAS Hiring API is running" });
 });
 
+// Connect to MongoDB before handling authenticated routes
+const dbMiddleware = async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("Database connection error:", error);
+    res.status(500).json({ status: "error", message: "Database connection failed" });
+  }
+};
+
 // Routes
-app.use("/auth", authRoute);
-app.use("/guest", guestRoute);
-app.use("/jobVacancy", jobVacancyRoute);
-app.use("/outsource", outsourceRoute);
-app.use("/user", userRoute);
+app.use("/auth", dbMiddleware, authRoute);
+app.use("/guest", dbMiddleware, guestRoute);
+app.use("/jobVacancy", dbMiddleware, jobVacancyRoute);
+app.use("/outsource", dbMiddleware, outsourceRoute);
+app.use("/user", dbMiddleware, userRoute);
 
 // Middleware penanganan error
 app.use((err, req, res, next) => {
