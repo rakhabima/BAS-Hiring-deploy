@@ -1,7 +1,9 @@
 import {
   Add as AddIcon,
+  Clear as ClearIcon,
   Delete as DeleteIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Search as SearchIcon
 } from '@mui/icons-material';
 import {
   Alert,
@@ -17,8 +19,13 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  FormControl,
   IconButton,
+  InputAdornment,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Snackbar,
   Table,
   TableBody,
@@ -26,6 +33,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
   useTheme
@@ -40,6 +48,11 @@ const InternalStaffPage = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
 
   // State for delete confirmation dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -175,6 +188,28 @@ const InternalStaffPage = () => {
     }
   };
 
+  // Filter staff list based on search term and filters
+  const filteredStaffList = staffList.filter(staff => {
+    // Search term filter (case insensitive)
+    const searchMatch = 
+      searchTerm === '' || 
+      staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      staff.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Status filter
+    const statusMatch = 
+      statusFilter === 'all' || 
+      (statusFilter === 'active' && staff.status) ||
+      (statusFilter === 'inactive' && !staff.status);
+
+    // Role filter
+    const roleMatch = 
+      roleFilter === 'all' || 
+      staff.role === roleFilter;
+
+    return searchMatch && statusMatch && roleMatch;
+  });
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -211,6 +246,96 @@ const InternalStaffPage = () => {
           overflow: 'hidden',
         }}
       >
+        {/* Search and Filter Bar */}
+        <Box sx={{ 
+          mb: 3, 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' }, 
+          gap: 2, 
+          alignItems: { xs: 'stretch', md: 'center' } 
+        }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Cari berdasarkan nama atau email..."
+            variant="outlined"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    aria-label="clear search"
+                    onClick={() => setSearchTerm('')}
+                    edge="end"
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+              sx: {
+                borderRadius: '8px',
+                backgroundColor: isDarkMode ? alpha(theme.palette.background.default, 0.6) : alpha(theme.palette.background.paper, 0.8),
+                '&:hover': {
+                  backgroundColor: isDarkMode ? alpha(theme.palette.background.default, 0.8) : alpha(theme.palette.background.paper, 1),
+                },
+              }
+            }}
+            sx={{ flex: 2 }}
+          />
+          
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel id="status-filter-label">Status</InputLabel>
+            <Select
+              labelId="status-filter-label"
+              id="status-filter"
+              value={statusFilter}
+              label="Status"
+              onChange={(e) => setStatusFilter(e.target.value)}
+              sx={{
+                borderRadius: '8px',
+                backgroundColor: isDarkMode ? alpha(theme.palette.background.default, 0.6) : alpha(theme.palette.background.paper, 0.8),
+                '&:hover': {
+                  backgroundColor: isDarkMode ? alpha(theme.palette.background.default, 0.8) : alpha(theme.palette.background.paper, 1),
+                },
+              }}
+            >
+              <MenuItem value="all">Semua Status</MenuItem>
+              <MenuItem value="active">Aktif</MenuItem>
+              <MenuItem value="inactive">Tidak Aktif</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel id="role-filter-label">Posisi Kerja</InputLabel>
+            <Select
+              labelId="role-filter-label"
+              id="role-filter"
+              value={roleFilter}
+              label="Posisi Kerja"
+              onChange={(e) => setRoleFilter(e.target.value)}
+              sx={{
+                borderRadius: '8px',
+                backgroundColor: isDarkMode ? alpha(theme.palette.background.default, 0.6) : alpha(theme.palette.background.paper, 0.8),
+                '&:hover': {
+                  backgroundColor: isDarkMode ? alpha(theme.palette.background.default, 0.8) : alpha(theme.palette.background.paper, 1),
+                },
+              }}
+            >
+              <MenuItem value="all">Semua Posisi</MenuItem>
+              <MenuItem value="RECRUITER">Recruiter</MenuItem>
+              <MenuItem value="GENERAL_MANAGER">General Manager</MenuItem>
+              <MenuItem value="KOORDINATOR_LAPANGAN">Koordinator Lapangan</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <CircularProgress />
@@ -220,7 +345,7 @@ const InternalStaffPage = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Typography variant="body1" color="error">{error}</Typography>
           </Box>
-        ) : staffList.length > 0 ? (
+        ) : filteredStaffList.length > 0 ? (
           <TableContainer component={Box} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
             <Table sx={{ tableLayout: 'fixed', width: '100%' }}>
               <colgroup>
@@ -256,8 +381,8 @@ const InternalStaffPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {staffList.map((staff, index) => {
-                  const isLastRow = index === staffList.length - 1;
+                {filteredStaffList.map((staff, index) => {
+                  const isLastRow = index === filteredStaffList.length - 1;
 
                   return (
                     <TableRow
@@ -411,6 +536,28 @@ const InternalStaffPage = () => {
               </TableBody>
             </Table>
           </TableContainer>
+        ) : staffList.length > 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+            <Typography variant="body1" color="textSecondary" sx={{ mb: 1 }}>
+              Tidak ada data staf yang sesuai dengan filter.
+            </Typography>
+            <Button 
+              variant="outlined" 
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+                setRoleFilter('all');
+              }}
+              sx={{ 
+                mt: 2,
+                borderRadius: '8px',
+                color: theme.palette.primary.main,
+                borderColor: theme.palette.primary.main,
+              }}
+            >
+              Reset Filter
+            </Button>
+          </Box>
         ) : (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <Typography variant="body1" color="textSecondary">
