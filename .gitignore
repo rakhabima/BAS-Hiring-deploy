@@ -3,18 +3,19 @@ node_modules/
 client/node_modules/
 server/node_modules/
 
-# Environment variables
+# Env
 .env
 .env.local
 .env.development
 .env.production
 .env.test
+.env.example
 client/.env
 client/.env.*
 server/.env
 server/.env.*
 
-# Build output (jika ada)
+# Build output (kalau ada)
 client/build/
 server/build/
 dist/
@@ -32,7 +33,7 @@ log/
 .DS_Store
 Thumbs.db
 
-# Editor directories and files (Opsional)
+# Editor directories and files
 .vscode/
 .idea/
 *.sublime-*
@@ -68,3 +69,15 @@ coverage/
 .railway
 .deploy/
 firebase-debug.log
+
+# Tambahan
+*.bak
+*.tmp
+*.temp
+.history/
+*.zip
+*.tar.gz
+*.rar
+node_modules/.cache/
+.npm/
+.yarn/
