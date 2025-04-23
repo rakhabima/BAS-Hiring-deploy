@@ -1,21 +1,36 @@
-import { ArrowBack, Close, LocationOn, Schedule, Work, ZoomIn, ZoomOut } from '@mui/icons-material';
+import { ArrowBack, Close, LocationOn, Refresh, Schedule, Work, ZoomIn, ZoomOut } from '@mui/icons-material';
 import {
-    Box,
-    Button,
-    CircularProgress,
-    Container,
-    Dialog,
-    DialogContent,
-    Divider,
-    Grid,
-    IconButton,
-    Paper,
-    Typography
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogContent,
+  Divider,
+  Grid,
+  IconButton,
+  Paper,
+  Typography
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { jobVacancyService } from '../../services/api';
 import { formatDate, formatRelativeTime } from '../../utils/formatDate';
+
+// Komponen untuk memungkinkan pengguna mencoba ulang jika terjadi error
+const RetryButton = ({ onClick }) => {
+  return (
+    <Button
+      variant="contained"
+      color="primary"
+      startIcon={<Refresh />}
+      onClick={onClick}
+      sx={{ mt: 2 }}
+    >
+      Coba Lagi
+    </Button>
+  );
+};
 
 const PublicJobDetailPage = () => {
   const { id } = useParams();
@@ -26,35 +41,33 @@ const PublicJobDetailPage = () => {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
 
-  // Fetch job data
-  useEffect(() => {
-    const fetchJobData = async () => {
-      try {
-        setLoading(true);
-        const response = await jobVacancyService.getJobVacancyById(id);
-        const jobData = response.data;
-        
-        // Check if job data exists
-        if (!jobData) {
-          setError('Lowongan pekerjaan tidak ditemukan.');
-          setLoading(false);
-          return;
-        }
-        
-        // No need to redirect for CLOSED jobs anymore
-        setJob(jobData);
-      } catch (err) {
-        console.error('Error fetching job data:', err);
-        setError('Gagal mengambil detail lowongan kerja. Silakan coba lagi nanti.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Menambahkan function retry untuk memuat ulang data
+  const handleRetry = () => {
+    setLoading(true);
+    setError(null);
+    fetchJobData();
+  };
 
+  // Function fetchJobData sebagai fungsi bernama agar dapat digunakan kembali
+  const fetchJobData = async () => {
+    try {
+      setLoading(true);
+      const response = await jobVacancyService.getJobVacancyById(id);
+      setJob(response.data);
+    } catch (err) {
+      console.error('Error fetching job data:', err);
+      setError('Gagal mengambil detail lowongan kerja. Silakan coba lagi nanti.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Use effect to fetch job data
+  useEffect(() => {
     if (id) {
       fetchJobData();
     }
-  }, [id, navigate]);
+  }, [id]); // Dependensi hanya pada ID
 
   const getJobTypeText = (type) => {
     switch (type) {
@@ -127,10 +140,25 @@ const PublicJobDetailPage = () => {
   if (error) {
     return (
       <Container sx={{ mt: 4, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography color="error" variant="h6" align="center">
-            {error}
-          </Typography>
+        <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+          <Box sx={{ my: 4 }}>
+            <Typography variant="h5" color="error" gutterBottom>
+              {error}
+            </Typography>
+            <Typography color="text.secondary" paragraph>
+              Mohon maaf atas ketidaknyamanan ini. Anda dapat mencoba memuat ulang halaman atau kembali ke daftar lowongan.
+            </Typography>
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate('/lowongan')}
+                startIcon={<ArrowBack />}
+              >
+                Kembali ke Daftar Lowongan
+              </Button>
+              <RetryButton onClick={handleRetry} />
+            </Box>
+          </Box>
         </Paper>
       </Container>
     );
