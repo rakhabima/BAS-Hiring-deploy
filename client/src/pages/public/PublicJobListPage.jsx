@@ -138,6 +138,11 @@ const PublicJobListPage = () => {
   };
 
   const viewJobDetails = (id) => {
+    console.log('Navigating to job detail with ID:', id);
+    if (!id) {
+      console.error('Error: Job ID is undefined or null');
+      return;
+    }
     navigate(`/lowongan/${id}`);
   };
 
@@ -284,7 +289,7 @@ const PublicJobListPage = () => {
         {filteredJobs.length > 0 ? (
           <Grid container spacing={3} mt={2}>
             {filteredJobs.map((job) => (
-              <Grid item xs={12} md={6} lg={4} key={job.id}>
+              <Grid item xs={12} md={6} lg={4} key={job.uuid || job.id}>
                 <Card 
                   elevation={3} 
                   sx={{ 
@@ -365,7 +370,7 @@ const PublicJobListPage = () => {
                         <Button 
                           size="small" 
                           color="primary" 
-                          onClick={() => viewJobDetails(job.id)}
+                          onClick={() => viewJobDetails(job.uuid || job.id)}
                         >
                           Detail
                         </Button>
