@@ -1,25 +1,25 @@
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, LocationOn, Search as SearchIcon, Work as WorkIcon } from '@mui/icons-material';
 import {
-    Box,
-    Button,
-    Card,
-    CardContent,
-    CardMedia,
-    CircularProgress,
-    Container,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Grid,
-    IconButton,
-    InputAdornment,
-    MenuItem,
-    Paper,
-    Select,
-    TextField,
-    Typography,
-    useTheme
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardMedia,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Select,
+  TextField,
+  Typography,
+  useTheme
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import React, { useEffect, useState } from 'react';
@@ -79,37 +79,12 @@ const JobPublicationsPage = () => {
         setLoading(true);
         const response = await jobVacancyService.getAllJobVacancies();
         
-        // Auto-update status for jobs where deadline has passed
-        // This only affects display status on the client side
-        const updatedJobs = response.data.map(job => {
-          const deadlineDate = new Date(job.deadline);
-          const today = new Date();
-          
-          // Auto-update to CLOSED if deadline has passed (only for ACTIVE jobs)
-          if (deadlineDate < today && job.status === 'ACTIVE') {
-            // Call the API to update the job status
-            jobVacancyService.updateJobVacancy(job.uuid || job.id, {
-              ...job,
-              status: 'CLOSED'
-            }).catch(err => {
-              console.error(`Failed to auto-update status for job ${job.uuid || job.id}:`, err);
-            });
-            
-            // Update the local job state immediately
-            return {
-              ...job,
-              status: 'CLOSED'
-            };
-          }
-          
-          return job;
-        });
-        
-        setJobs(updatedJobs || []);
+        // Hapus auto-update status, hanya gunakan data apa adanya dari database
+        setJobs(response.data || []);
         
         // Extract unique locations and job positions for filters
-        const uniqueLocations = [...new Set(updatedJobs.map(job => job.location))];
-        const uniquePositions = [...new Set(updatedJobs.map(job => job.jobPosition).filter(Boolean))];
+        const uniqueLocations = [...new Set(response.data.map(job => job.location))];
+        const uniquePositions = [...new Set(response.data.map(job => job.jobPosition).filter(Boolean))];
         
         setLocations(uniqueLocations);
         setJobPositions(uniquePositions);

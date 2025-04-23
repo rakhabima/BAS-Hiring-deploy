@@ -225,11 +225,18 @@ const EditJobPage = () => {
     setLoading(true);
 
     try {
-      // Remove auto-allocate status based on deadline
-      // Status only changes if recruiter changes it manually
-      // or if the real-time date passes the deadline (handled elsewhere)
+      // Membuat salinan formData untuk menghindari modifikasi state langsung
+      const dataToUpdate = { ...formData };
       
-      await jobVacancyService.updateJobVacancy(id, formData);
+      // Hapus field deletedAt jika ada untuk mencegah error "Cast to date failed"
+      if (dataToUpdate.deletedAt) {
+        delete dataToUpdate.deletedAt;
+      }
+      if (dataToUpdate.deletedAt === "null") {
+        delete dataToUpdate.deletedAt;
+      }
+      
+      await jobVacancyService.updateJobVacancy(id, dataToUpdate);
       navigate('/recruiter/job-publications');
     } catch (error) {
       console.error('Error updating job vacancy:', error);
