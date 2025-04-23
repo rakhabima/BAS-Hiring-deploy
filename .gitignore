@@ -14,6 +14,10 @@ client/.env
 client/.env.*
 server/.env
 server/.env.*
+**/.env
+**/.env.*
+*.env
+*.env.*
 
 # Build output (kalau ada)
 client/build/
@@ -49,6 +53,16 @@ jwts/
 credentials/
 secrets/
 **/auth_config.json
+**/secrets.json
+**/credentials.json
+**/*credential*
+**/*secret*
+**/*password*
+**/*confidential*
+**/*private*
+privatekey*
+**/mongodb_uri.txt
+**/*connection*string*
 
 # Temporary files and caches
 .cache/

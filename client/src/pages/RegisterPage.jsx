@@ -71,10 +71,10 @@ const RegisterPage = () => {
       return false;
     }
 
-    // Check if password is at least 6 characters
-    if (formData.password.length < 6) {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
       setError(true);
-      setErrorMessage('Kata sandi harus minimal 6 karakter');
+      setErrorMessage('Kata sandi harus minimal 8 karakter, mengandung huruf kapital, huruf kecil, dan angka');
       return false;
     }
 
@@ -285,13 +285,24 @@ const RegisterPage = () => {
               ),
             }}
             sx={{ 
-              mb: 2,
+              mb: 0.5,
               mt: 0,
               '& .MuiOutlinedInput-root': {
                 borderRadius: '4px',
               }
             }}
           />
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: theme.palette.text.secondary,
+              display: 'block',
+              mb: 2,
+              ml: 1
+            }}
+          >
+            Kata sandi harus minimal 8 karakter, mengandung huruf kapital, huruf kecil, dan angka.
+          </Typography>
 
           {/* Confirm Password Field */}
           <Typography 
