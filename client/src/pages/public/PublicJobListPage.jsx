@@ -1,22 +1,22 @@
 import { FilterList, Search } from '@mui/icons-material';
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Container,
-  Divider,
-  FormControl,
-  Grid,
-  IconButton,
-  InputAdornment,
-  InputLabel,
-  MenuItem,
-  Paper,
-  Select,
-  TextField,
-  Typography
+    Box,
+    Button,
+    Card,
+    CardContent,
+    CircularProgress,
+    Container,
+    Divider,
+    FormControl,
+    Grid,
+    IconButton,
+    InputAdornment,
+    InputLabel,
+    MenuItem,
+    Paper,
+    Select,
+    TextField,
+    Typography
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -46,14 +46,13 @@ const PublicJobListPage = () => {
         setLoading(true);
         const response = await jobVacancyService.getAllJobVacancies();
         
-        // Only show active jobs in public view
-        const activeJobs = response.data.filter(job => job.status === 'ACTIVE');
-        setJobs(activeJobs);
-        setFilteredJobs(activeJobs);
+        // Show both active and closed jobs in public view
+        setJobs(response.data);
+        setFilteredJobs(response.data);
         
         // Extract unique locations and job positions for filters
-        const uniqueLocations = [...new Set(activeJobs.map(job => job.location))];
-        const uniquePositions = [...new Set(activeJobs.map(job => job.jobPosition))];
+        const uniqueLocations = [...new Set(response.data.map(job => job.location))];
+        const uniquePositions = [...new Set(response.data.map(job => job.jobPosition))];
         
         setLocations(uniqueLocations);
         setJobPositions(uniquePositions);
@@ -140,6 +139,28 @@ const PublicJobListPage = () => {
 
   const viewJobDetails = (id) => {
     navigate(`/lowongan/${id}`);
+  };
+
+  // Add a status badge component
+  const getStatusBadge = (status) => {
+    return (
+      <Box 
+        component="span" 
+        sx={{ 
+          backgroundColor: status === 'ACTIVE' ? '#e6f4ea' : '#fce8e6',
+          color: status === 'ACTIVE' ? '#137333' : '#c5221f',
+          fontWeight: 'medium',
+          px: 1.5,
+          py: 0.5,
+          borderRadius: '16px',
+          fontSize: '0.75rem',
+          display: 'inline-flex',
+          alignItems: 'center',
+        }}
+      >
+        {status === 'ACTIVE' ? 'Aktif' : 'Tutup'}
+      </Box>
+    );
   };
 
   if (loading) {
@@ -260,76 +281,107 @@ const PublicJobListPage = () => {
           </Paper>
         )}
 
-        {filteredJobs.length === 0 ? (
-          <Box py={4} textAlign="center">
-            <Typography variant="h6" color="text.secondary">
-              Tidak ada lowongan pekerjaan yang ditemukan
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Coba ubah filter atau kata kunci pencarian Anda
-            </Typography>
-          </Box>
-        ) : (
-          <Grid container spacing={3}>
+        {filteredJobs.length > 0 ? (
+          <Grid container spacing={3} mt={2}>
             {filteredJobs.map((job) => (
-              <Grid item xs={12} md={6} key={job.uuid}>
+              <Grid item xs={12} md={6} lg={4} key={job.id}>
                 <Card 
-                  elevation={2} 
+                  elevation={3} 
                   sx={{ 
                     height: '100%', 
                     display: 'flex', 
                     flexDirection: 'column',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    transition: 'transform 0.2s',
                     '&:hover': {
                       transform: 'translateY(-4px)',
-                      boxShadow: 8
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.1)'
                     }
                   }}
                 >
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h2" gutterBottom>
-                      {job.title}
-                    </Typography>
-                    <Typography variant="subtitle2" color="primary" gutterBottom>
+                  <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="h6" component="h2" fontWeight="bold" gutterBottom noWrap>
+                        {job.title}
+                      </Typography>
+                      {getStatusBadge(job.status)}
+                    </Box>
+                    <Typography variant="subtitle1" color="primary.main" gutterBottom>
                       {job.jobPosition}
                     </Typography>
-                    <Box display="flex" alignItems="center" mt={1} mb={2}>
-                      <Typography variant="body2" color="text.secondary">
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        gap: 1,
+                        flexWrap: 'wrap',
+                        mb: 2 
+                      }}
+                    >
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          backgroundColor: 'action.hover',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          fontSize: '0.75rem'
+                        }}
+                      >
                         {job.location}
                       </Typography>
-                      <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 16 }} />
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          backgroundColor: 'action.hover',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          fontSize: '0.75rem'
+                        }}
+                      >
                         {getJobTypeText(job.jobType)}
                       </Typography>
                     </Box>
-                    <Typography variant="body2" color="text.secondary" paragraph sx={{ 
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      mb: 2
-                    }}>
-                      {job.description}
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        mb: 2,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                      }}
+                    >
+                      {job.description.slice(0, 150)}
+                      {job.description.length > 150 ? '...' : ''}
                     </Typography>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mt="auto">
-                      <Typography variant="caption" color="text.secondary">
-                        <strong>Deadline:</strong> {formatDate(job.deadline)}
-                      </Typography>
-                      <Button 
-                        variant="contained" 
-                        color="primary" 
-                        size="small"
-                        onClick={() => viewJobDetails(job.uuid)}
-                      >
-                        Lihat Detail
-                      </Button>
+                    <Box sx={{ mt: 'auto' }}>
+                      <Divider sx={{ my: 1 }} />
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Typography variant="caption" color="text.secondary">
+                          Deadline: {formatDate(job.deadline)}
+                        </Typography>
+                        <Button 
+                          size="small" 
+                          color="primary" 
+                          onClick={() => viewJobDetails(job.id)}
+                        >
+                          Detail
+                        </Button>
+                      </Box>
                     </Box>
                   </CardContent>
                 </Card>
               </Grid>
             ))}
           </Grid>
+        ) : (
+          <Paper elevation={1} sx={{ p: 4, mt: 2 }}>
+            <Typography variant="h6" align="center">
+              Tidak ada lowongan yang sesuai dengan kriteria pencarian.
+            </Typography>
+          </Paper>
         )}
       </Paper>
     </Container>

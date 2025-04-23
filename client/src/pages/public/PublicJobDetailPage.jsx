@@ -1,16 +1,16 @@
 import { ArrowBack, Close, LocationOn, Schedule, Work, ZoomIn, ZoomOut } from '@mui/icons-material';
 import {
-  Box,
-  Button,
-  CircularProgress,
-  Container,
-  Dialog,
-  DialogContent,
-  Divider,
-  Grid,
-  IconButton,
-  Paper,
-  Typography
+    Box,
+    Button,
+    CircularProgress,
+    Container,
+    Dialog,
+    DialogContent,
+    Divider,
+    Grid,
+    IconButton,
+    Paper,
+    Typography
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -41,12 +41,7 @@ const PublicJobDetailPage = () => {
           return;
         }
         
-        // Check if job is active, if not redirect to jobs list
-        if (jobData.status !== 'ACTIVE') {
-          navigate('/lowongan');
-          return;
-        }
-        
+        // No need to redirect for CLOSED jobs anymore
         setJob(jobData);
       } catch (err) {
         console.error('Error fetching job data:', err);
@@ -95,6 +90,28 @@ const PublicJobDetailPage = () => {
 
   const handleZoomOut = () => {
     setZoomLevel(prev => Math.max(prev - 0.5, 0.5));
+  };
+
+  // Add a status badge component
+  const getStatusBadge = (status) => {
+    return (
+      <Box 
+        component="span" 
+        sx={{ 
+          backgroundColor: status === 'ACTIVE' ? '#e6f4ea' : '#fce8e6',
+          color: status === 'ACTIVE' ? '#137333' : '#c5221f',
+          fontWeight: 'medium',
+          px: 2,
+          py: 0.5,
+          borderRadius: '16px',
+          fontSize: '0.875rem',
+          display: 'inline-flex',
+          alignItems: 'center',
+        }}
+      >
+        {status === 'ACTIVE' ? 'Aktif' : 'Tutup'}
+      </Box>
+    );
   };
 
   if (loading) {
@@ -193,9 +210,12 @@ const PublicJobDetailPage = () => {
           )}
 
           <Grid item xs={12} md={job.imageUrl ? 6 : 12}>
-            <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-              {job.title}
-            </Typography>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+                {job.title}
+              </Typography>
+              {getStatusBadge(job.status)}
+            </Box>
             <Typography variant="h6" color="primary" gutterBottom>
               {job.jobPosition}
             </Typography>

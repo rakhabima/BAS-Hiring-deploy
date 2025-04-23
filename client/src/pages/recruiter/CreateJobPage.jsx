@@ -1,19 +1,19 @@
 import { ArrowBack, CloudUpload } from '@mui/icons-material';
 import {
-  Box,
-  Button,
-  CircularProgress,
-  Container,
-  FormControl,
-  Grid,
-  IconButton,
-  InputLabel,
-  MenuItem,
-  Paper,
-  Select,
-  TextField,
-  Typography,
-  useTheme
+    Box,
+    Button,
+    CircularProgress,
+    Container,
+    FormControl,
+    Grid,
+    IconButton,
+    InputLabel,
+    MenuItem,
+    Paper,
+    Select,
+    TextField,
+    Typography,
+    useTheme
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -156,10 +156,13 @@ const CreateJobPage = () => {
       newErrors.deadline = 'Tanggal penutupan harus diisi';
     } else {
       const deadlineDate = new Date(formData.deadline);
+      deadlineDate.setHours(0, 0, 0, 0); // Reset time part for date comparison
+      
       const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time part for date comparison
       
       if (deadlineDate < today) {
-        newErrors.deadline = 'Tanggal penutupan tidak boleh di masa lalu';
+        newErrors.deadline = 'Tanggal penutupan tidak boleh sebelum hari ini';
       }
     }
 

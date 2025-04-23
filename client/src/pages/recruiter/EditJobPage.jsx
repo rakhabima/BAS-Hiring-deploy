@@ -193,6 +193,17 @@ const EditJobPage = () => {
 
     if (!formData.deadline) {
       newErrors.deadline = 'Tanggal penutupan harus diisi';
+    } else {
+      // Validate that deadline is not before today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time part for date comparison
+      
+      const deadlineDate = new Date(formData.deadline);
+      deadlineDate.setHours(0, 0, 0, 0); // Reset time part for date comparison
+      
+      if (deadlineDate < today) {
+        newErrors.deadline = 'Tanggal penutupan tidak boleh sebelum hari ini';
+      }
     }
 
     setErrors(newErrors);
@@ -214,13 +225,9 @@ const EditJobPage = () => {
     setLoading(true);
 
     try {
-      // Auto-update status based on deadline
-      const deadline = new Date(formData.deadline);
-      const now = new Date();
-      
-      if (deadline < now && formData.status === 'ACTIVE') {
-        formData.status = 'CLOSED';
-      }
+      // Remove auto-allocate status based on deadline
+      // Status only changes if recruiter changes it manually
+      // or if the real-time date passes the deadline (handled elsewhere)
       
       await jobVacancyService.updateJobVacancy(id, formData);
       navigate('/recruiter/job-publications');
