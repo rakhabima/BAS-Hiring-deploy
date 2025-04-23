@@ -612,8 +612,19 @@ export const jobVacancyService = {
       
       // Append text fields
       for (const key in jobData) {
+        // Skip imageUrl and undefined values
         if (key !== 'imageUrl' && jobData[key] !== undefined) {
-          formData.append(key, jobData[key]);
+          // Skip problematic fields
+          if (key === 'deletedAt' && (jobData[key] === null || jobData[key] === 'null' || jobData[key] === '')) {
+            continue;
+          }
+          
+          // Handle dates to ensure proper format
+          if (key === 'deadline' && jobData[key] instanceof Date) {
+            formData.append(key, jobData[key].toISOString());
+          } else {
+            formData.append(key, jobData[key]);
+          }
         }
       }
       
@@ -672,12 +683,23 @@ export const jobVacancyService = {
       return { data: null };
     } catch (error) {
       console.error('Error fetching job vacancy details:', error);
+      
+      // Berikan pesan error yang lebih spesifik untuk pengguna
+      let errorMessage = 'Gagal mengambil detail lowongan kerja. Silakan coba lagi nanti.';
+      
+      // Cek apakah ada pesan error spesifik dari server
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Lowongan pekerjaan tidak ditemukan.';
+      }
+      
+      // Log informasi error tambahan untuk debugging
       console.error('Response:', error.response?.data);
       console.error('Status:', error.response?.status);
       
-      // Don't show notification for this error as it might be in a public page
-      // but still throw the error for component handling
-      throw error;
+      // Throw custom error dengan pesan spesifik
+      throw new Error(errorMessage);
     }
   },
   
