@@ -12,6 +12,7 @@ import ServiceDetailPage from './pages/admin/ServiceDetailPage';
 import ServicePublicationsPage from './pages/admin/ServicePublicationsPage';
 import UserDetailPage from './pages/admin/UserDetailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import DashboardPage from './pages/gm/DashboardPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import OutsourcingRequestPage from './pages/public/OutsourcingRequestPage';
@@ -174,7 +175,7 @@ const AppContent = () => {
           {/* Protected Dashboard routes */}
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<div>Admin Dashboard</div>} />} />
           <Route path="/recruiter/dashboard" element={<ProtectedRoute element={<div>Recruiter Dashboard</div>} />} />
-          <Route path="/gm/dashboard" element={<ProtectedRoute element={<div>General Manager Dashboard</div>} />} />
+          <Route path="/gm/dashboard" element={<GMRoute element={<DashboardPage />} />} />
           
           {/* GM Routes - Service Publications */}
           <Route path="/gm/service-publications" element={<GMRoute element={<ServicePublicationsPage />} />} />

@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { createOutsourcing, createOutsourcingRequest, deleteOutsourcing, getAllOutsourcing, getOutsourcingById, updateOutsourcing } from "../controllers/outsourcingController.js";
+import { createOutsourcing, createOutsourcingRequest, deleteOutsourcing, getAllOutsourcing, getAllOutsourcingRequests, getOutsourcingById, handleDeleteOutsourcingRequest, updateOutsourcing, updateOutsourcingRequestFullData, updateRequestStatus } from "../controllers/outsourcingController.js";
 
 const router = express.Router();
 
@@ -23,8 +23,17 @@ const upload = multer({
 router.post("/create", upload.single('imageUrl'), createOutsourcing);
 router.put("/update/:uuid", upload.single('imageUrl'), updateOutsourcing);
 router.get("/all", getAllOutsourcing);
+
+// Pindahkan rute outsourcing requests di atas rute dinamis /:uuid
+router.get("/requests", getAllOutsourcingRequests);
+router.post("/request", createOutsourcingRequest);
+// Letakkan rute yang lebih spesifik dahulu
+router.put("/request/update/:uuid", updateOutsourcingRequestFullData);
+router.put("/request/:uuid", updateRequestStatus);
+router.delete("/request/:uuid", handleDeleteOutsourcingRequest);
+
+// Rute dinamis harus berada di bawah
 router.get("/:uuid", getOutsourcingById);
 router.delete("/delete/:uuid", deleteOutsourcing);
-router.post("/request", createOutsourcingRequest);
 
 export default router;
