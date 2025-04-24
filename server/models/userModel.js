@@ -32,7 +32,13 @@ const userSchema = new mongoose.Schema({
     isDeleted: {
         type: Boolean,
         default: false
+    },
+    lastLogin: {
+        type: Date,
+        default: null
     }
+}, {
+    timestamps: true // Adds createdAt and updatedAt
 });
 
 const User = mongoose.model("User", userSchema);

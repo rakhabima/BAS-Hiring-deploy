@@ -65,7 +65,8 @@ export const signup = async (req, res) => {
             name: newUser.name,
             email: newUser.email,
             role: newUser.role,
-            status: newUser.status
+            status: newUser.status,
+            createdAt: newUser.createdAt
         });
     } catch (error) {
         console.log("Error in signup controller", error.message);
@@ -118,6 +119,10 @@ export const login = async (req, res) => {
             return res.status(403).json({ error: "Account is inactive" });
         }
 
+        // Update lastLogin timestamp
+        user.lastLogin = new Date();
+        await user.save();
+
         // Log successful login
         await logActivity(
             "User Login", 
@@ -136,7 +141,9 @@ export const login = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                status: user.status
+                status: user.status,
+                lastLogin: user.lastLogin,
+                createdAt: user.createdAt
             }
         });
     } catch (error) {
