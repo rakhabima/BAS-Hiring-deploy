@@ -4,6 +4,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'r
 import Navbar from './components/Navbar';
 import NotificationSnackbar from './components/NotificationSnackbar';
 import ThemeProvider from './components/ThemeProvider';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import CreateAccountPage from './pages/admin/CreateAccountPage';
 import CreateServicePage from './pages/admin/CreateServicePage';
 import EditServicePage from './pages/admin/EditServicePage';
@@ -173,7 +174,7 @@ const AppContent = () => {
           <Route path="/admin/staff/:uuid" element={<AdminRoute element={<UserDetailPage />} />} />
           
           {/* Protected Dashboard routes */}
-          <Route path="/admin/dashboard" element={<ProtectedRoute element={<div>Admin Dashboard</div>} />} />
+          <Route path="/admin/dashboard" element={<AdminRoute element={<AdminDashboardPage />} />} />
           <Route path="/recruiter/dashboard" element={<ProtectedRoute element={<div>Recruiter Dashboard</div>} />} />
           <Route path="/gm/dashboard" element={<GMRoute element={<DashboardPage />} />} />
           

@@ -1,4 +1,4 @@
-import { createUserService, getAllUsersService, updateUserService, getUserByUUIDService, deleteUserService } from "../services/userService.js";
+import { createUserService, deleteUserService, getAllUsersService, getCandidatesService, getInternalStaffService, getUserByUUIDService, updateUserService } from "../services/userService.js";
 
 // Controller untuk membuat user baru
 export const createUser = async (req, res) => {
@@ -140,6 +140,46 @@ export const deleteUser = async (req, res) => {
         return res.status(error.message.includes("tidak ditemukan") ? 404 : 500).json({
             success: false,
             message: error.message || "Gagal menghapus user",
+            error: error.message
+        });
+    }
+};
+
+// Controller untuk mendapatkan hanya internal staff
+export const getInternalStaff = async (req, res) => {
+    try {
+        const users = await getInternalStaffService();
+
+        return res.status(200).json({
+            success: true,
+            message: "Berhasil mendapatkan daftar staff internal",
+            data: users
+        });
+    } catch (error) {
+        console.error("Error getting internal staff:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Gagal mendapatkan daftar staff internal",
+            error: error.message
+        });
+    }
+};
+
+// Controller untuk mendapatkan hanya kandidat
+export const getCandidates = async (req, res) => {
+    try {
+        const users = await getCandidatesService();
+
+        return res.status(200).json({
+            success: true,
+            message: "Berhasil mendapatkan daftar kandidat",
+            data: users
+        });
+    } catch (error) {
+        console.error("Error getting candidates:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Gagal mendapatkan daftar kandidat",
             error: error.message
         });
     }
