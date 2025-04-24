@@ -35,6 +35,10 @@ const outsourcingRequestSchema = new mongoose.Schema({
         enum: ["PENDING", "APPROVED", "REJECTED", "COMPLETED"],
         default: "PENDING"
     },
+    serviceType: {
+        type: String,
+        required: true
+    },
     serviceId: {
         type: String,
         ref: "OutsourcingService"

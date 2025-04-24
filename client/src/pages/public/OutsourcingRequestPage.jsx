@@ -443,7 +443,7 @@ const OutsourcingRequestPage = () => {
                         name="serviceCategory"
                         value={formData.serviceCategory}
                         onChange={handleChange}
-                        label="Kategori Layanan *"
+                        label="Kategori Layanan"
                         required
                       >
                         {SERVICE_CATEGORIES.map(category => (

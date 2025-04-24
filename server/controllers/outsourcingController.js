@@ -1,5 +1,5 @@
 import OutsourcingRequest from "../models/outsourcingRequestModel.js";
-import { createOutsourcingService, getAllOutsourcingServices, getOutsourcingServiceById, softDeleteOutsourcingService, updateOutsourcingService } from "../services/outsourcingService.js";
+import { createOutsourcingService, deleteOutsourcingRequest as deleteOutsourcingRequestService, getAllOutsourcingRequests as fetchAllOutsourcingRequests, getAllOutsourcingServices, getOutsourcingServiceById, softDeleteOutsourcingService, updateOutsourcingRequestData, updateOutsourcingRequestStatus, updateOutsourcingService } from "../services/outsourcingService.js";
 
 export const createOutsourcing = async (req, res) => {
     try {
@@ -215,6 +215,129 @@ export const createOutsourcingRequest = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Terjadi kesalahan saat membuat permintaan layanan',
+      error: error.message
+    });
+  }
+};
+
+export const getAllOutsourcingRequests = async (req, res) => {
+  try {
+    // Get all outsourcing requests
+    const requests = await fetchAllOutsourcingRequests();
+    
+    // Log untuk debugging
+    console.log('Fetched outsourcing requests:', requests ? requests.length : 0);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Berhasil mendapatkan daftar permintaan outsourcing',
+      data: requests
+    });
+  } catch (error) {
+    console.error('Error getting outsourcing requests:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat mengambil permintaan outsourcing',
+      error: error.message
+    });
+  }
+};
+
+export const updateRequestStatus = async (req, res) => {
+  try {
+    const { uuid } = req.params;
+    const { status } = req.body;
+    
+    // Validate status
+    const validStatuses = ["PENDING", "APPROVED", "REJECTED", "COMPLETED"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Status tidak valid. Status harus salah satu dari: ${validStatuses.join(', ')}`
+      });
+    }
+    
+    // Update the request status
+    const updatedRequest = await updateOutsourcingRequestStatus(uuid, status);
+    
+    if (!updatedRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Permintaan outsourcing tidak ditemukan'
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Status permintaan outsourcing berhasil diperbarui',
+      data: updatedRequest
+    });
+  } catch (error) {
+    console.error('Error updating outsourcing request status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat memperbarui status permintaan outsourcing',
+      error: error.message
+    });
+  }
+};
+
+export const handleDeleteOutsourcingRequest = async (req, res) => {
+  try {
+    const { uuid } = req.params;
+    
+    // Delete the request
+    const deletedRequest = await deleteOutsourcingRequestService(uuid);
+    
+    if (!deletedRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Permintaan outsourcing tidak ditemukan'
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Permintaan outsourcing berhasil dihapus',
+      data: deletedRequest
+    });
+  } catch (error) {
+    console.error('Error deleting outsourcing request:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat menghapus permintaan outsourcing',
+      error: error.message
+    });
+  }
+};
+
+export const updateOutsourcingRequestFullData = async (req, res) => {
+  try {
+    const { uuid } = req.params;
+    const updateData = req.body;
+    
+    console.log('Received update data for request:', uuid, updateData);
+    
+    // Update the request
+    const updatedRequest = await updateOutsourcingRequestData(uuid, updateData);
+    
+    if (!updatedRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Permintaan outsourcing tidak ditemukan'
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Data permintaan outsourcing berhasil diperbarui',
+      data: updatedRequest
+    });
+  } catch (error) {
+    console.error('Error updating outsourcing request data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat memperbarui data permintaan outsourcing',
       error: error.message
     });
   }
