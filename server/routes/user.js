@@ -1,5 +1,5 @@
 import express from "express";
-import { createUser, deleteUser, getAllUsers, getCandidates, getInternalStaff, getUserByUUID, updateUser } from "../controllers/userController.js";
+import { createUser, deleteUser, getAllUsers, getCandidates, getInternalStaff, getUserByUUID, updateUser, verifyPassword } from "../controllers/userController.js";
 // Import middleware untuk autentikasi jika diperlukan
 // import { authMiddleware } from "../middlewares/authMiddleware.js";
 
@@ -12,5 +12,6 @@ router.get("/candidates", getCandidates);
 router.get("/:uuid", getUserByUUID);
 router.put("/:uuid", updateUser);
 router.delete("/:uuid", deleteUser);
+router.post("/verify-password/:uuid", verifyPassword);
 
 export default router;

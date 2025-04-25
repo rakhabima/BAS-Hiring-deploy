@@ -281,18 +281,27 @@ const Navbar = () => {
             </ListItemButton>
           </ListItem>
         ))}
-        {/* Login/Dashboard button for mobile */}
-        <ListItem disablePadding>
-          {isLoggedIn ? (
-            <ListItemButton component={Link} to={getDashboardLink()}>
-              <ListItemText primary="Dashboard" />
-            </ListItemButton>
-          ) : (
+        {/* Login button or authenticated options for mobile */}
+        {isLoggedIn ? (
+          <>
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to="/profil">
+                <ListItemText primary="Profil" />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to={getDashboardLink()}>
+                <ListItemText primary="Dashboard" />
+              </ListItemButton>
+            </ListItem>
+          </>
+        ) : (
+          <ListItem disablePadding>
             <ListItemButton component={Link} to="/login">
               <ListItemText primary="Masuk" />
             </ListItemButton>
-          )}
-        </ListItem>
+          </ListItem>
+        )}
         {/* Logout button for mobile (only if logged in) */}
         {isLoggedIn && (
           <ListItem disablePadding>
@@ -406,6 +415,7 @@ const Navbar = () => {
       open={Boolean(anchorEl)}
       onClose={handleMenuClose}
     >
+      <MenuItem component={Link} to="/profil" onClick={handleMenuClose}>Profil</MenuItem>
       <MenuItem component={Link} to={getDashboardLink()} onClick={handleMenuClose}>Dashboard</MenuItem>
       <MenuItem onClick={confirmLogout}>Keluar</MenuItem>
     </Menu>

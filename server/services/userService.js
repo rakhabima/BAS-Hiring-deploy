@@ -118,10 +118,22 @@ export const updateUserService = async (uuid, updateData) => {
             throw new Error("User tidak ditemukan");
         }
 
-        // Jika ada update password, hash password baru
+        // Jika ada update password, verifikasi password lama dan hash password baru
         if (updateData.password) {
+            // Jika current password disediakan, verifikasi dulu
+            if (updateData.currentPassword) {
+                const isPasswordMatch = await bcrypt.compare(updateData.currentPassword, existingUser.password);
+                if (!isPasswordMatch) {
+                    throw new Error("Password saat ini tidak valid");
+                }
+            }
+            
+            // Hash password baru
             const salt = await bcrypt.genSalt(10);
             updateData.password = await bcrypt.hash(updateData.password, salt);
+            
+            // Hapus currentPassword dari updateData agar tidak tersimpan ke database
+            delete updateData.currentPassword;
         }
 
         // Make sure status is properly handled as a boolean
@@ -178,6 +190,25 @@ export const deleteUserService = async (uuid) => {
         };
     } catch (error) {
         console.error(`Error in deleteUserService:`, error);
+        throw error;
+    }
+};
+
+// Verifikasi password pengguna
+export const verifyPasswordService = async (uuid, currentPassword) => {
+    try {
+        // Find user with UUID
+        const user = await User.findOne({ uuid });
+        if (!user) {
+            throw new Error("User tidak ditemukan");
+        }
+        
+        // Compare password with stored hash
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        
+        return isMatch;
+    } catch (error) {
+        console.error(`Error in verifyPasswordService:`, error);
         throw error;
     }
 };

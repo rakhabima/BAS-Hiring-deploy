@@ -426,7 +426,22 @@ export const userService = {
       return getMockUpdateUser(uuid, userData);
     } catch (error) {
       console.error(`Error updating user ${uuid}:`, error);
-      return getMockUpdateUser(uuid, userData);
+      throw error;
+    }
+  },
+
+  // Verify user's current password
+  verifyCurrentPassword: async (uuid, currentPassword) => {
+    try {
+      console.log(`Verifying password for user with UUID: ${uuid}`);
+      const response = await api.post(logEndpoint(`/user/verify-password/${uuid}`), { 
+        currentPassword 
+      });
+      
+      return response.data && response.data.success;
+    } catch (error) {
+      console.error(`Error verifying password for user ${uuid}:`, error);
+      return false;
     }
   },
 
