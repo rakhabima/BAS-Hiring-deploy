@@ -33,6 +33,26 @@ export const createUserService = async (userData) => {
 export const getAllUsersService = async () => {
     try {
         console.log('Fetching all users from database...');
+        // Get all users who aren't deleted - no role filtering
+        const users = await User.find(
+            { 
+                isDeleted: false
+            }, 
+            { password: 0 }
+        ); // Exclude password field
+        
+        console.log(`Found ${users.length} users total`);
+        return users;
+    } catch (error) {
+        console.error('Error in getAllUsersService:', error);
+        throw error;
+    }
+};
+
+// Mengambil data internal staff (admin, GM, recruiter, dll) saja
+export const getInternalStaffService = async () => {
+    try {
+        console.log('Fetching internal staff from database...');
         // Get all internal staff users who aren't deleted
         // Include roles ADMIN, RECRUITER, GENERAL_MANAGER, KOORDINATOR_LAPANGAN only
         const users = await User.find(
@@ -48,7 +68,28 @@ export const getAllUsersService = async () => {
         console.log(`Found ${users.length} internal staff users`);
         return users;
     } catch (error) {
-        console.error('Error in getAllUsersService:', error);
+        console.error('Error in getInternalStaffService:', error);
+        throw error;
+    }
+};
+
+// Mengambil data kandidat saja
+export const getCandidatesService = async () => {
+    try {
+        console.log('Fetching candidates from database...');
+        // Get all candidate users who aren't deleted
+        const users = await User.find(
+            { 
+                isDeleted: false,
+                role: 'CANDIDATE'
+            }, 
+            { password: 0 }
+        ); // Exclude password field
+        
+        console.log(`Found ${users.length} candidates`);
+        return users;
+    } catch (error) {
+        console.error('Error in getCandidatesService:', error);
         throw error;
     }
 };
@@ -77,10 +118,22 @@ export const updateUserService = async (uuid, updateData) => {
             throw new Error("User tidak ditemukan");
         }
 
-        // Jika ada update password, hash password baru
+        // Jika ada update password, verifikasi password lama dan hash password baru
         if (updateData.password) {
+            // Jika current password disediakan, verifikasi dulu
+            if (updateData.currentPassword) {
+                const isPasswordMatch = await bcrypt.compare(updateData.currentPassword, existingUser.password);
+                if (!isPasswordMatch) {
+                    throw new Error("Password saat ini tidak valid");
+                }
+            }
+            
+            // Hash password baru
             const salt = await bcrypt.genSalt(10);
             updateData.password = await bcrypt.hash(updateData.password, salt);
+            
+            // Hapus currentPassword dari updateData agar tidak tersimpan ke database
+            delete updateData.currentPassword;
         }
 
         // Make sure status is properly handled as a boolean
@@ -137,6 +190,25 @@ export const deleteUserService = async (uuid) => {
         };
     } catch (error) {
         console.error(`Error in deleteUserService:`, error);
+        throw error;
+    }
+};
+
+// Verifikasi password pengguna
+export const verifyPasswordService = async (uuid, currentPassword) => {
+    try {
+        // Find user with UUID
+        const user = await User.findOne({ uuid });
+        if (!user) {
+            throw new Error("User tidak ditemukan");
+        }
+        
+        // Compare password with stored hash
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        
+        return isMatch;
+    } catch (error) {
+        console.error(`Error in verifyPasswordService:`, error);
         throw error;
     }
 };

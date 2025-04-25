@@ -12,32 +12,32 @@ import MenuIcon from '@mui/icons-material/Menu';
 import PeopleIcon from '@mui/icons-material/People';
 import WorkIcon from '@mui/icons-material/Work';
 import {
-  AppBar,
-  Box,
-  Button,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Divider,
-  Drawer,
-  IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Menu,
-  MenuItem,
-  Link as MuiLink,
-  Slide,
-  Toolbar,
-  Typography,
-  useMediaQuery,
-  useScrollTrigger,
-  useTheme
+    AppBar,
+    Box,
+    Button,
+    Container,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    Divider,
+    Drawer,
+    IconButton,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Menu,
+    MenuItem,
+    Link as MuiLink,
+    Slide,
+    Toolbar,
+    Typography,
+    useMediaQuery,
+    useScrollTrigger,
+    useTheme
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -239,7 +239,24 @@ const Navbar = () => {
 
   // Dashboard link based on user role - now always returns /home
   const getDashboardLink = () => {
-    return '/home';
+    switch(userRole) {
+      case 'ADMIN':
+        return '/admin/dashboard';
+      case 'RECRUITER':
+        return '/recruiter/dashboard';
+      case 'GENERAL_MANAGER':
+        return '/gm/dashboard';
+      case 'CANDIDATE':
+        return '/candidate/dashboard';
+      case 'KOORDINATOR_LAPANGAN':
+        return '/korlap/dashboard';
+      case 'KARYAWAN':
+        return '/karyawan/dashboard';
+      case 'VENDOR':
+        return '/vendor/dashboard';
+      default:
+        return '/home';
+    }
   };
 
   // Get the sidebar navigation items based on role
@@ -264,18 +281,27 @@ const Navbar = () => {
             </ListItemButton>
           </ListItem>
         ))}
-        {/* Login/Dashboard button for mobile */}
-        <ListItem disablePadding>
-          {isLoggedIn ? (
-            <ListItemButton component={Link} to={getDashboardLink()}>
-              <ListItemText primary="Dashboard" />
-            </ListItemButton>
-          ) : (
+        {/* Login button or authenticated options for mobile */}
+        {isLoggedIn ? (
+          <>
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to="/profil">
+                <ListItemText primary="Profil" />
+              </ListItemButton>
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to={getDashboardLink()}>
+                <ListItemText primary="Dashboard" />
+              </ListItemButton>
+            </ListItem>
+          </>
+        ) : (
+          <ListItem disablePadding>
             <ListItemButton component={Link} to="/login">
               <ListItemText primary="Masuk" />
             </ListItemButton>
-          )}
-        </ListItem>
+          </ListItem>
+        )}
         {/* Logout button for mobile (only if logged in) */}
         {isLoggedIn && (
           <ListItem disablePadding>
@@ -389,6 +415,7 @@ const Navbar = () => {
       open={Boolean(anchorEl)}
       onClose={handleMenuClose}
     >
+      <MenuItem component={Link} to="/profil" onClick={handleMenuClose}>Profil</MenuItem>
       <MenuItem component={Link} to={getDashboardLink()} onClick={handleMenuClose}>Dashboard</MenuItem>
       <MenuItem onClick={confirmLogout}>Keluar</MenuItem>
     </Menu>

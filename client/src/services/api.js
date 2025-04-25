@@ -426,7 +426,22 @@ export const userService = {
       return getMockUpdateUser(uuid, userData);
     } catch (error) {
       console.error(`Error updating user ${uuid}:`, error);
-      return getMockUpdateUser(uuid, userData);
+      throw error;
+    }
+  },
+
+  // Verify user's current password
+  verifyCurrentPassword: async (uuid, currentPassword) => {
+    try {
+      console.log(`Verifying password for user with UUID: ${uuid}`);
+      const response = await api.post(logEndpoint(`/user/verify-password/${uuid}`), { 
+        currentPassword 
+      });
+      
+      return response.data && response.data.success;
+    } catch (error) {
+      console.error(`Error verifying password for user ${uuid}:`, error);
+      return false;
     }
   },
 
@@ -568,6 +583,72 @@ export const outsourcingService = {
       return response.data;
     } catch (error) {
       showNotification('Gagal menghapus layanan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get all outsourcing requests
+  getAllOutsourcingRequests: async () => {
+    try {
+      console.log('Calling outsource/requests endpoint');
+      const response = await api.get(logEndpoint('/outsource/requests'));
+      console.log('Outsourcing requests response:', response.data);
+      
+      // Check response format and handle it appropriately
+      if (response.data && response.data.success && response.data.data) {
+        // Format: { success: true, data: [...] }
+        return response.data.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        // Format: direct array
+        return response.data;
+      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        // Format: { data: [...] }
+        return response.data.data;
+      }
+      
+      // Return empty array if no recognizable data format
+      console.warn('Unrecognized response format from outsourcing requests API');
+      return [];
+    } catch (error) {
+      console.error('Error fetching outsourcing requests:', error);
+      showNotification('Gagal mengambil daftar permintaan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      return [];
+    }
+  },
+  
+  // Update outsourcing request status
+  updateOutsourcingRequestStatus: async (uuid, status) => {
+    try {
+      const response = await api.put(logEndpoint(`/outsource/request/${uuid}`), { status });
+      showNotification('Status permintaan outsourcing berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui status permintaan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Update outsourcing request full data
+  updateOutsourcingRequestData: async (uuid, requestData) => {
+    try {
+      console.log('Updating request data:', uuid, requestData);
+      const response = await api.put(logEndpoint(`/outsource/request/update/${uuid}`), requestData);
+      showNotification('Data permintaan outsourcing berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui data permintaan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Delete outsourcing request
+  deleteOutsourcingRequest: async (uuid) => {
+    try {
+      const response = await api.delete(logEndpoint(`/outsource/request/${uuid}`));
+      showNotification('Permintaan outsourcing berhasil dihapus', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal menghapus permintaan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
       throw error;
     }
   }

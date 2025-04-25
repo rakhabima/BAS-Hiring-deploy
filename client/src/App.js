@@ -4,6 +4,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'r
 import Navbar from './components/Navbar';
 import NotificationSnackbar from './components/NotificationSnackbar';
 import ThemeProvider from './components/ThemeProvider';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import CreateAccountPage from './pages/admin/CreateAccountPage';
 import CreateServicePage from './pages/admin/CreateServicePage';
 import EditServicePage from './pages/admin/EditServicePage';
@@ -12,8 +13,10 @@ import ServiceDetailPage from './pages/admin/ServiceDetailPage';
 import ServicePublicationsPage from './pages/admin/ServicePublicationsPage';
 import UserDetailPage from './pages/admin/UserDetailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import DashboardPage from './pages/gm/DashboardPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import ProfileUser from './pages/ProfileUser';
 import OutsourcingRequestPage from './pages/public/OutsourcingRequestPage';
 import PublicJobDetailPage from './pages/public/PublicJobDetailPage';
 import PublicJobListPage from './pages/public/PublicJobListPage';
@@ -166,15 +169,18 @@ const AppContent = () => {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           
+          {/* Profile route - accessible to all authenticated users */}
+          <Route path="/profil" element={<ProtectedRoute element={<ProfileUser />} />} />
+          
           {/* Admin routes */}
           <Route path="/admin/internal-staff" element={<AdminRoute element={<InternalStaffPage />} />} />
           <Route path="/admin/create-account" element={<AdminRoute element={<CreateAccountPage />} />} />
           <Route path="/admin/staff/:uuid" element={<AdminRoute element={<UserDetailPage />} />} />
           
           {/* Protected Dashboard routes */}
-          <Route path="/admin/dashboard" element={<ProtectedRoute element={<div>Admin Dashboard</div>} />} />
+          <Route path="/admin/dashboard" element={<AdminRoute element={<AdminDashboardPage />} />} />
           <Route path="/recruiter/dashboard" element={<ProtectedRoute element={<div>Recruiter Dashboard</div>} />} />
-          <Route path="/gm/dashboard" element={<ProtectedRoute element={<div>General Manager Dashboard</div>} />} />
+          <Route path="/gm/dashboard" element={<GMRoute element={<DashboardPage />} />} />
           
           {/* GM Routes - Service Publications */}
           <Route path="/gm/service-publications" element={<GMRoute element={<ServicePublicationsPage />} />} />

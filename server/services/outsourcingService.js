@@ -1,3 +1,4 @@
+import OutsourcingRequest from "../models/outsourcingRequestModel.js";
 import OutsourcingServiceModel from "../models/outsourcingServiceModel.js";
 
 
@@ -40,4 +41,46 @@ export const softDeleteOutsourcingService = async (uuid) => {
         { new: true }
     );
     return updatedService;
+};
+
+export const getAllOutsourcingRequests = async () => {
+    console.log('Executing getAllOutsourcingRequests service...');
+    try {
+        const requests = await OutsourcingRequest.find({}).sort({ submission: -1 });
+        console.log(`Found ${requests.length} outsourcing requests`);
+        return requests;
+    } catch (error) {
+        console.error('Error in getAllOutsourcingRequests service:', error);
+        throw error;
+    }
+};
+
+export const updateOutsourcingRequestStatus = async (uuid, status) => {
+    const request = await OutsourcingRequest.findOneAndUpdate(
+        { uuid }, 
+        { status },
+        { new: true }
+    );
+    return request;
+};
+
+export const deleteOutsourcingRequest = async (uuid) => {
+    const request = await OutsourcingRequest.findOneAndDelete({ uuid });
+    return request;
+};
+
+export const updateOutsourcingRequestData = async (uuid, updateData) => {
+    try {
+        console.log('Updating outsourcing request data:', uuid, updateData);
+        const request = await OutsourcingRequest.findOneAndUpdate(
+            { uuid }, 
+            updateData,
+            { new: true }
+        );
+        console.log('Updated request:', request);
+        return request;
+    } catch (error) {
+        console.error('Error in updateOutsourcingRequestData service:', error);
+        throw error;
+    }
 };
