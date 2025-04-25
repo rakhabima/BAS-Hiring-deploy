@@ -1,4 +1,4 @@
-import { createUserService, deleteUserService, getAllUsersService, getCandidatesService, getInternalStaffService, getUserByUUIDService, updateUserService } from "../services/userService.js";
+import { createUserService, deleteUserService, getAllUsersService, getCandidatesService, getInternalStaffService, getUserByUUIDService, updateUserService, verifyPasswordService } from "../services/userService.js";
 
 // Controller untuk membuat user baru
 export const createUser = async (req, res) => {
@@ -92,10 +92,10 @@ export const updateUser = async (req, res) => {
         const updateData = req.body;  // Get update data from request body
 
         // Ensure that at least one field is provided to update
-        if (!updateData.name && !updateData.email && !updateData.role && !updateData.status) {
+        if (!updateData.name && !updateData.email && !updateData.role && !updateData.status && !updateData.password) {
             return res.status(400).json({
                 success: false,
-                message: "Harap sertakan data yang ingin diperbarui (name, email, role, atau status)"
+                message: "Harap sertakan data yang ingin diperbarui (name, email, role, password, atau status)"
             });
         }
 
@@ -180,6 +180,37 @@ export const getCandidates = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Gagal mendapatkan daftar kandidat",
+            error: error.message
+        });
+    }
+};
+
+// Controller untuk verifikasi password
+export const verifyPassword = async (req, res) => {
+    try {
+        const { uuid } = req.params;
+        const { currentPassword } = req.body;
+
+        if (!currentPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Password saat ini wajib diisi"
+            });
+        }
+
+        const isPasswordValid = await verifyPasswordService(uuid, currentPassword);
+
+        return res.status(200).json({
+            success: isPasswordValid,
+            message: isPasswordValid 
+                ? "Password valid" 
+                : "Password tidak valid"
+        });
+    } catch (error) {
+        console.error("Error verifying password:", error);
+        return res.status(error.message.includes("tidak ditemukan") ? 404 : 500).json({
+            success: false,
+            message: error.message || "Gagal memverifikasi password",
             error: error.message
         });
     }

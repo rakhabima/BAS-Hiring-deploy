@@ -16,6 +16,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/gm/DashboardPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import ProfileUser from './pages/ProfileUser';
 import OutsourcingRequestPage from './pages/public/OutsourcingRequestPage';
 import PublicJobDetailPage from './pages/public/PublicJobDetailPage';
 import PublicJobListPage from './pages/public/PublicJobListPage';
@@ -167,6 +168,9 @@ const AppContent = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          
+          {/* Profile route - accessible to all authenticated users */}
+          <Route path="/profil" element={<ProtectedRoute element={<ProfileUser />} />} />
           
           {/* Admin routes */}
           <Route path="/admin/internal-staff" element={<AdminRoute element={<InternalStaffPage />} />} />
