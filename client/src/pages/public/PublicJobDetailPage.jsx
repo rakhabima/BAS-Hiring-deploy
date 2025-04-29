@@ -83,9 +83,8 @@ const PublicJobDetailPage = () => {
   };
 
   const handleApply = () => {
-    // For demonstration purposes, just prompt the user
-    // In a real application, this could navigate to an application form
-    alert('Untuk melamar pekerjaan ini, silakan hubungi kami melalui email atau telepon yang tertera di website.');
+    // Redirect to job application form with job ID
+    navigate(`/lowongan/${id}/apply`);
   };
 
   const handleOpenImageDialog = () => {
@@ -297,8 +296,9 @@ const PublicJobDetailPage = () => {
               fullWidth
               onClick={handleApply}
               sx={{ mt: 2, mb: 3 }}
+              disabled={job.status !== 'ACTIVE'}
             >
-              Lamar Sekarang
+              {job.status === 'ACTIVE' ? 'Lamar Sekarang' : 'Lowongan Ditutup'}
             </Button>
           </Grid>
 
@@ -333,8 +333,9 @@ const PublicJobDetailPage = () => {
                 variant="contained" 
                 color="primary" 
                 onClick={handleApply}
+                disabled={job.status !== 'ACTIVE'}
               >
-                Lamar Sekarang
+                {job.status === 'ACTIVE' ? 'Lamar Sekarang' : 'Lowongan Ditutup'}
               </Button>
             </Box>
           </Grid>
