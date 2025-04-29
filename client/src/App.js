@@ -17,6 +17,7 @@ import DashboardPage from './pages/gm/DashboardPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import ProfileUser from './pages/ProfileUser';
+import JobApplicationForm from './pages/public/JobApplicationForm';
 import OutsourcingRequestPage from './pages/public/OutsourcingRequestPage';
 import PublicJobDetailPage from './pages/public/PublicJobDetailPage';
 import PublicJobListPage from './pages/public/PublicJobListPage';
@@ -206,6 +207,7 @@ const AppContent = () => {
           {/* Public Job Vacancy Routes */}
           <Route path="/lowongan" element={<PublicJobListPage />} />
           <Route path="/lowongan/:id" element={<PublicJobDetailPage />} />
+          <Route path="/lowongan/:id/apply" element={<ProtectedRoute element={<JobApplicationForm />} />} />
           
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />

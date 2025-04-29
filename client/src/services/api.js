@@ -797,6 +797,69 @@ export const jobVacancyService = {
   }
 };
 
+// Job Application services
+export const jobApplicationService = {
+  // Submit job application
+  submitApplication: async (applicationData) => {
+    try {
+      const formData = new FormData();
+      
+      // Handle text fields
+      for (const key in applicationData) {
+        if (!key.startsWith('foto_') && applicationData[key] !== undefined) {
+          formData.append(key, applicationData[key]);
+        }
+      }
+      
+      // Handle file uploads
+      const fileFields = [
+        'foto_diri', 'foto_ktp', 'foto_sim', 
+        'foto_stnk_hal_1', 'foto_stnk_hal_2', 'foto_ijazah'
+      ];
+      
+      fileFields.forEach(field => {
+        if (applicationData[field] instanceof File) {
+          formData.append(field, applicationData[field]);
+        }
+      });
+      
+      const response = await api.post(logEndpoint('/jobApplication/submit'), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      showNotification('Lamaran berhasil dikirim', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengirim lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get job applications for a candidate
+  getCandidateApplications: async () => {
+    try {
+      const response = await api.get(logEndpoint('/jobApplication/candidate'));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil data lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get application details by ID
+  getApplicationById: async (uuid) => {
+    try {
+      const response = await api.get(logEndpoint(`/jobApplication/${uuid}`));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil detail lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  }
+};
+
 // Helper functions for mock data
 const getMockUserData = () => {
   // Get any existing mock data from localStorage
