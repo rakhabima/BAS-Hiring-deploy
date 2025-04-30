@@ -337,24 +337,27 @@ const JobApplicationForm = () => {
         isValid = false;
       }
       
-      // Validate vehicle information
-      if (!formData.tipe_sim) {
+      // Check if position is courier
+      const isCourierPosition = jobData?.jobPosition?.toLowerCase().includes('kurir');
+      
+      // Only validate SIM for courier positions
+      if (isCourierPosition && !formData.tipe_sim) {
         errors.tipe_sim = 'Tipe SIM wajib dipilih';
         isValid = false;
       }
       
-      if (formData.tipe_sim !== 'Tidak Punya' && !formData.no_sim) {
-        errors.no_sim = 'Nomor SIM wajib diisi';
-        isValid = false;
-      }
-      
-      if (formData.tipe_sim !== 'Tidak Punya' && !formData.masa_berlaku_sim) {
-        errors.masa_berlaku_sim = 'Masa berlaku SIM wajib diisi';
-        isValid = false;
-      }
-      
-      // Only validate vehicle details if SIM is available
-      if (formData.tipe_sim !== 'Tidak Punya') {
+      // Only validate vehicle details if SIM is available and position is courier
+      if (formData.tipe_sim !== 'Tidak Punya' && isCourierPosition) {
+        if (!formData.no_sim) {
+          errors.no_sim = 'Nomor SIM wajib diisi';
+          isValid = false;
+        }
+        
+        if (!formData.masa_berlaku_sim) {
+          errors.masa_berlaku_sim = 'Masa berlaku SIM wajib diisi';
+          isValid = false;
+        }
+        
         if (!formData.merk_kendaraan) {
           errors.merk_kendaraan = 'Jenis & merk kendaraan wajib diisi';
           isValid = false;
@@ -413,17 +416,20 @@ const JobApplicationForm = () => {
         isValid = false;
       }
       
-      if (formData.tipe_sim !== 'Tidak Punya' && !formData.foto_sim) {
+      // Check if position is courier for SIM and STNK requirements
+      const isCourierPosition = jobData?.jobPosition?.toLowerCase().includes('kurir');
+      
+      if (formData.tipe_sim !== 'Tidak Punya' && isCourierPosition && !formData.foto_sim) {
         errors.foto_sim = 'Foto SIM wajib diunggah';
         isValid = false;
       }
       
-      if (formData.tipe_sim !== 'Tidak Punya' && !formData.foto_stnk_hal_1) {
+      if (formData.tipe_sim !== 'Tidak Punya' && isCourierPosition && !formData.foto_stnk_hal_1) {
         errors.foto_stnk_hal_1 = 'Foto STNK halaman depan wajib diunggah';
         isValid = false;
       }
       
-      if (formData.tipe_sim !== 'Tidak Punya' && !formData.foto_stnk_hal_2) {
+      if (formData.tipe_sim !== 'Tidak Punya' && isCourierPosition && !formData.foto_stnk_hal_2) {
         errors.foto_stnk_hal_2 = 'Foto STNK halaman belakang wajib diunggah';
         isValid = false;
       }
@@ -470,7 +476,7 @@ const JobApplicationForm = () => {
   // Handle closing the success dialog
   const handleSuccessClose = () => {
     setSuccessOpen(false);
-    navigate('/');
+    navigate('/candidate/portal-informasi');
   };
 
   // Handle navigation back to job details with confirmation
@@ -809,10 +815,13 @@ const JobApplicationForm = () => {
               <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                 Informasi Kendaraan
               </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Informasi kendaraan hanya wajib diisi untuk posisi kurir. Untuk posisi lain, Anda dapat melewati bagian ini.
+              </Typography>
               
               <Grid container spacing={3}>
                 <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth required error={!!formErrors.tipe_sim}>
+                  <FormControl fullWidth error={!!formErrors.tipe_sim}>
                     <InputLabel id="tipe-sim-label">Tipe SIM</InputLabel>
                     <Select
                       labelId="tipe-sim-label"
@@ -845,7 +854,7 @@ const JobApplicationForm = () => {
                     error={!!formErrors.no_sim}
                     helperText={formErrors.no_sim}
                     disabled={formData.tipe_sim === 'Tidak Punya'}
-                    required={formData.tipe_sim !== 'Tidak Punya'}
+                    required={formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')}
                   />
                 </Grid>
                 
@@ -861,7 +870,7 @@ const JobApplicationForm = () => {
                           error: !!formErrors.masa_berlaku_sim,
                           helperText: formErrors.masa_berlaku_sim,
                           disabled: formData.tipe_sim === 'Tidak Punya',
-                          required: formData.tipe_sim !== 'Tidak Punya'
+                          required: formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')
                         }
                       }}
                     />
@@ -879,7 +888,7 @@ const JobApplicationForm = () => {
                     error={!!formErrors.merk_kendaraan}
                     helperText={formErrors.merk_kendaraan}
                     disabled={formData.tipe_sim === 'Tidak Punya'}
-                    required={formData.tipe_sim !== 'Tidak Punya'}
+                    required={formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')}
                   />
                 </Grid>
                 
@@ -894,7 +903,7 @@ const JobApplicationForm = () => {
                     error={!!formErrors.tahun_produksi_kendaraan}
                     helperText={formErrors.tahun_produksi_kendaraan}
                     disabled={formData.tipe_sim === 'Tidak Punya'}
-                    required={formData.tipe_sim !== 'Tidak Punya'}
+                    required={formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')}
                   />
                 </Grid>
                 
@@ -909,7 +918,7 @@ const JobApplicationForm = () => {
                     error={!!formErrors.no_pol_kendaraan}
                     helperText={formErrors.no_pol_kendaraan}
                     disabled={formData.tipe_sim === 'Tidak Punya'}
-                    required={formData.tipe_sim !== 'Tidak Punya'}
+                    required={formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')}
                   />
                 </Grid>
                 
@@ -924,7 +933,7 @@ const JobApplicationForm = () => {
                     error={!!formErrors.no_stnk}
                     helperText={formErrors.no_stnk}
                     disabled={formData.tipe_sim === 'Tidak Punya'}
-                    required={formData.tipe_sim !== 'Tidak Punya'}
+                    required={formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')}
                   />
                 </Grid>
                 
@@ -940,7 +949,7 @@ const JobApplicationForm = () => {
                           error: !!formErrors.masa_berlaku_stnk,
                           helperText: formErrors.masa_berlaku_stnk,
                           disabled: formData.tipe_sim === 'Tidak Punya',
-                          required: formData.tipe_sim !== 'Tidak Punya'
+                          required: formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')
                         }
                       }}
                     />
@@ -959,7 +968,7 @@ const JobApplicationForm = () => {
                           error: !!formErrors.masa_berlaku_pajak_kendaraan,
                           helperText: formErrors.masa_berlaku_pajak_kendaraan,
                           disabled: formData.tipe_sim === 'Tidak Punya',
-                          required: formData.tipe_sim !== 'Tidak Punya'
+                          required: formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')
                         }
                       }}
                     />

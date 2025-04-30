@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { getApplicationByIdController, getCandidateApplicationsController, submitApplicationController } from "../controllers/jobApplicationController.js";
+import { getApplicationByIdController, getCandidateApplicationsController, submitApplicationController, updateApplicationController, updateApplicationStatusController } from "../controllers/jobApplicationController.js";
 import { authenticateUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -39,5 +39,11 @@ router.get("/candidate", authenticateUser, getCandidateApplicationsController);
 
 // Get application by ID (requires authentication)
 router.get("/:uuid", authenticateUser, getApplicationByIdController);
+
+// Update application for revision (requires authentication)
+router.put("/:uuid/update", authenticateUser, upload.fields(uploadFields), updateApplicationController);
+
+// Update application status by recruiter (requires authentication)
+router.put("/:uuid/update-status", authenticateUser, updateApplicationStatusController);
 
 export default router; 

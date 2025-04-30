@@ -17,10 +17,17 @@ import DashboardPage from './pages/gm/DashboardPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import ProfileUser from './pages/ProfileUser';
+import ApplicationList from './pages/public/ApplicationList';
+import DetailOnJob from './pages/public/DetailOnJob';
+import DetailTechnicalTest from './pages/public/DetailTechnicalTest';
+import DetailWawancara from './pages/public/DetailWawancara';
+import JobApplicationEditForm from './pages/public/JobApplicationEditForm';
 import JobApplicationForm from './pages/public/JobApplicationForm';
 import OutsourcingRequestPage from './pages/public/OutsourcingRequestPage';
+import PortalInformasi from './pages/public/PortalInformasi';
 import PublicJobDetailPage from './pages/public/PublicJobDetailPage';
 import PublicJobListPage from './pages/public/PublicJobListPage';
+import RingkasanFormulir from './pages/public/RingkasanFormulir';
 import PublicServiceDetailPage from './pages/PublicServiceDetailPage';
 import PublicServiceListPage from './pages/PublicServiceListPage';
 import CreateJobPage from './pages/recruiter/CreateJobPage';
@@ -208,6 +215,15 @@ const AppContent = () => {
           <Route path="/lowongan" element={<PublicJobListPage />} />
           <Route path="/lowongan/:id" element={<PublicJobDetailPage />} />
           <Route path="/lowongan/:id/apply" element={<ProtectedRoute element={<JobApplicationForm />} />} />
+          
+          {/* Candidate Routes - Job Application Information Portal */}
+          <Route path="/candidate/portal-informasi" element={<ProtectedRoute element={<ApplicationList />} />} />
+          <Route path="/candidate/portal-informasi/:uuid" element={<ProtectedRoute element={<PortalInformasi />} />} />
+          <Route path="/candidate/portal-informasi/ringkasan-formulir/:uuid" element={<ProtectedRoute element={<RingkasanFormulir />} />} />
+          <Route path="/candidate/portal-informasi/detail-wawancara/:uuid" element={<ProtectedRoute element={<DetailWawancara />} />} />
+          <Route path="/candidate/portal-informasi/detail-technical-test/:uuid" element={<ProtectedRoute element={<DetailTechnicalTest />} />} />
+          <Route path="/candidate/portal-informasi/detail-on-job/:uuid" element={<ProtectedRoute element={<DetailOnJob />} />} />
+          <Route path="/candidate/portal-informasi/edit-formulir/:uuid" element={<ProtectedRoute element={<JobApplicationEditForm />} />} />
           
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
