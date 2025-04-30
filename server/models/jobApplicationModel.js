@@ -24,7 +24,7 @@ const jobApplicationSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["PENDING", "REVIEWING", "INTERVIEW_SCHEDULED", "TECHNICAL_TEST", "REJECTED", "ACCEPTED", "ON_JOB"],
+        enum: ["PENDING", "REVIEWING", "INTERVIEW_SCHEDULED", "TECHNICAL_TEST", "REJECTED", "ACCEPTED", "ON_JOB", "REVISION"],
         default: "PENDING"
     },
     
@@ -97,34 +97,43 @@ const jobApplicationSchema = new mongoose.Schema({
         required: true
     },
     
-    // Informasi Kendaraan
+    // Informasi Kendaraan (opsional, hanya diperlukan untuk posisi kurir)
     no_sim: {
-        type: String
+        type: String,
+        default: null
     },
     tipe_sim: {
         type: String,
-        enum: ["Tidak Punya", "SIM A", "SIM B1", "SIM B2", "SIM C"]
+        enum: ["Tidak Punya", "SIM A", "SIM B1", "SIM B2", "SIM C"],
+        default: "Tidak Punya"
     },
     masa_berlaku_sim: {
-        type: Date
+        type: Date,
+        default: null
     },
     merk_kendaraan: {
-        type: String
+        type: String,
+        default: null
     },
     tahun_produksi_kendaraan: {
-        type: String
+        type: String,
+        default: null
     },
     no_pol_kendaraan: {
-        type: String
+        type: String,
+        default: null
     },
     no_stnk: {
-        type: String
+        type: String,
+        default: null
     },
     masa_berlaku_stnk: {
-        type: Date
+        type: Date,
+        default: null
     },
     masa_berlaku_pajak_kendaraan: {
-        type: Date
+        type: Date,
+        default: null
     },
     
     // Informasi Bank
@@ -163,13 +172,16 @@ const jobApplicationSchema = new mongoose.Schema({
         required: true
     },
     foto_sim: {
-        type: String
+        type: String,
+        default: null
     },
     foto_stnk_hal_1: {
-        type: String
+        type: String,
+        default: null
     },
     foto_stnk_hal_2: {
-        type: String
+        type: String,
+        default: null
     },
     foto_ijazah: {
         type: String,

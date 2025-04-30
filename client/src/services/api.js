@@ -806,8 +806,20 @@ export const jobApplicationService = {
       
       // Handle text fields
       for (const key in applicationData) {
-        if (!key.startsWith('foto_') && applicationData[key] !== undefined) {
-          formData.append(key, applicationData[key]);
+        if (!key.startsWith('foto_')) {
+          // For empty SIM type, use the default "Tidak Punya"
+          if (key === 'tipe_sim' && (!applicationData[key] || applicationData[key] === '')) {
+            formData.append(key, 'Tidak Punya');
+          }
+          // For date fields that might be null
+          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan') 
+              && applicationData[key] === null) {
+            formData.append(key, 'null');
+          } 
+          // For regular fields 
+          else if (applicationData[key] !== undefined) {
+            formData.append(key, applicationData[key]);
+          }
         }
       }
       
@@ -855,6 +867,56 @@ export const jobApplicationService = {
       return response.data;
     } catch (error) {
       showNotification('Gagal mengambil detail lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Update job application (for revision)
+  updateApplication: async (uuid, applicationData) => {
+    try {
+      const formData = new FormData();
+      
+      // Handle text fields
+      for (const key in applicationData) {
+        if (!key.startsWith('foto_')) {
+          // For empty SIM type, use the default "Tidak Punya"
+          if (key === 'tipe_sim' && (!applicationData[key] || applicationData[key] === '')) {
+            formData.append(key, 'Tidak Punya');
+          }
+          // For date fields that might be null
+          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan') 
+              && applicationData[key] === null) {
+            formData.append(key, 'null');
+          } 
+          // For regular fields 
+          else if (applicationData[key] !== undefined) {
+            formData.append(key, applicationData[key]);
+          }
+        }
+      }
+      
+      // Handle file uploads
+      const fileFields = [
+        'foto_diri', 'foto_ktp', 'foto_sim', 
+        'foto_stnk_hal_1', 'foto_stnk_hal_2', 'foto_ijazah'
+      ];
+      
+      fileFields.forEach(field => {
+        if (applicationData[field] instanceof File) {
+          formData.append(field, applicationData[field]);
+        }
+      });
+      
+      const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update`), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      showNotification('Lamaran berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui lamaran: ' + (error.response?.data?.message || error.message), 'error');
       throw error;
     }
   }

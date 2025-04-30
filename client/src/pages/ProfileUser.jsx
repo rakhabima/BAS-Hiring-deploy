@@ -3,28 +3,30 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import WorkIcon from '@mui/icons-material/Work';
 import {
-    Alert,
-    Box,
-    Button,
-    CircularProgress,
-    Container,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-    Divider,
-    Grid,
-    IconButton,
-    InputAdornment,
-    Paper,
-    TextField,
-    Typography
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
+  Grid,
+  IconButton,
+  InputAdornment,
+  Paper,
+  TextField,
+  Typography
 } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { userService } from '../services/api';
 
 const ProfileUser = () => {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -547,7 +549,7 @@ const ProfileUser = () => {
               variant="contained" 
               color="primary" 
               startIcon={<WorkIcon />}
-              onClick={() => {}}
+              onClick={() => navigate('/candidate/portal-informasi')}
               sx={{ mt: 2 }}
             >
               Lihat Portal Lamaran

@@ -12,32 +12,32 @@ import MenuIcon from '@mui/icons-material/Menu';
 import PeopleIcon from '@mui/icons-material/People';
 import WorkIcon from '@mui/icons-material/Work';
 import {
-    AppBar,
-    Box,
-    Button,
-    Container,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-    Divider,
-    Drawer,
-    IconButton,
-    List,
-    ListItem,
-    ListItemButton,
-    ListItemIcon,
-    ListItemText,
-    Menu,
-    MenuItem,
-    Link as MuiLink,
-    Slide,
-    Toolbar,
-    Typography,
-    useMediaQuery,
-    useScrollTrigger,
-    useTheme
+  AppBar,
+  Box,
+  Button,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Link as MuiLink,
+  Slide,
+  Toolbar,
+  Typography,
+  useMediaQuery,
+  useScrollTrigger,
+  useTheme
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -81,7 +81,7 @@ const getSidebarItems = (role) => {
       ];
     case 'CANDIDATE':
       return [
-        { label: 'Portal Informasi', icon: <InfoIcon />, path: '/candidate/information-portal' }
+        { label: 'Portal Informasi', icon: <InfoIcon />, path: '/candidate/portal-informasi' }
       ];
     case 'KOORDINATOR_LAPANGAN':
       return [
