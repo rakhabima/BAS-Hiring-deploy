@@ -162,7 +162,7 @@ const CandidateDetailPage = () => {
 
     // Handle cancel button
     const handleCancel = () => {
-        navigate('/recruiter/candidates');
+        navigate('/recruiter/dashboard');
     };
 
     // Get appropriate button text based on status
