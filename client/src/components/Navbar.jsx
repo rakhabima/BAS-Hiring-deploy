@@ -58,7 +58,7 @@ function HideOnScroll(props) {
 
 // Define sidebar navigation items based on role
 const getSidebarItems = (role) => {
-  switch(role) {
+  switch (role) {
     case 'ADMIN':
       return [
         { label: 'Karyawan', icon: <PeopleIcon />, path: '/admin/employees' },
@@ -117,7 +117,7 @@ const Navbar = () => {
       // Better way to check if user is logged in - look for user data in localStorage
       const storedUser = localStorage.getItem('user');
       const storedRole = localStorage.getItem('userRole');
-      
+
       if (storedUser) {
         try {
           const user = JSON.parse(storedUser);
@@ -133,12 +133,12 @@ const Navbar = () => {
         setUserRole(storedRole || 'GUEST');
       }
     };
-    
+
     checkLoginStatus();
-    
+
     // Set up an interval to check login status periodically
     const intervalId = setInterval(checkLoginStatus, 2000);
-    
+
     // Clean up the interval when component unmounts
     return () => clearInterval(intervalId);
   }, []);
@@ -184,20 +184,20 @@ const Navbar = () => {
       // Clear any stored user data
       localStorage.removeItem('user');
       localStorage.removeItem('userEmail');
-      
+
       // Set GUEST role explicitly
       localStorage.setItem('userRole', 'GUEST');
-      
+
       // Update component state
       setIsLoggedIn(false);
       setUserRole('GUEST');
-      
+
       // Close sidebar if open
       setSidebarOpen(false);
-      
+
       // Redirect to home page
       navigate('/home');
-      
+
       // Close the menu
       handleMenuClose();
     } catch (error) {
@@ -239,7 +239,7 @@ const Navbar = () => {
 
   // Dashboard link based on user role - now always returns /home
   const getDashboardLink = () => {
-    switch(userRole) {
+    switch (userRole) {
       case 'ADMIN':
         return '/admin/dashboard';
       case 'RECRUITER':
@@ -247,7 +247,7 @@ const Navbar = () => {
       case 'GENERAL_MANAGER':
         return '/gm/dashboard';
       case 'CANDIDATE':
-        return '/candidate/dashboard';
+        return '/candidate/portal-informasi';
       case 'KOORDINATOR_LAPANGAN':
         return '/korlap/dashboard';
       case 'KARYAWAN':
@@ -325,7 +325,7 @@ const Navbar = () => {
   // Sidebar content based on user role
   const sidebarContent = (
     <Box
-      sx={{ 
+      sx={{
         width: 280,
         height: '100%',
         display: 'flex',
@@ -333,9 +333,9 @@ const Navbar = () => {
       }}
       role="presentation"
     >
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
+      <Box sx={{
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'space-between',
         p: 2
       }}>
@@ -365,9 +365,9 @@ const Navbar = () => {
       </List>
       <Divider />
       <Box sx={{ p: 2 }}>
-        <Button 
-          variant="outlined" 
-          fullWidth 
+        <Button
+          variant="outlined"
+          fullWidth
           startIcon={<LogoutIcon />}
           onClick={confirmLogout}
           sx={{ mt: 1 }}
@@ -385,9 +385,9 @@ const Navbar = () => {
   );
 
   const renderSidebar = (
-    <Drawer 
-      anchor="right" 
-      open={sidebarOpen} 
+    <Drawer
+      anchor="right"
+      open={sidebarOpen}
       onClose={toggleSidebar}
       sx={{
         '& .MuiDrawer-paper': {
@@ -431,8 +431,8 @@ const Navbar = () => {
         <AppBar
           position="fixed"
           sx={{
-            backgroundColor: scrolled 
-              ? theme.palette.background.paper 
+            backgroundColor: scrolled
+              ? theme.palette.background.paper
               : 'transparent',
             boxShadow: scrolled ? theme.shadows[4] : 'none',
             transition: 'all 0.3s ease',
@@ -448,10 +448,10 @@ const Navbar = () => {
                   <img
                     src="/assets/baslogo.png"
                     alt="BAS Logo"
-                    style={{ 
-                      width: 100, 
+                    style={{
+                      width: 100,
                       height: 'auto',
-                      filter: scrolled 
+                      filter: scrolled
                         ? 'none'
                         : (mode === 'dark' ? 'brightness(0) invert(1)' : 'none')
                     }}
@@ -468,10 +468,10 @@ const Navbar = () => {
                       color="inherit"
                       component={Link}
                       to={getMenuItemDestination(item)}
-                      sx={{ 
+                      sx={{
                         mx: 1,
-                        color: scrolled 
-                          ? theme.palette.text.primary 
+                        color: scrolled
+                          ? theme.palette.text.primary
                           : (mode === 'dark' ? '#fff' : '#000'),
                         '&:hover': {
                           backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -490,9 +490,9 @@ const Navbar = () => {
                 <IconButton
                   onClick={toggleColorMode}
                   color="inherit"
-                  sx={{ 
-                    color: scrolled 
-                      ? theme.palette.text.primary 
+                  sx={{
+                    color: scrolled
+                      ? theme.palette.text.primary
                       : (mode === 'dark' ? '#fff' : '#000')
                   }}
                 >
@@ -507,10 +507,10 @@ const Navbar = () => {
                     aria-label="open sidebar menu"
                     onClick={toggleSidebar}
                     color="inherit"
-                    sx={{ 
+                    sx={{
                       ml: 1,
-                      color: scrolled 
-                        ? theme.palette.text.primary 
+                      color: scrolled
+                        ? theme.palette.text.primary
                         : (mode === 'dark' ? '#fff' : '#000')
                     }}
                   >
@@ -528,10 +528,10 @@ const Navbar = () => {
                     aria-haspopup="true"
                     onClick={handleProfileMenuOpen}
                     color="inherit"
-                    sx={{ 
+                    sx={{
                       ml: 2,
-                      color: scrolled 
-                        ? theme.palette.text.primary 
+                      color: scrolled
+                        ? theme.palette.text.primary
                         : (mode === 'dark' ? '#fff' : '#000')
                     }}
                   >
@@ -542,9 +542,9 @@ const Navbar = () => {
                     variant="contained"
                     color="primary"
                     startIcon={<AccountCircleIcon />}
-                    sx={{ 
+                    sx={{
                       ml: 2,
-                      display: { xs: 'none', sm: 'flex' } 
+                      display: { xs: 'none', sm: 'flex' }
                     }}
                     component={Link}
                     to="/login"
@@ -561,9 +561,9 @@ const Navbar = () => {
                     color="inherit"
                     aria-label="menu"
                     onClick={toggleDrawer(true)}
-                    sx={{ 
-                      color: scrolled 
-                        ? theme.palette.text.primary 
+                    sx={{
+                      color: scrolled
+                        ? theme.palette.text.primary
                         : (mode === 'dark' ? '#fff' : '#000')
                     }}
                   >

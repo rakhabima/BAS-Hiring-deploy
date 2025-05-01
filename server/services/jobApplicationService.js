@@ -43,20 +43,20 @@ export const getCandidateApplications = async (candidateId) => {
     // Find all applications for this candidate
     const applications = await JobApplication.find({ candidateId })
       .sort({ submissionDate: -1 });
-    
+
     // Process applications to properly populate job posting details
     const populatedApplications = [];
-    
+
     for (const application of applications) {
       try {
         // Find the job posting by UUID
-        const jobPosting = await JobPosting.findOne({ 
-          uuid: application.jobPostingId 
+        const jobPosting = await JobPosting.findOne({
+          uuid: application.jobPostingId
         });
-        
+
         // Create a copy of the application as a plain object
         const appObject = application.toObject();
-        
+
         // Manually assign job posting if found
         if (jobPosting) {
           appObject.jobPostingId = {
@@ -68,7 +68,7 @@ export const getCandidateApplications = async (candidateId) => {
             deadline: jobPosting.deadline
           };
         }
-        
+
         populatedApplications.push(appObject);
       } catch (err) {
         console.error(`Error populating job posting for application ${application.uuid}:`, err);
@@ -76,7 +76,7 @@ export const getCandidateApplications = async (candidateId) => {
         populatedApplications.push(application.toObject());
       }
     }
-    
+
     return populatedApplications;
   } catch (error) {
     console.error("Error getting candidate applications:", error);
@@ -93,20 +93,20 @@ export const getApplicationById = async (uuid) => {
   try {
     // Find application by UUID
     const application = await JobApplication.findOne({ uuid });
-    
+
     if (!application) {
       return null;
     }
-    
+
     // Convert to plain object
     const appObject = application.toObject();
-    
+
     // Find and manually populate job posting
     try {
-      const jobPosting = await JobPosting.findOne({ 
-        uuid: application.jobPostingId 
+      const jobPosting = await JobPosting.findOne({
+        uuid: application.jobPostingId
       });
-      
+
       if (jobPosting) {
         appObject.jobPostingId = {
           title: jobPosting.title,
@@ -120,7 +120,7 @@ export const getApplicationById = async (uuid) => {
     } catch (err) {
       console.error(`Error populating job posting for application ${uuid}:`, err);
     }
-    
+
     return appObject;
   } catch (error) {
     console.error("Error getting application by ID:", error);
@@ -143,28 +143,47 @@ export const updateApplication = async (uuid, updateData) => {
         updateData[field] = null;
       }
     });
-    
+
     // Ensure tipe_sim has a valid enum value
     if (!updateData.tipe_sim || updateData.tipe_sim === "") {
       updateData.tipe_sim = "Tidak Punya";
     }
-    
-    // Update status to PENDING after revision
-    if (!updateData.status) {
-      updateData.status = "PENDING";
+
+    // Get the current application to check for status changes
+    const currentApplication = await JobApplication.findOne({ uuid });
+
+    if (!currentApplication) {
+      return null;
     }
-    
+
+    // Determine if status is changing
+    const isStatusChanging = updateData.status && updateData.status !== currentApplication.status;
+
+    // If status is changing, add a new status history entry
+    if (isStatusChanging) {
+      // Create a new status history entry
+      const statusEntry = {
+        status: updateData.status,
+        timestamp: new Date(),
+        notes: updateData.notes || '',
+        updatedBy: updateData.updatedBy
+      };
+
+      // Add the new status entry to the history
+      updateData.statusHistory = [...(currentApplication.statusHistory || []), statusEntry];
+    }
+
     // Find and update the application
     const updatedApplication = await JobApplication.findOneAndUpdate(
       { uuid },
       { $set: updateData },
       { new: true }
     );
-    
+
     if (!updatedApplication) {
       return null;
     }
-    
+
     // If status is ACCEPTED or ON_JOB, update the user's employment status
     if (updateData.status === "ACCEPTED" || updateData.status === "ON_JOB") {
       await User.findOneAndUpdate(
@@ -172,16 +191,16 @@ export const updateApplication = async (uuid, updateData) => {
         { $set: { employmentStatus: "ON_JOB" } }
       );
     }
-    
+
     // Convert to plain object
     const appObject = updatedApplication.toObject();
-    
+
     // Find and manually populate job posting
     try {
-      const jobPosting = await JobPosting.findOne({ 
-        uuid: updatedApplication.jobPostingId 
+      const jobPosting = await JobPosting.findOne({
+        uuid: updatedApplication.jobPostingId
       });
-      
+
       if (jobPosting) {
         appObject.jobPostingId = {
           title: jobPosting.title,
@@ -195,10 +214,73 @@ export const updateApplication = async (uuid, updateData) => {
     } catch (err) {
       console.error(`Error populating job posting for updated application ${uuid}:`, err);
     }
-    
+
     return appObject;
   } catch (error) {
     console.error("Error updating application:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all job applications (for recruiters)
+ * @returns {Promise<Array>} - Array of all job application objects
+ */
+export const getAllApplications = async () => {
+  try {
+    // Find all applications
+    const applications = await JobApplication.find({})
+      .sort({ submissionDate: -1 });
+
+    // Process applications to properly populate job posting details
+    const populatedApplications = [];
+
+    for (const application of applications) {
+      try {
+        // Find the job posting by UUID
+        const jobPosting = await JobPosting.findOne({
+          uuid: application.jobPostingId
+        });
+
+        // Find candidate details
+        const candidate = await User.findOne({
+          uuid: application.candidateId
+        });
+
+        // Create a copy of the application as a plain object
+        const appObject = application.toObject();
+
+        // Add candidate information
+        if (candidate) {
+          appObject.candidateInfo = {
+            name: candidate.name,
+            email: candidate.email
+          };
+        }
+
+        // Manually assign job posting if found
+        if (jobPosting) {
+          appObject.jobPostingId = {
+            title: jobPosting.title,
+            companyName: jobPosting.title, // Assuming company name is in title
+            jobPosition: jobPosting.jobPosition,
+            location: jobPosting.location,
+            salary: jobPosting.salary,
+            deadline: jobPosting.deadline
+          };
+        }
+
+        populatedApplications.push(appObject);
+      } catch (err) {
+        console.error(`Error populating job posting for application ${application.uuid}:`, err);
+        // Include the application even if population fails
+        populatedApplications.push(application.toObject());
+      }
+    }
+
+    return populatedApplications;
+  } catch (error) {
+    console.error("Error getting all applications:", error);
     throw error;
   }
 }; 

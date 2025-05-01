@@ -27,7 +27,7 @@ const jobApplicationSchema = new mongoose.Schema({
         enum: ["PENDING", "REVIEWING", "INTERVIEW_SCHEDULED", "TECHNICAL_TEST", "REJECTED", "ACCEPTED", "ON_JOB", "REVISION"],
         default: "PENDING"
     },
-    
+
     // Informasi Pribadi
     nama_ktp: {
         type: String,
@@ -56,7 +56,7 @@ const jobApplicationSchema = new mongoose.Schema({
         required: true,
         enum: ["SD", "SMP", "SMA/SMK", "D1", "D2", "D3", "D4/S1", "S2", "S3"]
     },
-    
+
     // Informasi Kontak
     email: {
         type: String,
@@ -78,7 +78,7 @@ const jobApplicationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    
+
     // Informasi Alamat
     kota: {
         type: String,
@@ -96,7 +96,7 @@ const jobApplicationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    
+
     // Informasi Kendaraan (opsional, hanya diperlukan untuk posisi kurir)
     no_sim: {
         type: String,
@@ -135,7 +135,7 @@ const jobApplicationSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-    
+
     // Informasi Bank
     no_rekening: {
         type: String,
@@ -149,7 +149,7 @@ const jobApplicationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    
+
     // Informasi Pekerjaan
     posisi_dilamar: {
         type: String,
@@ -161,7 +161,7 @@ const jobApplicationSchema = new mongoose.Schema({
     ekspektasi_lama_bekerja: {
         type: String
     },
-    
+
     // Dokumen
     foto_diri: {
         type: String,
@@ -187,13 +187,59 @@ const jobApplicationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    
+
     // Field untuk catatan tambahan
     notes: {
         type: String
-    }
+    },
+
+    // Status history to track changes
+    statusHistory: [
+        {
+            status: {
+                type: String,
+                enum: ["PENDING", "REVIEWING", "INTERVIEW_SCHEDULED", "TECHNICAL_TEST", "REJECTED", "ACCEPTED", "ON_JOB", "REVISION"],
+                required: true
+            },
+            timestamp: {
+                type: Date,
+                default: Date.now
+            },
+            notes: {
+                type: String
+            },
+            updatedBy: {
+                type: String,
+                ref: "User"
+            }
+        }
+    ]
 }, {
     timestamps: true
+});
+
+// Add middleware to track status changes
+jobApplicationSchema.pre('save', function (next) {
+    const application = this;
+
+    // If it's a new application, add the initial PENDING status
+    if (application.isNew) {
+        application.statusHistory = [{
+            status: application.status || 'PENDING',
+            timestamp: new Date(),
+            notes: 'Dokumen lamaran terkirim, menunggu verifikasi'
+        }];
+    }
+    // If the status has changed, add a new entry to the history
+    else if (application.isModified('status')) {
+        application.statusHistory.push({
+            status: application.status,
+            timestamp: new Date(),
+            notes: application.notes || ''
+        });
+    }
+
+    next();
 });
 
 const JobApplication = mongoose.model("JobApplication", jobApplicationSchema);

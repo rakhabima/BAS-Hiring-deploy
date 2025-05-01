@@ -41,9 +41,9 @@ const DetailOnJob = () => {
   if (error) {
     return (
       <Box sx={{ maxWidth: 800, mx: 'auto', mt: 5 }}>
-        <Alert 
+        <Alert
           severity="error"
-          sx={{ 
+          sx={{
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : undefined,
             color: theme.palette.mode === 'dark' ? theme.palette.error.light : undefined,
             '& .MuiAlert-icon': {
@@ -53,9 +53,9 @@ const DetailOnJob = () => {
         >
           {error}
         </Alert>
-        <Button 
-          variant="contained" 
-          sx={{ mt: 3 }} 
+        <Button
+          variant="contained"
+          sx={{ mt: 3 }}
           onClick={() => navigate('/candidate/portal-informasi')}
         >
           Kembali
@@ -67,9 +67,9 @@ const DetailOnJob = () => {
   if (!application) {
     return (
       <Box sx={{ maxWidth: 800, mx: 'auto', mt: 5 }}>
-        <Alert 
+        <Alert
           severity="warning"
-          sx={{ 
+          sx={{
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.15)' : undefined,
             color: theme.palette.mode === 'dark' ? theme.palette.warning.light : undefined,
             '& .MuiAlert-icon': {
@@ -79,9 +79,9 @@ const DetailOnJob = () => {
         >
           Data aplikasi tidak ditemukan
         </Alert>
-        <Button 
-          variant="contained" 
-          sx={{ mt: 3 }} 
+        <Button
+          variant="contained"
+          sx={{ mt: 3 }}
           onClick={() => navigate('/candidate/portal-informasi')}
         >
           Kembali
@@ -92,65 +92,65 @@ const DetailOnJob = () => {
 
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto', mt: 5 }}>
-      <Typography 
-        variant="h4" 
-        fontWeight="bold" 
+      <Typography
+        variant="h4"
+        fontWeight="bold"
         mb={3}
         sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
       >
         Detail On Job
       </Typography>
-      <Paper 
-        elevation={2} 
-        sx={{ 
+      <Paper
+        elevation={2}
+        sx={{
           p: 3,
           bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : undefined,
           border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none'
         }}
       >
-        <Typography 
-          variant="subtitle1" 
+        <Typography
+          variant="subtitle1"
           fontWeight="bold"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           Informasi Penempatan
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           Nama: {application.nama_ktp}
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           Posisi: {application.jobPostingId?.jobPosition || 'Tidak tersedia'}
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           Lokasi Kerja: {application.jobPostingId?.location || 'Jakarta'}
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           Status: Aktif Bekerja
         </Typography>
-        
-        <Typography 
-          variant="subtitle1" 
-          fontWeight="bold" 
-          sx={{ 
+
+        <Typography
+          variant="subtitle1"
+          fontWeight="bold"
+          sx={{
             mt: 3,
-            color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined 
+            color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined
           }}
         >
           Catatan Penting
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
@@ -159,9 +159,9 @@ const DetailOnJob = () => {
         </Typography>
       </Paper>
 
-      <Button 
-        variant="contained" 
-        sx={{ mt: 3 }} 
+      <Button
+        variant="contained"
+        sx={{ mt: 3 }}
         onClick={() => navigate('/candidate/portal-informasi')}
       >
         Kembali

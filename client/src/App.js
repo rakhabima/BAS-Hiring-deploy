@@ -30,6 +30,8 @@ import PublicJobListPage from './pages/public/PublicJobListPage';
 import RingkasanFormulir from './pages/public/RingkasanFormulir';
 import PublicServiceDetailPage from './pages/PublicServiceDetailPage';
 import PublicServiceListPage from './pages/PublicServiceListPage';
+import CandidateDetailPage from './pages/recruiter/CandidateDetailPage';
+import CandidatesPage from './pages/recruiter/CandidatesPage';
 import CreateJobPage from './pages/recruiter/CreateJobPage';
 import EditJobPage from './pages/recruiter/EditJobPage';
 import JobDetailPage from './pages/recruiter/JobDetailPage';
@@ -86,48 +88,48 @@ const ProtectedRoute = ({ element }) => {
 // Admin Route component to check if user is authenticated and has ADMIN role
 const AdminRoute = ({ element }) => {
   const isAuthenticated = localStorage.getItem('user') !== null;
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-  
+
   const user = JSON.parse(localStorage.getItem('user'));
   if (user.role !== 'ADMIN') {
     return <Navigate to="/home" />;
   }
-  
+
   return element;
 };
 
 // GM Route component to check if user is authenticated and has GENERAL_MANAGER role
 const GMRoute = ({ element }) => {
   const isAuthenticated = localStorage.getItem('user') !== null;
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-  
+
   const user = JSON.parse(localStorage.getItem('user'));
   if (user.role !== 'GENERAL_MANAGER') {
     return <Navigate to="/home" />;
   }
-  
+
   return element;
 };
 
 // Recruiter Route component to check if user is authenticated and has RECRUITER role
 const RecruiterRoute = ({ element }) => {
   const isAuthenticated = localStorage.getItem('user') !== null;
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-  
+
   const user = JSON.parse(localStorage.getItem('user'));
   if (user.role !== 'RECRUITER') {
     return <Navigate to="/home" />;
   }
-  
+
   return element;
 };
 
@@ -138,18 +140,18 @@ const AppContent = () => {
   const shouldShowNavbar = !hideNavbarPaths.includes(location.pathname);
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <Box sx={{
+      display: 'flex',
+      flexDirection: 'column',
       minHeight: '100vh',
       width: '100%',
       position: 'relative',
     }}>
       <ScrollToTop />
       {shouldShowNavbar && <Navbar />}
-      <Box 
-        component="main" 
-        sx={{ 
+      <Box
+        component="main"
+        sx={{
           flexGrow: 1,
           width: '100%',
           display: 'flex',
@@ -176,46 +178,46 @@ const AppContent = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          
+
           {/* Profile route - accessible to all authenticated users */}
           <Route path="/profil" element={<ProtectedRoute element={<ProfileUser />} />} />
-          
+
           {/* Admin routes */}
           <Route path="/admin/internal-staff" element={<AdminRoute element={<InternalStaffPage />} />} />
           <Route path="/admin/create-account" element={<AdminRoute element={<CreateAccountPage />} />} />
           <Route path="/admin/staff/:uuid" element={<AdminRoute element={<UserDetailPage />} />} />
-          
+
           {/* Protected Dashboard routes */}
           <Route path="/admin/dashboard" element={<AdminRoute element={<AdminDashboardPage />} />} />
-          <Route path="/recruiter/dashboard" element={<ProtectedRoute element={<div>Recruiter Dashboard</div>} />} />
+          <Route path="/recruiter/dashboard" element={<RecruiterRoute element={<CandidatesPage />} />} />
           <Route path="/gm/dashboard" element={<GMRoute element={<DashboardPage />} />} />
-          
+
           {/* GM Routes - Service Publications */}
           <Route path="/gm/service-publications" element={<GMRoute element={<ServicePublicationsPage />} />} />
           <Route path="/gm/service-publications/create" element={<GMRoute element={<CreateServicePage />} />} />
           <Route path="/gm/service-publications/edit/:id" element={<GMRoute element={<EditServicePage />} />} />
           <Route path="/gm/service-publications/detail/:id" element={<GMRoute element={<ServiceDetailPage />} />} />
-          
+
           <Route path="/candidate/dashboard" element={<ProtectedRoute element={<div>Candidate Dashboard</div>} />} />
           <Route path="/korlap/dashboard" element={<ProtectedRoute element={<div>Koordinator Lapangan Dashboard</div>} />} />
-          
+
           {/* Recruiter Routes */}
-          <Route path="/recruiter/dashboard" element={<RecruiterRoute element={<div>Recruiter Dashboard</div>} />} />
+          <Route path="/recruiter/candidate-detail/:candidateId" element={<RecruiterRoute element={<CandidateDetailPage />} />} />
+          <Route path="/recruiter/candidate-interview/:candidateId" element={<RecruiterRoute element={<div>Interview Scheduling</div>} />} />
+          <Route path="/recruiter/technical-test/:candidateId" element={<RecruiterRoute element={<div>Technical Test</div>} />} />
           <Route path="/recruiter/service-form" element={<RecruiterRoute element={<div>Outsourcing Service Form</div>} />} />
-          <Route path="/recruiter/outsourcing" element={<RecruiterRoute element={<div>Recruiter Outsource Services</div>} />} />
-          <Route path="/recruiter/outsourcing/:id" element={<RecruiterRoute element={<div>Outsourcing Service Details</div>} />} />
-          
+
           {/* Job Vacancy Routes */}
           <Route path="/recruiter/job-publications" element={<RecruiterRoute element={<JobPublicationsPage />} />} />
           <Route path="/recruiter/job-publications/create" element={<RecruiterRoute element={<CreateJobPage />} />} />
           <Route path="/recruiter/job-publications/edit/:id" element={<RecruiterRoute element={<EditJobPage />} />} />
           <Route path="/recruiter/job-publications/:id" element={<RecruiterRoute element={<JobDetailPage />} />} />
-          
+
           {/* Public Job Vacancy Routes */}
           <Route path="/lowongan" element={<PublicJobListPage />} />
           <Route path="/lowongan/:id" element={<PublicJobDetailPage />} />
           <Route path="/lowongan/:id/apply" element={<ProtectedRoute element={<JobApplicationForm />} />} />
-          
+
           {/* Candidate Routes - Job Application Information Portal */}
           <Route path="/candidate/portal-informasi" element={<ProtectedRoute element={<ApplicationList />} />} />
           <Route path="/candidate/portal-informasi/:uuid" element={<ProtectedRoute element={<PortalInformasi />} />} />
@@ -224,7 +226,7 @@ const AppContent = () => {
           <Route path="/candidate/portal-informasi/detail-technical-test/:uuid" element={<ProtectedRoute element={<DetailTechnicalTest />} />} />
           <Route path="/candidate/portal-informasi/detail-on-job/:uuid" element={<ProtectedRoute element={<DetailOnJob />} />} />
           <Route path="/candidate/portal-informasi/edit-formulir/:uuid" element={<ProtectedRoute element={<JobApplicationEditForm />} />} />
-          
+
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

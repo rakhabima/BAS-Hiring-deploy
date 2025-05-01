@@ -32,8 +32,8 @@ app.use(cors({
 
 // Health check route - responds before DB connection to ensure Railway healthcheck passes
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
+  res.status(200).json({
+    status: 'ok',
     message: 'BAS Hiring Monolithic Application is running',
     environment: process.env.NODE_ENV || 'development'
   });
@@ -66,14 +66,14 @@ try {
 
 // Check if frontend build exists
 const frontendBuildPath = path.join(__dirname, 'client/build');
-const frontendExists = fs.existsSync(frontendBuildPath) && 
-                      fs.existsSync(path.join(frontendBuildPath, 'index.html'));
+const frontendExists = fs.existsSync(frontendBuildPath) &&
+  fs.existsSync(path.join(frontendBuildPath, 'index.html'));
 
 // Serve static frontend assets if they exist
 if (frontendExists) {
   console.log('Frontend build detected, serving static files');
   app.use(express.static(frontendBuildPath));
-  
+
   // Handle React routing, return all requests to React app
   app.get('*', (req, res) => {
     // Skip API routes (already handled)
