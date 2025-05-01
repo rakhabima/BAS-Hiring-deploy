@@ -49,9 +49,9 @@ const DetailWawancara = () => {
   if (error) {
     return (
       <Box sx={{ maxWidth: 800, mx: 'auto', mt: 5 }}>
-        <Alert 
+        <Alert
           severity="error"
-          sx={{ 
+          sx={{
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : undefined,
             color: theme.palette.mode === 'dark' ? theme.palette.error.light : undefined,
             '& .MuiAlert-icon': {
@@ -61,9 +61,9 @@ const DetailWawancara = () => {
         >
           {error}
         </Alert>
-        <Button 
-          variant="contained" 
-          sx={{ mt: 3 }} 
+        <Button
+          variant="contained"
+          sx={{ mt: 3 }}
           onClick={() => navigate('/candidate/portal-informasi')}
         >
           Kembali
@@ -75,9 +75,9 @@ const DetailWawancara = () => {
   if (!application) {
     return (
       <Box sx={{ maxWidth: 800, mx: 'auto', mt: 5 }}>
-        <Alert 
+        <Alert
           severity="warning"
-          sx={{ 
+          sx={{
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.15)' : undefined,
             color: theme.palette.mode === 'dark' ? theme.palette.warning.light : undefined,
             '& .MuiAlert-icon': {
@@ -87,9 +87,9 @@ const DetailWawancara = () => {
         >
           Data aplikasi tidak ditemukan
         </Alert>
-        <Button 
-          variant="contained" 
-          sx={{ mt: 3 }} 
+        <Button
+          variant="contained"
+          sx={{ mt: 3 }}
           onClick={() => navigate('/candidate/portal-informasi')}
         >
           Kembali
@@ -105,78 +105,78 @@ const DetailWawancara = () => {
 
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto', mt: 5 }}>
-      <Typography 
-        variant="h4" 
-        fontWeight="bold" 
+      <Typography
+        variant="h4"
+        fontWeight="bold"
         mb={3}
         sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
       >
         Detail Pelaksanaan Wawancara
       </Typography>
-      <Paper 
-        elevation={2} 
-        sx={{ 
+      <Paper
+        elevation={2}
+        sx={{
           p: 3,
           bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : undefined,
           border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none'
         }}
       >
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           Tanggal: {format(interviewDate, 'dd MMMM yyyy')}
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           Waktu: 45 Menit
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           Lokasi: Zoom Meeting (Daring)
         </Typography>
-        <Typography 
-          variant="subtitle1" 
-          fontWeight="bold" 
-          sx={{ 
+        <Typography
+          variant="subtitle1"
+          fontWeight="bold"
+          sx={{
             mt: 2,
-            color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined 
+            color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined
           }}
         >
           Catatan Penting
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           Harap diperhatikan:
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           - Gunakan pakaian yang rapih
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           - Hadir 5 menit sebelum wawancara dimulai
         </Typography>
-        <Typography 
+        <Typography
           variant="body2"
           sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined }}
         >
           - Segera konfirmasi kehadiran
         </Typography>
-        
-        <FormControl 
-          fullWidth 
-          sx={{ 
+
+        <FormControl
+          fullWidth
+          sx={{
             mt: 3,
             '& .MuiInputLabel-root': {
               color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : undefined
@@ -207,9 +207,9 @@ const DetailWawancara = () => {
         </FormControl>
       </Paper>
 
-      <Button 
-        variant="contained" 
-        sx={{ mt: 3 }} 
+      <Button
+        variant="contained"
+        sx={{ mt: 3 }}
         onClick={() => navigate('/candidate/portal-informasi')}
       >
         Kembali

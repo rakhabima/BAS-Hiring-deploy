@@ -1,12 +1,12 @@
 import express from "express";
 import multer from "multer";
-import { getApplicationByIdController, getCandidateApplicationsController, submitApplicationController, updateApplicationController, updateApplicationStatusController } from "../controllers/jobApplicationController.js";
+import { getAllApplicationsController, getApplicationByIdController, getCandidateApplicationsController, submitApplicationController, updateApplicationController, updateApplicationStatusController } from "../controllers/jobApplicationController.js";
 import { authenticateUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Configure multer to store files in memory
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     // Accept only images
@@ -36,6 +36,9 @@ router.post("/submit", authenticateUser, upload.fields(uploadFields), submitAppl
 
 // Get candidate's applications (requires authentication)
 router.get("/candidate", authenticateUser, getCandidateApplicationsController);
+
+// Get all applications (for recruiters - requires authentication)
+router.get("/all", authenticateUser, getAllApplicationsController);
 
 // Get application by ID (requires authentication)
 router.get("/:uuid", authenticateUser, getApplicationByIdController);

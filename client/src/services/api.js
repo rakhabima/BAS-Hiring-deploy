@@ -13,8 +13,8 @@ const showNotification = (message, severity) => {
 
 // Determine base URL - use relative path if monolithic deployment, or environment variable
 const isMonolithicDeployment = window.location.hostname.includes('railway.app');
-const API_BASE_URL = isMonolithicDeployment 
-  ? '/api' 
+const API_BASE_URL = isMonolithicDeployment
+  ? '/api'
   : process.env.REACT_APP_API_URL || 'http://localhost:5555';
 
 console.log('API URL configured as:', API_BASE_URL);
@@ -59,15 +59,15 @@ export const authService = {
         ...userData,
         isPublicRegistration: true // Ensure CANDIDATE role
       });
-      
+
       // Show success notification
       showNotification('Registrasi berhasil! Silakan login.', 'success');
-      
+
       return response.data;
     } catch (error) {
       // Show error notification
       let errorMsg = 'Registrasi gagal. Silakan coba lagi.';
-      
+
       if (error.response) {
         if (error.response.status === 409) {
           errorMsg = 'Email sudah terdaftar. Silakan gunakan email lain.';
@@ -75,7 +75,7 @@ export const authService = {
           errorMsg = error.response.data.message;
         }
       }
-      
+
       showNotification(errorMsg, 'error');
       throw error;
     }
@@ -105,10 +105,10 @@ export const authService = {
 
       // Proceed with real login
       const response = await api.post(logEndpoint('/auth/login'), credentials);
-      
+
       // Show success notification
       showNotification('Login berhasil! Selamat datang.', 'success');
-      
+
       // Ensure user data is properly formatted
       // If server response doesn't match expected format, adapt it here
       if (response.data && !response.data.user && response.data.uuid) {
@@ -129,7 +129,7 @@ export const authService = {
     } catch (error) {
       // Show error notification
       let errorMsg = 'Login gagal. Silakan coba lagi.';
-      
+
       if (error.response) {
         if (error.response.status === 401) {
           errorMsg = 'Email atau kata sandi salah.';
@@ -137,7 +137,7 @@ export const authService = {
           errorMsg = error.response.data.message;
         }
       }
-      
+
       showNotification(errorMsg, 'error');
       throw error;
     }
@@ -154,17 +154,17 @@ export const authService = {
 
       // Set role to GUEST
       localStorage.setItem('userRole', 'GUEST');
-      
+
       // Clear any session cookies by setting them to expire
       document.cookie.split(";").forEach((c) => {
         document.cookie = c
           .replace(/^ +/, "")
           .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
-      
+
       // Show success notification
       showNotification('Logout berhasil. Sampai jumpa!', 'success');
-      
+
       return response.data;
     } catch (error) {
       // Even if API call fails, still clear client-side data
@@ -177,7 +177,7 @@ export const authService = {
           .replace(/^ +/, "")
           .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
-      
+
       // Show error notification
       showNotification('Terjadi kesalahan saat logout.', 'error');
       throw error;
@@ -204,12 +204,12 @@ export const authService = {
         });
 
         console.log('Staff account creation successful:', response.data);
-        
+
         // After successful creation, add to mock staff list for development purposes
         try {
           // Generate a UUID for the mock user
           const mockUuid = 'staff-' + Date.now().toString().slice(-6);
-          
+
           // Create a mock staff object
           const mockStaff = {
             uuid: mockUuid,
@@ -219,25 +219,25 @@ export const authService = {
             status: true,
             createdBy: userData.createdBy || 'admin'
           };
-          
+
           // Get existing mock staff list
           const existingMockData = localStorage.getItem('mockStaffList');
           let mockStaffList = [];
-          
+
           if (existingMockData) {
             mockStaffList = JSON.parse(existingMockData);
           }
-          
+
           // Add new staff to the list
           mockStaffList.push(mockStaff);
-          
+
           // Save updated list
           localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
           console.log('Added new staff to mock staff list:', mockStaff);
         } catch (mockError) {
           console.error('Error updating mock staff list:', mockError);
         }
-        
+
         return response.data;
       } catch (primaryError) {
         console.error('Primary endpoint failed:', primaryError.response?.data || primaryError.message);
@@ -282,10 +282,10 @@ export const authService = {
 
         // If all backend endpoints failed, use mock data
         console.log('All endpoints failed. Using mock data instead.');
-        
+
         // Generate a UUID for the mock user
         const mockUuid = 'staff-' + Date.now().toString().slice(-6);
-        
+
         // Create a mock staff object
         const mockStaff = {
           uuid: mockUuid,
@@ -295,26 +295,26 @@ export const authService = {
           status: true,
           createdBy: userData.createdBy || 'admin'
         };
-        
+
         // Get existing mock staff list
         const existingMockData = localStorage.getItem('mockStaffList');
         let mockStaffList = [];
-        
+
         if (existingMockData) {
           mockStaffList = JSON.parse(existingMockData);
         }
-        
+
         // Add new staff to the list
         mockStaffList.push(mockStaff);
-        
+
         // Save updated list
         localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
         console.log('Created mock staff account:', mockStaff);
-        
-        return { 
-          success: true, 
+
+        return {
+          success: true,
           data: mockStaff,
-          message: 'Account created successfully (mock)' 
+          message: 'Account created successfully (mock)'
         };
       }
     } catch (error) {
@@ -345,7 +345,7 @@ export const userService = {
       console.log('Fetching all users');
       const response = await api.get(logEndpoint('/user/all'));
       console.log('Fetched users response:', response);
-      
+
       // Process the response appropriately
       if (response.data && response.data.success && response.data.data) {
         console.log('Standard API response with data array:', response.data.data.length, 'users');
@@ -363,7 +363,7 @@ export const userService = {
           }
         }
       }
-      
+
       // If we couldn't find a valid response format, fall back to mock data
       console.log('Using mock data as fallback');
       return getMockUserData();
@@ -378,10 +378,10 @@ export const userService = {
     try {
       console.log(`Fetching user with UUID: ${uuid}`);
       const response = await api.get(logEndpoint(`/user/${uuid}`));
-      
+
       // Log the full response for debugging
       console.log('User API response:', response);
-      
+
       // Handle different response formats
       if (response.data && response.data.success && response.data.data) {
         // Standard API response
@@ -392,7 +392,7 @@ export const userService = {
         console.log('Direct user object response:', response.data);
         return { success: true, data: response.data };
       }
-      
+
       // If no valid format is found, use mock data
       return getMockUserDetailData(uuid);
     } catch (error) {
@@ -405,15 +405,15 @@ export const userService = {
   updateUser: async (uuid, userData) => {
     try {
       console.log(`Updating user with UUID: ${uuid}`, userData);
-      
+
       // Ensure boolean values are properly set for status
       if (userData.status !== undefined) {
         userData.status = Boolean(userData.status);
       }
-      
+
       const response = await api.put(logEndpoint(`/user/${uuid}`), userData);
       console.log('User update response:', response);
-      
+
       if (response.data && response.data.success) {
         console.log('Update successful with standard response');
         return response.data;
@@ -421,7 +421,7 @@ export const userService = {
         console.log('Update successful with direct user object');
         return { success: true, data: response.data };
       }
-      
+
       // If the response format is unexpected, use mock data
       return getMockUpdateUser(uuid, userData);
     } catch (error) {
@@ -434,10 +434,10 @@ export const userService = {
   verifyCurrentPassword: async (uuid, currentPassword) => {
     try {
       console.log(`Verifying password for user with UUID: ${uuid}`);
-      const response = await api.post(logEndpoint(`/user/verify-password/${uuid}`), { 
-        currentPassword 
+      const response = await api.post(logEndpoint(`/user/verify-password/${uuid}`), {
+        currentPassword
       });
-      
+
       return response.data && response.data.success;
     } catch (error) {
       console.error(`Error verifying password for user ${uuid}:`, error);
@@ -451,12 +451,12 @@ export const userService = {
       console.log(`Deleting user with UUID: ${uuid}`);
       const response = await api.delete(logEndpoint(`/user/${uuid}`));
       console.log('User deletion response:', response);
-      
+
       if (response.data && response.data.success) {
         console.log('Deletion successful');
         return response.data;
       }
-      
+
       // If the response format is unexpected, use mock data
       return getMockDeleteUser(uuid);
     } catch (error) {
@@ -472,7 +472,7 @@ export const outsourcingService = {
   createOutsourcingService: async (serviceData) => {
     try {
       const formData = new FormData();
-      
+
       // Append text fields
       for (const key in serviceData) {
         if (key !== 'imageUrl' && serviceData[key] !== undefined) {
@@ -484,12 +484,12 @@ export const outsourcingService = {
           }
         }
       }
-      
+
       // Append file if it exists
       if (serviceData.imageUrl instanceof File) {
         formData.append('imageUrl', serviceData.imageUrl);
       }
-      
+
       const response = await api.post(logEndpoint('/outsource/create'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -502,7 +502,7 @@ export const outsourcingService = {
       throw error;
     }
   },
-  
+
   // Submit outsourcing service request
   submitOutsourcingRequest: async (requestData) => {
     try {
@@ -514,15 +514,15 @@ export const outsourcingService = {
       throw error;
     }
   },
-  
+
   // Update an existing outsourcing service
   updateOutsourcingService: async (uuid, serviceData) => {
     try {
       const formData = new FormData();
-      
+
       // Log the incoming data for debugging
       console.log('Updating service with data:', JSON.stringify(serviceData));
-      
+
       // Append text fields
       for (const key in serviceData) {
         if (key !== 'imageUrl' && serviceData[key] !== undefined) {
@@ -540,17 +540,17 @@ export const outsourcingService = {
           }
         }
       }
-      
+
       // Append file if it exists
       if (serviceData.imageUrl instanceof File) {
         formData.append('imageUrl', serviceData.imageUrl);
       }
-      
+
       // Log form data entries for debugging
       for (let pair of formData.entries()) {
         console.log(`Form data: ${pair[0]}: ${pair[1]}`);
       }
-      
+
       const response = await api.put(logEndpoint(`/outsource/update/${uuid}`), formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -563,7 +563,7 @@ export const outsourcingService = {
       throw error;
     }
   },
-  
+
   // Get all outsourcing services
   getAllOutsourcingServices: async () => {
     try {
@@ -574,7 +574,7 @@ export const outsourcingService = {
       throw error;
     }
   },
-  
+
   // Delete an outsourcing service
   deleteOutsourcingService: async (uuid) => {
     try {
@@ -586,14 +586,14 @@ export const outsourcingService = {
       throw error;
     }
   },
-  
+
   // Get all outsourcing requests
   getAllOutsourcingRequests: async () => {
     try {
       console.log('Calling outsource/requests endpoint');
       const response = await api.get(logEndpoint('/outsource/requests'));
       console.log('Outsourcing requests response:', response.data);
-      
+
       // Check response format and handle it appropriately
       if (response.data && response.data.success && response.data.data) {
         // Format: { success: true, data: [...] }
@@ -605,7 +605,7 @@ export const outsourcingService = {
         // Format: { data: [...] }
         return response.data.data;
       }
-      
+
       // Return empty array if no recognizable data format
       console.warn('Unrecognized response format from outsourcing requests API');
       return [];
@@ -615,7 +615,7 @@ export const outsourcingService = {
       return [];
     }
   },
-  
+
   // Update outsourcing request status
   updateOutsourcingRequestStatus: async (uuid, status) => {
     try {
@@ -627,7 +627,7 @@ export const outsourcingService = {
       throw error;
     }
   },
-  
+
   // Update outsourcing request full data
   updateOutsourcingRequestData: async (uuid, requestData) => {
     try {
@@ -640,7 +640,7 @@ export const outsourcingService = {
       throw error;
     }
   },
-  
+
   // Delete outsourcing request
   deleteOutsourcingRequest: async (uuid) => {
     try {
@@ -660,19 +660,19 @@ export const jobVacancyService = {
   createJobVacancy: async (jobData) => {
     try {
       const formData = new FormData();
-      
+
       // Append text fields
       for (const key in jobData) {
         if (key !== 'imageUrl' && jobData[key] !== undefined) {
           formData.append(key, jobData[key]);
         }
       }
-      
+
       // Append file if it exists
       if (jobData.imageUrl instanceof File) {
         formData.append('imageUrl', jobData.imageUrl);
       }
-      
+
       const response = await api.post(logEndpoint('/jobVacancy/create'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -685,12 +685,12 @@ export const jobVacancyService = {
       throw error;
     }
   },
-  
+
   // Update an existing job vacancy
   updateJobVacancy: async (uuid, jobData) => {
     try {
       const formData = new FormData();
-      
+
       // Append text fields
       for (const key in jobData) {
         // Skip imageUrl and undefined values
@@ -699,7 +699,7 @@ export const jobVacancyService = {
           if (key === 'deletedAt' && (jobData[key] === null || jobData[key] === 'null' || jobData[key] === '')) {
             continue;
           }
-          
+
           // Handle dates to ensure proper format
           if (key === 'deadline' && jobData[key] instanceof Date) {
             formData.append(key, jobData[key].toISOString());
@@ -708,12 +708,12 @@ export const jobVacancyService = {
           }
         }
       }
-      
+
       // Append file if it exists
       if (jobData.imageUrl instanceof File) {
         formData.append('imageUrl', jobData.imageUrl);
       }
-      
+
       const response = await api.put(logEndpoint(`/jobVacancy/update/${uuid}`), formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -726,7 +726,7 @@ export const jobVacancyService = {
       throw error;
     }
   },
-  
+
   // Get all job vacancies
   getAllJobVacancies: async () => {
     try {
@@ -737,22 +737,22 @@ export const jobVacancyService = {
       throw error;
     }
   },
-  
+
   // Get a specific job vacancy by ID
   getJobVacancyById: async (uuid) => {
     try {
       console.log(`Fetching job vacancy details for ID: ${uuid}`);
       const response = await api.get(logEndpoint(`/jobVacancy/${uuid}`));
-      
+
       // Add additional logging to debug
       console.log('Job vacancy fetch response:', response.data);
-      
+
       // Validate response data - handle both potential response formats
       if (!response.data) {
         console.warn('Empty response from job vacancy API');
         return { data: null };
       }
-      
+
       // Some APIs might return data directly, others might nest it in a data property
       if (response.data.data) {
         return response.data;
@@ -760,30 +760,30 @@ export const jobVacancyService = {
         // If the data is directly in response.data, wrap it
         return { data: response.data };
       }
-      
+
       return { data: null };
     } catch (error) {
       console.error('Error fetching job vacancy details:', error);
-      
+
       // Berikan pesan error yang lebih spesifik untuk pengguna
       let errorMessage = 'Gagal mengambil detail lowongan kerja. Silakan coba lagi nanti.';
-      
+
       // Cek apakah ada pesan error spesifik dari server
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.status === 404) {
         errorMessage = 'Lowongan pekerjaan tidak ditemukan.';
       }
-      
+
       // Log informasi error tambahan untuk debugging
       console.error('Response:', error.response?.data);
       console.error('Status:', error.response?.status);
-      
+
       // Throw custom error dengan pesan spesifik
       throw new Error(errorMessage);
     }
   },
-  
+
   // Delete a job vacancy
   deleteJobVacancy: async (uuid) => {
     try {
@@ -803,7 +803,7 @@ export const jobApplicationService = {
   submitApplication: async (applicationData) => {
     try {
       const formData = new FormData();
-      
+
       // Handle text fields
       for (const key in applicationData) {
         if (!key.startsWith('foto_')) {
@@ -812,35 +812,35 @@ export const jobApplicationService = {
             formData.append(key, 'Tidak Punya');
           }
           // For date fields that might be null
-          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan') 
-              && applicationData[key] === null) {
+          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan')
+            && applicationData[key] === null) {
             formData.append(key, 'null');
-          } 
+          }
           // For regular fields 
           else if (applicationData[key] !== undefined) {
             formData.append(key, applicationData[key]);
           }
         }
       }
-      
+
       // Handle file uploads
       const fileFields = [
-        'foto_diri', 'foto_ktp', 'foto_sim', 
+        'foto_diri', 'foto_ktp', 'foto_sim',
         'foto_stnk_hal_1', 'foto_stnk_hal_2', 'foto_ijazah'
       ];
-      
+
       fileFields.forEach(field => {
         if (applicationData[field] instanceof File) {
           formData.append(field, applicationData[field]);
         }
       });
-      
+
       const response = await api.post(logEndpoint('/jobApplication/submit'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       showNotification('Lamaran berhasil dikirim', 'success');
       return response.data;
     } catch (error) {
@@ -848,7 +848,7 @@ export const jobApplicationService = {
       throw error;
     }
   },
-  
+
   // Get job applications for a candidate
   getCandidateApplications: async () => {
     try {
@@ -859,7 +859,7 @@ export const jobApplicationService = {
       throw error;
     }
   },
-  
+
   // Get application details by ID
   getApplicationById: async (uuid) => {
     try {
@@ -870,12 +870,12 @@ export const jobApplicationService = {
       throw error;
     }
   },
-  
+
   // Update job application (for revision)
   updateApplication: async (uuid, applicationData) => {
     try {
       const formData = new FormData();
-      
+
       // Handle text fields
       for (const key in applicationData) {
         if (!key.startsWith('foto_')) {
@@ -884,39 +884,62 @@ export const jobApplicationService = {
             formData.append(key, 'Tidak Punya');
           }
           // For date fields that might be null
-          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan') 
-              && applicationData[key] === null) {
+          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan')
+            && applicationData[key] === null) {
             formData.append(key, 'null');
-          } 
+          }
           // For regular fields 
           else if (applicationData[key] !== undefined) {
             formData.append(key, applicationData[key]);
           }
         }
       }
-      
+
       // Handle file uploads
       const fileFields = [
-        'foto_diri', 'foto_ktp', 'foto_sim', 
+        'foto_diri', 'foto_ktp', 'foto_sim',
         'foto_stnk_hal_1', 'foto_stnk_hal_2', 'foto_ijazah'
       ];
-      
+
       fileFields.forEach(field => {
         if (applicationData[field] instanceof File) {
           formData.append(field, applicationData[field]);
         }
       });
-      
+
       const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update`), formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       showNotification('Lamaran berhasil diperbarui', 'success');
       return response.data;
     } catch (error) {
       showNotification('Gagal memperbarui lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+
+  // Get all job applications (for recruiters)
+  getAllApplications: async () => {
+    try {
+      const response = await api.get(logEndpoint('/jobApplication/all'));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil data lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+
+  // Update application status (for recruiters)
+  updateApplicationStatus: async (uuid, statusData) => {
+    try {
+      const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update-status`), statusData);
+      showNotification('Status lamaran berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui status lamaran: ' + (error.response?.data?.message || error.message), 'error');
       throw error;
     }
   }
@@ -926,11 +949,11 @@ export const jobApplicationService = {
 const getMockUserData = () => {
   // Get any existing mock data from localStorage
   const existingMockData = localStorage.getItem('mockStaffList');
-  
+
   if (existingMockData) {
     return JSON.parse(existingMockData);
   }
-  
+
   // Create mock data if none exists
   const mockStaffList = [
     {
@@ -955,22 +978,22 @@ const getMockUserData = () => {
       status: false
     }
   ];
-  
+
   // Save to localStorage for persistence
   localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
-  
+
   return { success: true, data: mockStaffList };
 };
 
 const getMockUserDetailData = (uuid) => {
   // If API fails, use mock data
   const mockStaffList = localStorage.getItem('mockStaffList');
-  
+
   if (mockStaffList) {
     try {
       const staffList = JSON.parse(mockStaffList);
       const user = staffList.find(staff => staff.uuid === uuid);
-      
+
       if (user) {
         console.log('Found matching mock user:', user);
         return { success: true, data: user };
@@ -979,7 +1002,7 @@ const getMockUserDetailData = (uuid) => {
       console.error('Error parsing mock staff list:', parseError);
     }
   }
-  
+
   // If no matching user found, create a mock one for this UUID
   const mockUser = {
     uuid: uuid,
@@ -988,7 +1011,7 @@ const getMockUserDetailData = (uuid) => {
     role: 'GENERAL_MANAGER',
     status: true
   };
-  
+
   console.log('Created mock user:', mockUser);
   return { success: true, data: mockUser };
 };
@@ -996,7 +1019,7 @@ const getMockUserDetailData = (uuid) => {
 const getMockUpdateUser = (uuid, userData) => {
   // If API fails, update mock data
   const mockStaffList = localStorage.getItem('mockStaffList');
-  
+
   if (mockStaffList) {
     try {
       const staffList = JSON.parse(mockStaffList);
@@ -1007,23 +1030,23 @@ const getMockUpdateUser = (uuid, userData) => {
         }
         return staff;
       });
-      
+
       // Save updated list back to localStorage
       localStorage.setItem('mockStaffList', JSON.stringify(updatedList));
-      
+
       // Return the updated user
       const updatedUser = updatedList.find(staff => staff.uuid === uuid);
       console.log('Mock user updated:', updatedUser);
-      
+
       return { success: true, data: updatedUser };
     } catch (parseError) {
       console.error('Error parsing mock staff list:', parseError);
     }
   }
-  
+
   // If no mock data exists, just return success with the input data
-  return { 
-    success: true, 
+  return {
+    success: true,
     data: { uuid: uuid, ...userData },
     message: 'User updated successfully (mock)'
   };
@@ -1032,24 +1055,24 @@ const getMockUpdateUser = (uuid, userData) => {
 const getMockDeleteUser = (uuid) => {
   // If API fails, update mock data
   const mockStaffList = localStorage.getItem('mockStaffList');
-  
+
   if (mockStaffList) {
     try {
       const staffList = JSON.parse(mockStaffList);
-      
+
       // Find user before removing
       const userToDelete = staffList.find(staff => staff.uuid === uuid);
-      
+
       // Filter out the user with the specified ID
       const updatedList = staffList.filter(staff => staff.uuid !== uuid);
-      
+
       // Save updated list back to localStorage
       localStorage.setItem('mockStaffList', JSON.stringify(updatedList));
-      
+
       console.log('Mock user deleted:', userToDelete);
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         message: 'User deleted successfully (mock)',
         data: userToDelete
       };
@@ -1057,10 +1080,10 @@ const getMockDeleteUser = (uuid) => {
       console.error('Error parsing mock staff list:', parseError);
     }
   }
-  
+
   // If no mock data exists, just return success
-  return { 
-    success: true, 
+  return {
+    success: true,
     message: 'User deleted successfully (mock)'
   };
 };

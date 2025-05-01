@@ -75,7 +75,7 @@ const getApplicationStatus = (status) => {
 // Helper function to get status color
 const getStatusColor = (status, theme) => {
   const isDark = theme.palette.mode === 'dark';
-  
+
   switch (status) {
     case 'PENDING':
     case 'REVIEWING':
@@ -98,7 +98,7 @@ const getStatusColor = (status, theme) => {
 // Helper function to get border color for status
 const getStatusBorderColor = (status, theme) => {
   const isDark = theme.palette.mode === 'dark';
-  
+
   switch (status) {
     case 'REJECTED':
       return isDark ? theme.palette.error.main : '#ef5350';
@@ -113,7 +113,7 @@ const getStatusBorderColor = (status, theme) => {
 // Helper function to get text color for status
 const getStatusTextColor = (status, theme) => {
   const isDark = theme.palette.mode === 'dark';
-  
+
   switch (status) {
     case 'PENDING':
     case 'REVIEWING':
@@ -142,7 +142,7 @@ const PortalInformasi = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [statusHistory, setStatusHistory] = useState([]);
   const theme = useTheme();
-  
+
   useEffect(() => {
     const fetchApplicationDetail = async () => {
       try {
@@ -150,75 +150,50 @@ const PortalInformasi = () => {
         const response = await jobApplicationService.getApplicationById(uuid);
         setApplication(response.data);
         setActiveStep(getActiveStep(response.data.status));
-        
-        // Create status history (dummy data - nanti akan diimplementasikan dari API)
-        const history = [
-          {
-            id: 1, 
-            date: response.data.submissionDate,
+
+        // Check if we have real status history data
+        if (response.data.statusHistory && response.data.statusHistory.length > 0) {
+          // Use the real status history from the database
+          const formattedHistory = response.data.statusHistory.map((entry, index) => ({
+            id: index + 1,
+            date: new Date(entry.timestamp),
+            status: entry.status,
+            notes: entry.notes || getDefaultNoteForStatus(entry.status)
+          }));
+
+          setStatusHistory(formattedHistory);
+        } else {
+          // Fallback to basic history if no detailed history is available
+          const currentDate = new Date();
+          let history = [];
+
+          // Always add submission entry as the first status
+          history.push({
+            id: 1,
+            date: new Date(response.data.submissionDate),
             status: 'PENDING',
             notes: 'Dokumen lamaran terkirim, menunggu verifikasi'
+          });
+
+          // Add actual current status (if different from PENDING)
+          if (response.data.status !== 'PENDING') {
+            // Get the timestamp of when the status was last updated
+            const statusDate = response.data.updatedAt ? new Date(response.data.updatedAt) : currentDate;
+
+            // Add notes information if available
+            const statusNotes = response.data.notes || getDefaultNoteForStatus(response.data.status);
+
+            history.push({
+              id: 2,
+              date: statusDate,
+              status: response.data.status,
+              notes: statusNotes
+            });
           }
-        ];
-        
-        // Add additional status entries based on current status
-        if (['REVIEWING', 'REVISION', 'INTERVIEW_SCHEDULED', 'TECHNICAL_TEST', 'REJECTED', 'ACCEPTED', 'ON_JOB'].includes(response.data.status)) {
-          history.push({
-            id: 2,
-            date: new Date(new Date(response.data.submissionDate).getTime() + 86400000), // +1 day
-            status: response.data.status === 'REVISION' ? 'REVISION' : 'REVIEWING',
-            notes: response.data.status === 'REVISION' 
-              ? 'Dokumen perlu perbaikan'
-              : 'Dokumen sedang dalam proses review'
-          });
+
+          setStatusHistory(history);
         }
-        
-        if (['INTERVIEW_SCHEDULED', 'TECHNICAL_TEST', 'REJECTED', 'ACCEPTED', 'ON_JOB'].includes(response.data.status)) {
-          history.push({
-            id: 3,
-            date: new Date(new Date(response.data.submissionDate).getTime() + 172800000), // +2 days
-            status: 'INTERVIEW_SCHEDULED',
-            notes: 'Jadwal wawancara telah ditentukan'
-          });
-        }
-        
-        if (['TECHNICAL_TEST', 'ACCEPTED', 'ON_JOB'].includes(response.data.status)) {
-          history.push({
-            id: 4,
-            date: new Date(new Date(response.data.submissionDate).getTime() + 259200000), // +3 days
-            status: 'TECHNICAL_TEST',
-            notes: 'Technical test akan dilaksanakan'
-          });
-        }
-        
-        if (['ACCEPTED', 'ON_JOB'].includes(response.data.status)) {
-          history.push({
-            id: 5,
-            date: new Date(new Date(response.data.submissionDate).getTime() + 345600000), // +4 days
-            status: 'ACCEPTED',
-            notes: 'Anda diterima sebagai karyawan'
-          });
-        }
-        
-        if (response.data.status === 'ON_JOB') {
-          history.push({
-            id: 6,
-            date: new Date(new Date(response.data.submissionDate).getTime() + 432000000), // +5 days
-            status: 'ON_JOB',
-            notes: 'Anda aktif bekerja'
-          });
-        }
-        
-        if (response.data.status === 'REJECTED') {
-          history.push({
-            id: 3,
-            date: new Date(new Date(response.data.submissionDate).getTime() + 172800000), // +2 days
-            status: 'REJECTED',
-            notes: 'Maaf, Anda tidak lolos ke tahap selanjutnya'
-          });
-        }
-        
-        setStatusHistory(history);
+
         setLoading(false);
       } catch (err) {
         console.error('Error fetching application details:', err);
@@ -226,14 +201,36 @@ const PortalInformasi = () => {
         setLoading(false);
       }
     };
-    
+
     fetchApplicationDetail();
   }, [uuid]);
-  
+
+  // Helper function to get default notes for each status
+  const getDefaultNoteForStatus = (status) => {
+    switch (status) {
+      case 'REVIEWING':
+        return 'Dokumen sedang dalam proses review';
+      case 'REVISION':
+        return 'Dokumen perlu perbaikan';
+      case 'INTERVIEW_SCHEDULED':
+        return 'Jadwal wawancara telah ditentukan';
+      case 'TECHNICAL_TEST':
+        return 'Technical test akan dilaksanakan';
+      case 'REJECTED':
+        return 'Maaf, Anda tidak lolos ke tahap selanjutnya';
+      case 'ACCEPTED':
+        return 'Anda diterima sebagai karyawan';
+      case 'ON_JOB':
+        return 'Anda aktif bekerja';
+      default:
+        return 'Status telah diperbarui';
+    }
+  };
+
   const handleBackToList = () => {
     navigate('/candidate/portal-informasi');
   };
-  
+
   // Fungsi untuk cek apakah tombol aksi harus bisa diklik
   const isActionEnabled = (status) => {
     if (status === 'PENDING') return true;
@@ -243,7 +240,7 @@ const PortalInformasi = () => {
     if (status === 'ON_JOB' && application.status === 'ON_JOB') return true;
     return false;
   };
-  
+
   const handleStatusAction = (status) => {
     // Action based on status
     switch (status) {
@@ -267,7 +264,7 @@ const PortalInformasi = () => {
         break;
     }
   };
-  
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -275,13 +272,13 @@ const PortalInformasi = () => {
       </Box>
     );
   }
-  
+
   if (error) {
     return (
       <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 5, px: 2 }}>
-        <Alert 
+        <Alert
           severity="error"
-          sx={{ 
+          sx={{
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : undefined,
             color: theme.palette.mode === 'dark' ? theme.palette.error.light : undefined,
             '& .MuiAlert-icon': {
@@ -294,9 +291,9 @@ const PortalInformasi = () => {
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={handleBackToList}
-          sx={{ 
+          sx={{
             mt: 2,
-            color: theme.palette.mode === 'dark' ? theme.palette.primary.light : undefined 
+            color: theme.palette.mode === 'dark' ? theme.palette.primary.light : undefined
           }}
         >
           Kembali ke Daftar Lamaran
@@ -308,9 +305,9 @@ const PortalInformasi = () => {
   if (!application) {
     return (
       <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 5, px: 2 }}>
-        <Alert 
+        <Alert
           severity="warning"
-          sx={{ 
+          sx={{
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 193, 7, 0.15)' : undefined,
             color: theme.palette.mode === 'dark' ? theme.palette.warning.light : undefined,
             '& .MuiAlert-icon': {
@@ -323,9 +320,9 @@ const PortalInformasi = () => {
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={handleBackToList}
-          sx={{ 
+          sx={{
             mt: 2,
-            color: theme.palette.mode === 'dark' ? theme.palette.primary.light : undefined 
+            color: theme.palette.mode === 'dark' ? theme.palette.primary.light : undefined
           }}
         >
           Kembali ke Daftar Lamaran
@@ -333,10 +330,10 @@ const PortalInformasi = () => {
       </Box>
     );
   }
-  
+
   const isRejected = application.status === 'REJECTED';
   const isCompleted = ['ACCEPTED', 'ON_JOB'].includes(application.status);
-  
+
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 5, px: 2 }}>
       <Button
@@ -346,16 +343,16 @@ const PortalInformasi = () => {
       >
         Kembali ke Daftar Lamaran
       </Button>
-      
+
       <Typography variant="h5" fontWeight="bold" mb={3}>
         Detail Lamaran Pekerjaan
       </Typography>
-      
+
       <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" fontWeight="bold" mb={2}>
           {application.jobPostingId?.jobPosition || 'Tidak tersedia'}
         </Typography>
-        
+
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="body1">
             <strong>Tanggal Aplikasi:</strong> {format(new Date(application.submissionDate), 'dd MMMM yyyy')}
@@ -374,11 +371,11 @@ const PortalInformasi = () => {
             {getApplicationStatus(application.status)}
           </Box>
         </Box>
-        
+
         {isRejected ? (
-          <Alert 
-            severity="error" 
-            sx={{ 
+          <Alert
+            severity="error"
+            sx={{
               mt: 2,
               backgroundColor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : undefined,
               color: theme.palette.mode === 'dark' ? theme.palette.error.light : undefined,
@@ -390,9 +387,9 @@ const PortalInformasi = () => {
             Maaf, lamaran Anda tidak lolos ke tahap selanjutnya. Tetap semangat untuk mencoba kesempatan lain!
           </Alert>
         ) : isCompleted ? (
-          <Alert 
-            severity="success" 
-            sx={{ 
+          <Alert
+            severity="success"
+            sx={{
               mt: 2,
               backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.15)' : undefined,
               color: theme.palette.mode === 'dark' ? theme.palette.success.light : undefined,
@@ -411,11 +408,11 @@ const PortalInformasi = () => {
           <Typography variant="h6" fontWeight="bold" mb={2}>
             Progress Lamaran
           </Typography>
-          
-          <Stepper 
-            activeStep={activeStep} 
-            alternativeLabel 
-            sx={{ 
+
+          <Stepper
+            activeStep={activeStep}
+            alternativeLabel
+            sx={{
               mb: 4,
               '& .MuiStepLabel-root .Mui-completed': {
                 color: theme.palette.mode === 'dark' ? theme.palette.success.light : theme.palette.success.main, // customize color for completed steps
@@ -434,55 +431,55 @@ const PortalInformasi = () => {
               </Step>
             ))}
           </Stepper>
-          
+
           <Box sx={{ mt: 3 }}>
-            <Typography 
-              variant="body1" 
+            <Typography
+              variant="body1"
               fontWeight="bold"
               sx={{ color: theme.palette.mode === 'dark' ? theme.palette.text.primary : 'inherit' }}
             >
               Status Saat Ini: {getApplicationStatus(application.status)}
             </Typography>
-            
+
             {application.status === 'PENDING' && (
-              <Box 
-                sx={{ 
-                  mt: 2, 
-                  p: 2, 
-                  bgcolor: theme.palette.mode === 'dark' 
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  bgcolor: theme.palette.mode === 'dark'
                     ? 'rgba(66, 66, 66, 0.9)'  // Darker background for dark mode
-                    : '#f9f9f9', 
-                  borderRadius: 1, 
-                  border: `1px solid ${theme.palette.mode === 'dark' 
+                    : '#f9f9f9',
+                  borderRadius: 1,
+                  border: `1px solid ${theme.palette.mode === 'dark'
                     ? theme.palette.primary.dark
                     : '#e0e0e0'}`,
-                  boxShadow: theme.palette.mode === 'dark' 
-                    ? `0 0 8px rgba(0, 0, 0, 0.5)` 
+                  boxShadow: theme.palette.mode === 'dark'
+                    ? `0 0 8px rgba(0, 0, 0, 0.5)`
                     : 'none',
                   color: theme.palette.mode === 'dark'
                     ? '#ffffff'
                     : 'inherit'
                 }}
               >
-                <Typography 
-                  variant="subtitle1" 
-                  fontWeight="bold" 
+                <Typography
+                  variant="subtitle1"
+                  fontWeight="bold"
                   gutterBottom
-                  sx={{ 
-                    color: theme.palette.mode === 'dark' 
-                      ? theme.palette.primary.light 
-                      : theme.palette.primary.main 
+                  sx={{
+                    color: theme.palette.mode === 'dark'
+                      ? theme.palette.primary.light
+                      : theme.palette.primary.main
                   }}
                 >
                   Dokumen Anda sedang menunggu verifikasi
                 </Typography>
-                <Typography 
-                  variant="body2" 
+                <Typography
+                  variant="body2"
                   paragraph
-                  sx={{ 
-                    color: theme.palette.mode === 'dark' 
-                      ? '#ffffff' 
-                      : 'text.secondary' 
+                  sx={{
+                    color: theme.palette.mode === 'dark'
+                      ? '#ffffff'
+                      : 'text.secondary'
                   }}
                 >
                   Anda dapat melihat detail dokumen yang telah diunggah dengan menekan tombol di bawah ini.
@@ -496,44 +493,44 @@ const PortalInformasi = () => {
                 </Button>
               </Box>
             )}
-            
+
             {application.status === 'REVISION' && (
-              <Box 
-                sx={{ 
-                  mt: 3, 
-                  p: 2, 
-                  bgcolor: theme.palette.mode === 'dark' 
+              <Box
+                sx={{
+                  mt: 3,
+                  p: 2,
+                  bgcolor: theme.palette.mode === 'dark'
                     ? 'rgba(66, 66, 66, 0.9)'
-                    : '#f9f9f9', 
-                  borderRadius: 1, 
-                  border: `1px solid ${theme.palette.mode === 'dark' 
+                    : '#f9f9f9',
+                  borderRadius: 1,
+                  border: `1px solid ${theme.palette.mode === 'dark'
                     ? theme.palette.error.dark
                     : '#e0e0e0'}`,
-                  boxShadow: theme.palette.mode === 'dark' 
-                    ? `0 0 8px rgba(0, 0, 0, 0.5)` 
+                  boxShadow: theme.palette.mode === 'dark'
+                    ? `0 0 8px rgba(0, 0, 0, 0.5)`
                     : 'none',
                   color: theme.palette.mode === 'dark'
                     ? '#ffffff'
                     : 'inherit'
                 }}
               >
-                <Typography 
-                  variant="subtitle1" 
-                  fontWeight="bold" 
+                <Typography
+                  variant="subtitle1"
+                  fontWeight="bold"
                   gutterBottom
-                  sx={{ 
+                  sx={{
                     color: theme.palette.error.main
                   }}
                 >
                   Perlu Perbaikan
                 </Typography>
-                <Typography 
-                  variant="body2" 
+                <Typography
+                  variant="body2"
                   paragraph
-                  sx={{ 
-                    color: theme.palette.mode === 'dark' 
-                      ? '#ffffff' 
-                      : 'text.secondary' 
+                  sx={{
+                    color: theme.palette.mode === 'dark'
+                      ? '#ffffff'
+                      : 'text.secondary'
                   }}
                 >
                   {application.notes || "Mohon lengkapi atau perbaiki dokumen lamaran Anda sesuai dengan permintaan tim rekrutmen."}
@@ -548,7 +545,7 @@ const PortalInformasi = () => {
                 </Button>
               </Box>
             )}
-            
+
             {application.status === 'INTERVIEW_SCHEDULED' && (
               <Button
                 variant="contained"
@@ -559,7 +556,7 @@ const PortalInformasi = () => {
                 Lihat Jadwal Wawancara
               </Button>
             )}
-            
+
             {application.status === 'TECHNICAL_TEST' && (
               <Button
                 variant="contained"
@@ -573,7 +570,7 @@ const PortalInformasi = () => {
           </Box>
         </Paper>
       )}
-      
+
       <Paper elevation={2} sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <HistoryIcon sx={{ mr: 1, color: theme.palette.mode === 'dark' ? theme.palette.text.primary : 'inherit' }} />
@@ -581,7 +578,7 @@ const PortalInformasi = () => {
             Riwayat Status
           </Typography>
         </Box>
-        
+
         <TableContainer>
           <Table>
             <TableHead>
