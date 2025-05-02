@@ -47,7 +47,7 @@ const getApplicationStatus = (status) => {
 // Helper function to get status color
 const getStatusColor = (status, theme) => {
   const isDark = theme.palette.mode === 'dark';
-
+  
   switch (status) {
     case 'PENDING':
     case 'REVIEWING':
@@ -70,7 +70,7 @@ const getStatusColor = (status, theme) => {
 // Helper function to get status border color
 const getStatusBorderColor = (status, theme) => {
   const isDark = theme.palette.mode === 'dark';
-
+  
   switch (status) {
     case 'REJECTED':
       return isDark ? theme.palette.error.main : '#ef5350';
@@ -85,7 +85,7 @@ const getStatusBorderColor = (status, theme) => {
 // Helper function to get status text color
 const getStatusTextColor = (status, theme) => {
   const isDark = theme.palette.mode === 'dark';
-
+  
   switch (status) {
     case 'PENDING':
     case 'REVIEWING':
@@ -147,11 +147,11 @@ const ApplicationList = () => {
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 5, px: 2 }}>
-      <Typography
-        variant="h5"
-        fontWeight="bold"
+      <Typography 
+        variant="h5" 
+        fontWeight="bold" 
         mb={3}
-        sx={{
+        sx={{ 
           color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined
         }}
       >
@@ -159,9 +159,9 @@ const ApplicationList = () => {
       </Typography>
 
       {error && (
-        <Alert
-          severity="error"
-          sx={{
+        <Alert 
+          severity="error" 
+          sx={{ 
             mb: 3,
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : undefined,
             color: theme.palette.mode === 'dark' ? theme.palette.error.light : undefined,
@@ -175,9 +175,9 @@ const ApplicationList = () => {
       )}
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-        <Button
-          variant="contained"
-          color="primary"
+        <Button 
+          variant="contained" 
+          color="primary" 
           onClick={handleApplyNewJob}
           startIcon={<WorkIcon />}
         >
@@ -186,45 +186,45 @@ const ApplicationList = () => {
       </Box>
 
       {applications.length === 0 && !error ? (
-        <Paper
-          elevation={2}
-          sx={{
-            p: 4,
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            p: 4, 
             textAlign: 'center',
             bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : undefined,
             border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none'
           }}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
-            <AssignmentIcon sx={{
-              fontSize: 80,
-              color: theme.palette.mode === 'dark' ? theme.palette.text.primary : 'text.secondary',
-              opacity: 0.7,
-              mb: 2
+            <AssignmentIcon sx={{ 
+              fontSize: 80, 
+              color: theme.palette.mode === 'dark' ? theme.palette.text.primary : 'text.secondary', 
+              opacity: 0.7, 
+              mb: 2 
             }} />
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 2,
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                mb: 2, 
                 fontWeight: 'bold',
                 color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined
               }}
             >
               Anda belum memiliki lamaran pekerjaan
             </Typography>
-            <Typography
-              variant="body1"
-              sx={{
-                mb: 3,
-                color: theme.palette.mode === 'dark' ? theme.palette.text.primary : 'text.secondary',
-                maxWidth: '600px'
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                mb: 3, 
+                color: theme.palette.mode === 'dark' ? theme.palette.text.primary : 'text.secondary', 
+                maxWidth: '600px' 
               }}
             >
               Silakan lihat daftar lowongan yang tersedia dan mulai melamar untuk melihat progres lamaran Anda di halaman ini
             </Typography>
-            <Button
-              variant="contained"
-              color="primary"
+            <Button 
+              variant="contained" 
+              color="primary" 
               size="large"
               onClick={handleApplyNewJob}
               startIcon={<WorkIcon />}
@@ -234,8 +234,8 @@ const ApplicationList = () => {
           </Box>
         </Paper>
       ) : (
-        <TableContainer
-          component={Paper}
+        <TableContainer 
+          component={Paper} 
           elevation={2}
           sx={{
             bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : undefined,
@@ -245,27 +245,27 @@ const ApplicationList = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{
+                <TableCell sx={{ 
                   color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined,
                   fontWeight: 'bold'
                 }}>
                   Posisi
                 </TableCell>
-                <TableCell sx={{
+                <TableCell sx={{ 
                   color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined,
                   fontWeight: 'bold'
                 }}>
                   Tanggal
                 </TableCell>
-                <TableCell sx={{
+                <TableCell sx={{ 
                   color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined,
                   fontWeight: 'bold'
                 }}>
                   Status
                 </TableCell>
-                <TableCell
+                <TableCell 
                   align="center"
-                  sx={{
+                  sx={{ 
                     color: theme.palette.mode === 'dark' ? theme.palette.text.primary : undefined,
                     fontWeight: 'bold'
                   }}

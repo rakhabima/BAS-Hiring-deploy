@@ -69,7 +69,7 @@ export const getCandidateApplicationsController = async (req, res) => {
 
     // Get applications
     const applications = await getCandidateApplications(candidateId);
-
+    
     res.status(200).json({
       data: applications
     });
@@ -83,24 +83,24 @@ export const getCandidateApplicationsController = async (req, res) => {
 export const getApplicationByIdController = async (req, res) => {
   try {
     const { uuid } = req.params;
-
+    
     // Get the application
     const application = await getApplicationById(uuid);
-
+    
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
-
+    
     // Ensure user has permission to view this application
     const isOwner = application.candidateId === req.user.uuid;
     const isStaff = checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"]);
-
+    
     if (!isOwner && !isStaff) {
       return res.status(403).json({
         message: "Unauthorized: You don't have permission to view this application"
       });
     }
-
+    
     res.status(200).json({
       data: application
     });
@@ -114,30 +114,30 @@ export const getApplicationByIdController = async (req, res) => {
 export const updateApplicationController = async (req, res) => {
   try {
     const { uuid } = req.params;
-
+    
     // Get the application
     const application = await getApplicationById(uuid);
-
+    
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
-
+    
     // Ensure user is the owner of this application
     if (application.candidateId !== req.user.uuid) {
       return res.status(403).json({
         message: "Unauthorized: You don't have permission to update this application"
       });
     }
-
+    
     // Ensure application is in REVISION status
     if (application.status !== "REVISION") {
       return res.status(400).json({
         message: "Cannot update application: Application is not in revision status"
       });
     }
-
+    
     const updateData = { ...req.body };
-
+    
     // Handle file uploads
     if (req.files) {
       // Process each uploaded file
@@ -146,10 +146,10 @@ export const updateApplicationController = async (req, res) => {
         updateData[fieldName] = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
       }
     }
-
+    
     // Update the application
     const updatedApplication = await updateApplication(uuid, updateData);
-
+    
     res.status(200).json({
       message: "Lamaran berhasil diperbarui",
       data: {
@@ -176,21 +176,21 @@ export const updateApplicationStatusController = async (req, res) => {
 
     const { uuid } = req.params;
     const { status, notes } = req.body;
-
+    
     // Get the application
     const application = await getApplicationById(uuid);
-
+    
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
-
+    
     // Update the application status
-    const updatedApplication = await updateApplication(uuid, {
-      status,
+    const updatedApplication = await updateApplication(uuid, { 
+      status, 
       notes,
       updatedBy: req.user.uuid
     });
-
+    
     res.status(200).json({
       message: "Status aplikasi berhasil diperbarui",
       data: {
@@ -216,7 +216,7 @@ export const getAllApplicationsController = async (req, res) => {
 
     // Get all applications
     const applications = await getAllApplications();
-
+    
     res.status(200).json({
       data: applications
     });

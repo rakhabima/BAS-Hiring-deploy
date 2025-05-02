@@ -50,8 +50,8 @@ export const signup = async (req, res) => {
 
         // Log the activity
         await logActivity(
-            "User Registration",
-            newUser.uuid,
+            "User Registration", 
+            newUser.uuid, 
             { email: newUser.email, role: newUser.role, isPublicRegistration },
             "INFO",
             req
@@ -87,35 +87,35 @@ export const login = async (req, res) => {
             // Log failed login attempt
             if (user) {
                 await logActivity(
-                    "Failed Login Attempt",
-                    user.uuid,
+                    "Failed Login Attempt", 
+                    user.uuid, 
                     { email: user.email, reason: "Incorrect password" },
                     "WARNING",
                     req
                 );
             } else {
                 await logActivity(
-                    "Failed Login Attempt",
-                    null,
+                    "Failed Login Attempt", 
+                    null, 
                     { email, reason: "User not found" },
                     "WARNING",
                     req
                 );
             }
-
+            
             return res.status(400).json({ error: "Invalid email or password" });
         }
 
         // Check if user account is active
         if (!user.status) {
             await logActivity(
-                "Failed Login Attempt",
-                user.uuid,
+                "Failed Login Attempt", 
+                user.uuid, 
                 { email: user.email, reason: "Account inactive" },
                 "WARNING",
                 req
             );
-
+            
             return res.status(403).json({ error: "Account is inactive" });
         }
 
@@ -125,8 +125,8 @@ export const login = async (req, res) => {
 
         // Log successful login
         await logActivity(
-            "User Login",
-            user.uuid,
+            "User Login", 
+            user.uuid, 
             { email: user.email, role: user.role },
             "INFO",
             req
@@ -134,7 +134,7 @@ export const login = async (req, res) => {
 
         generateTokenAndSetCookie(user.uuid, user.role, res);
 
-        res.status(200).json({
+        res.status(200).json({ 
             message: "Logged in successfully",
             user: {
                 uuid: user.uuid,
@@ -157,14 +157,14 @@ export const logout = async (req, res) => {
         // Log the logout activity if user info is available
         if (req.user) {
             await logActivity(
-                "User Logout",
-                req.user.uuid,
+                "User Logout", 
+                req.user.uuid, 
                 { role: req.user.role },
                 "INFO",
                 req
             );
         }
-
+        
         res.cookie("jwt", "", { maxAge: 0 });
         res.status(200).json({ message: "Logged out successfully" });
     } catch (error) {

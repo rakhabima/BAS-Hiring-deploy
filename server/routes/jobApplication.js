@@ -6,7 +6,7 @@ import { authenticateUser } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 // Configure multer to store files in memory
-const upload = multer({
+const upload = multer({ 
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     // Accept only images
