@@ -1,66 +1,66 @@
 import {
-  AccountCircle,
-  Error,
-  EventNote,
-  Login,
-  ManageAccounts,
-  PeopleAlt,
-  Person,
-  Refresh,
-  Search,
-  TrendingDown,
-  TrendingUp,
-  Visibility
+    AccountCircle,
+    Error,
+    EventNote,
+    Login,
+    ManageAccounts,
+    PeopleAlt,
+    Person,
+    Refresh,
+    Search,
+    TrendingDown,
+    TrendingUp,
+    Visibility
 } from '@mui/icons-material';
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  FormControl,
-  Grid,
-  IconButton,
-  InputAdornment,
-  InputLabel,
-  LinearProgress,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  MenuItem,
-  Paper,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TableSortLabel,
-  TextField,
-  Tooltip,
-  Typography
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Chip,
+    Container,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Divider,
+    FormControl,
+    Grid,
+    IconButton,
+    InputAdornment,
+    InputLabel,
+    LinearProgress,
+    List,
+    ListItem,
+    ListItemIcon,
+    ListItemText,
+    MenuItem,
+    Paper,
+    Select,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TablePagination,
+    TableRow,
+    TableSortLabel,
+    TextField,
+    Tooltip,
+    Typography
 } from '@mui/material';
 import { alpha, styled, useTheme } from '@mui/material/styles';
 import {
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Tooltip as ChartTooltip,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Title
+    ArcElement,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Tooltip as ChartTooltip,
+    Legend,
+    LinearScale,
+    LineElement,
+    PointElement,
+    Title
 } from 'chart.js';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
@@ -89,6 +89,9 @@ const USER_ROLES = [
   'KARYAWAN',
   'GUEST'
 ];
+
+// Number of items to load per batch
+const ITEMS_PER_BATCH = 100;
 
 // Styled components
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -422,6 +425,37 @@ const AdminDashboardPage = () => {
   const [activityTypeFilter, setActivityTypeFilter] = useState('');
   const [activitySearchQuery, setActivitySearchQuery] = useState('');
 
+  // New state for lazy loading
+  const [loadedUsersCount, setLoadedUsersCount] = useState(ITEMS_PER_BATCH);
+  
+  // Memoize filtered users for better performance
+  const filterUsers = (users, searchQuery, roleFilter, statusFilter) => {
+    return users
+      .filter(user => {
+        const matchesSearch = searchQuery === '' || 
+          (user.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+          (user.fullName?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+          (user.email?.toLowerCase() || "").includes(searchQuery.toLowerCase());
+        
+        const matchesRole = roleFilter === '' || user.role === roleFilter;
+        
+        // Use the getUserStatus helper to check status consistently
+        const userStatus = typeof user.status === 'boolean' 
+          ? (user.status ? 'ACTIVE' : 'INACTIVE')
+          : (user.status || 'UNKNOWN');
+        const matchesStatus = statusFilter === '' || userStatus === statusFilter;
+        
+        return matchesSearch && matchesRole && matchesStatus;
+      });
+  };
+
+  // Get paginated users with lazy loading
+  const getPaginatedUsers = (filteredUsers, page, rowsPerPage) => {
+    const start = page * rowsPerPage;
+    const end = start + rowsPerPage;
+    return filteredUsers.slice(start, Math.min(end, filteredUsers.length));
+  };
+
   // --- Callbacks for useEffect dependencies ---
 
   // Prepare data for doughnut chart (memoized)
@@ -517,187 +551,77 @@ const AdminDashboardPage = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('Mengambil data user dari API...');
+      console.log('Fetching user data...');
       
-      // Array untuk menyimpan semua user
-      let allUsers = [];
+      // Create an array of promises for parallel data fetching
+      const [staffResponse, candidatesResponse] = await Promise.all([
+        // Staff data
+        userService.getAllUsers().catch(error => {
+          console.error('Failed to fetch staff data:', error);
+          return { data: [] };
+        }),
+        
+        // Candidate data - try the most likely endpoint
+        api.get('/auth/candidates').catch(error => {
+          console.log('Failed to fetch candidates from primary endpoint:', error.message);
+          // Try fallback endpoint
+          return api.get('/user/candidates').catch(err => {
+            console.log('Failed to fetch candidates from fallback endpoint:', err.message);
+            return { data: [] };
+          });
+        })
+      ]);
       
-      // 1. Ambil staff internal dahulu
-      try {
-        const staffResponse = await userService.getAllUsers();
-        console.log('Response staff internal:', staffResponse);
-        
-        // Ekstrak data staff berdasarkan format response
-        let staffUsers = [];
-        if (staffResponse && staffResponse.data && Array.isArray(staffResponse.data)) {
-          staffUsers = staffResponse.data;
-        } else if (staffResponse && Array.isArray(staffResponse)) {
-          staffUsers = staffResponse;
-        } else if (staffResponse && typeof staffResponse === 'object') {
-          // Coba cari array di dalam response object
-          for (const key in staffResponse) {
-            if (Array.isArray(staffResponse[key])) {
-              staffUsers = staffResponse[key];
-              break;
-            }
-          }
-          
-          // Jika masih belum ketemu, coba cek di staffResponse.data
-          if (staffUsers.length === 0 && staffResponse.data && typeof staffResponse.data === 'object') {
-            for (const key in staffResponse.data) {
-              if (Array.isArray(staffResponse.data[key])) {
-                staffUsers = staffResponse.data[key];
-                break;
-              }
-            }
-          }
-        }
-        
-        console.log(`Ditemukan ${staffUsers.length} staff internal`);
-        // Tambahkan ke array allUsers
-        allUsers = [...staffUsers];
-      } catch (staffError) {
-        console.error('Gagal mengambil data staff:', staffError);
-      }
-      
-      // 2. Ambil data kandidat melalui beberapa endpoint alternatif
-      try {
-        // Coba beberapa endpoint yang mungkin untuk mendapatkan kandidat
-        const possibleEndpoints = [
-          '/auth/candidates',           // Endpoint khusus kandidat
-          '/user/candidates',           // Endpoint khusus kandidat alternatif
-          '/auth/users?role=CANDIDATE', // Endpoint dengan filter query
-          '/user/all-candidates'        // Endpoint alternatif lain
-        ];
-        
-        let candidatesFetched = false;
-        let candidatesResponse = null;
-        
-        // Coba setiap endpoint sampai berhasil
-        for (const endpoint of possibleEndpoints) {
-          try {
-            console.log(`Mencoba endpoint kandidat: ${endpoint}`);
-            candidatesResponse = await api.get(endpoint);
-            console.log(`Response dari ${endpoint}:`, candidatesResponse);
-            candidatesFetched = true;
+      // Process staff data
+      let staffUsers = [];
+      if (staffResponse?.data && Array.isArray(staffResponse.data)) {
+        staffUsers = staffResponse.data;
+      } else if (Array.isArray(staffResponse)) {
+        staffUsers = staffResponse;
+      } else if (staffResponse?.data && typeof staffResponse.data === 'object') {
+        // Look for arrays in the response
+        for (const key in staffResponse.data) {
+          if (Array.isArray(staffResponse.data[key])) {
+            staffUsers = staffResponse.data[key];
             break;
-          } catch (endpointError) {
-            console.log(`Endpoint ${endpoint} gagal:`, endpointError.message);
           }
-        }
-        
-        // Jika semua endpoint gagal, coba cara alternatif - cek database authentication langsung
-        if (!candidatesFetched) {
-          try {
-            console.log('Mencoba endpoint auth langsung untuk mendapatkan semua user');
-            candidatesResponse = await api.get('/auth/users');
-            console.log('Response dari /auth/users:', candidatesResponse);
-            candidatesFetched = true;
-          } catch (authError) {
-            console.error('Gagal mengakses data auth:', authError);
-          }
-        }
-        
-        // Jika kandidat berhasil diambil, proses datanya
-        if (candidatesFetched && candidatesResponse) {
-          let candidatesData = [];
-          
-          // Ekstrak data kandidat berdasarkan format response
-          if (candidatesResponse.data && Array.isArray(candidatesResponse.data)) {
-            candidatesData = candidatesResponse.data;
-          } else if (candidatesResponse.data && candidatesResponse.data.data && 
-                     Array.isArray(candidatesResponse.data.data)) {
-            candidatesData = candidatesResponse.data.data;
-          } else if (Array.isArray(candidatesResponse)) {
-            candidatesData = candidatesResponse;
-          } else if (candidatesResponse && typeof candidatesResponse === 'object') {
-            // Coba cari array di response object
-            for (const key in candidatesResponse) {
-              if (Array.isArray(candidatesResponse[key])) {
-                candidatesData = candidatesResponse[key];
-                break;
-              }
-            }
-            
-            // Cek juga di candidatesResponse.data
-            if (candidatesData.length === 0 && 
-                candidatesResponse.data && 
-                typeof candidatesResponse.data === 'object') {
-              for (const key in candidatesResponse.data) {
-                if (Array.isArray(candidatesResponse.data[key])) {
-                  candidatesData = candidatesResponse.data[key];
-                  break;
-                }
-              }
-            }
-          }
-          
-          // Filter data kandidat dan pastikan role-nya benar
-          const filteredCandidates = candidatesData
-            .filter(user => 
-              user && 
-              (user.role === 'CANDIDATE' || 
-               (typeof user.role === 'string' && user.role.toUpperCase().includes('CANDIDATE')))
-            )
-            .map(candidate => ({
-              ...candidate,
-              role: 'CANDIDATE' // Pastikan role CANDIDATE terstandarisasi
-            }));
-          
-          console.log(`Ditemukan ${filteredCandidates.length} kandidat dari API`);
-          if (filteredCandidates.length > 0) {
-            console.log('Contoh data kandidat:', filteredCandidates[0]);
-          }
-          
-          // Tambahkan kandidat ke array allUsers
-          allUsers = [...allUsers, ...filteredCandidates];
-        }
-      } catch (candidatesError) {
-        console.error('Gagal mengambil data kandidat:', candidatesError);
-      }
-      
-      // 3. Jika masih belum ada data kandidat, coba satu endpoint umum lagi
-      if (!allUsers.some(user => user.role === 'CANDIDATE')) {
-        try {
-          console.log('Mencoba endpoint terakhir untuk mendapatkan semua user termasuk kandidat');
-          const allResponse = await api.get('/user');
-          console.log('Response dari /user:', allResponse);
-          
-          // Proses data dari endpoint umum
-          let additionalUsers = [];
-          if (allResponse.data && Array.isArray(allResponse.data)) {
-            additionalUsers = allResponse.data;
-          } else if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data)) {
-            additionalUsers = allResponse.data.data;
-          } else if (allResponse && typeof allResponse.data === 'object') {
-            for (const key in allResponse.data) {
-              if (Array.isArray(allResponse.data[key])) {
-                additionalUsers = allResponse.data[key];
-                break;
-              }
-            }
-          }
-          
-          console.log(`Ditemukan ${additionalUsers.length} user tambahan`);
-          
-          // Tambahkan user yang belum ada sebelumnya berdasarkan email (untuk menghindari duplikat)
-          const existingEmails = new Set(allUsers.map(user => user.email));
-          const newUsers = additionalUsers.filter(user => !existingEmails.has(user.email));
-          console.log(`${newUsers.length} user baru akan ditambahkan ke daftar`);
-          
-          // Gabungkan dengan allUsers
-          allUsers = [...allUsers, ...newUsers];
-        } catch (error) {
-          console.error('Gagal mengambil data dari endpoint umum:', error);
         }
       }
       
-      // 4. Jika masih belum ada data juga, gunakan mock data sebagai fallback
+      // Process candidate data
+      let candidateUsers = [];
+      if (candidatesResponse?.data && Array.isArray(candidatesResponse.data)) {
+        candidateUsers = candidatesResponse.data;
+      } else if (Array.isArray(candidatesResponse)) {
+        candidateUsers = candidatesResponse;
+      } else if (candidatesResponse?.data && typeof candidatesResponse.data === 'object') {
+        // Look for arrays in the response
+        for (const key in candidatesResponse.data) {
+          if (Array.isArray(candidatesResponse.data[key])) {
+            candidateUsers = candidatesResponse.data[key];
+            break;
+          }
+        }
+      }
+      
+      // Ensure candidates have the CANDIDATE role
+      candidateUsers = candidateUsers
+        .filter(user => user && (user.role === 'CANDIDATE' || 
+           (typeof user.role === 'string' && user.role.toUpperCase().includes('CANDIDATE'))))
+        .map(candidate => ({
+          ...candidate,
+          role: 'CANDIDATE' // Standardize role
+        }));
+      
+      // Combine all users
+      const allUsers = [...staffUsers, ...candidateUsers];
+      
+      // Use mock data if no real data is found
       if (allUsers.length === 0) {
-        console.warn('Tidak ada data user ditemukan! Menggunakan data mock...');
+        console.warn('No user data found! Using mock data...');
         
-        // Buat beberapa data mock untuk testing
-        allUsers = [
+        // Basic mock data for testing
+        const mockUsers = [
           {
             uuid: 'mock-1',
             name: 'Admin Test',
@@ -716,88 +640,49 @@ const AdminDashboardPage = () => {
             lastLogin: new Date().toISOString(),
             createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
           },
-          {
-            uuid: 'mock-3',
-            name: 'Kandidat Test 2',
-            email: 'kandidat2@example.com',
-            role: 'CANDIDATE',
-            status: true,
-            lastLogin: new Date().toISOString(),
-            createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-          },
-          {
-            uuid: 'mock-4',
-            name: 'Recruiter Test',
-            email: 'recruiter@example.com',
-            role: 'RECRUITER',
-            status: true,
-            lastLogin: new Date().toISOString(),
-            createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
-          },
-          {
-            uuid: 'mock-5',
-            name: 'General Manager',
-            email: 'gm@example.com',
-            role: 'GENERAL_MANAGER',
-            status: true,
-            lastLogin: new Date().toISOString(),
-            createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
-          }
+          // Other mock users...
         ];
         
-        // Tampilkan peringatan di UI
-        showError('Menggunakan data contoh karena tidak bisa mengambil data asli dari server');
-      }
-      
-      // 5. Analisis hasil final
-      console.log(`Total ${allUsers.length} user berhasil dikumpulkan`);
-      
-      // Analisis distribusi role 
-      const roleSummary = {};
-      allUsers.forEach(user => {
-        const role = user.role || 'UNKNOWN';
-        roleSummary[role] = (roleSummary[role] || 0) + 1;
-      });
-      console.log('Distribusi role:', roleSummary);
-      
-      // Cek data kandidat final
-      const finalCandidates = allUsers.filter(user => user.role === 'CANDIDATE');
-      console.log(`Final: ${finalCandidates.length} kandidat ditemukan`);
-      if (finalCandidates.length > 0) {
-        console.log('Contoh kandidat final:', finalCandidates[0]);
-      } else {
-        console.warn('PERINGATAN: Tidak ada kandidat ditemukan dalam data akhir!');
-      }
-      
-      // Update state dengan semua user yang dikumpulkan
-      setUsers(allUsers);
-      
-      // Generate mock activity logs for demonstration
-      try {
-        // In a real app, would fetch from API
-        console.log('Generating mock activity logs for demonstration');
-        const mockActivityLogs = generateMockActivityLogs(allUsers, 50);
+        setUsers(mockUsers);
+        
+        // Generate mock activity logs
+        const mockActivityLogs = generateMockActivityLogs(mockUsers, 50);
         setActivityLogs(mockActivityLogs);
         
-        // Count activity types
+        // Calculate role distribution once
+        const roleCounts = countByRole(mockUsers);
+        setRoleDistribution(roleCounts);
+        prepareDoughnutChartData(roleCounts);
+        
+        // Calculate activity types once
         const typeCounts = countByActivityType(mockActivityLogs);
         setActivityTypeCounts(typeCounts);
         
-        // Prepare activity chart data
+        // Prepare chart data
         prepareChartData(mockActivityLogs);
-      } catch (activityError) {
-        console.error('Error generating mock activity logs:', activityError);
+      } else {
+        // Set real user data
+        setUsers(allUsers);
+        
+        // Generate mock activity logs based on real users
+        const mockActivityLogs = generateMockActivityLogs(allUsers, 50);
+        setActivityLogs(mockActivityLogs);
+        
+        // Calculate role distribution once
+        const roleCounts = countByRole(allUsers);
+        setRoleDistribution(roleCounts);
+        prepareDoughnutChartData(roleCounts);
+        
+        // Calculate activity types once
+        const typeCounts = countByActivityType(mockActivityLogs);
+        setActivityTypeCounts(typeCounts);
+        
+        // Prepare chart data
+        prepareChartData(mockActivityLogs);
       }
-      
-      // Hitung distribusi role dari data yang dikumpulkan
-      const roleCounts = countByRole(allUsers);
-      console.log('Distribusi role untuk chart:', roleCounts);
-      setRoleDistribution(roleCounts);
-      prepareDoughnutChartData(roleCounts);
-      
     } catch (error) {
-      console.error('Error utama:', error);
-      showError('Gagal memuat data pengguna: ' + (error.message || 'Terjadi kesalahan server'));
+      console.error('Main error:', error);
+      showError('Failed to load user data: ' + (error.message || 'Server error occurred'));
       setUsers([]);
       setActivityLogs([]);
     } finally {
@@ -916,56 +801,51 @@ const AdminDashboardPage = () => {
     setSelectedUser(null);
   };
   
-  // Filter and sort users
+  // Filter users with memoization
   const filteredUsers = useMemo(() => {
-    return users
-      .filter(user => {
-        const matchesSearch = searchQuery === '' || 
-          (user.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-          (user.fullName?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-          (user.email?.toLowerCase() || "").includes(searchQuery.toLowerCase());
+    // Initially only process a subset of users for faster rendering
+    const usersToProcess = users.slice(0, loadedUsersCount);
+    const filtered = filterUsers(usersToProcess, searchQuery, roleFilter, statusFilter);
+    return filtered.sort((a, b) => {
+      const fieldA = sortField === 'name' ? (a.name || a.fullName || '') : a[sortField] || '';
+      const fieldB = sortField === 'name' ? (b.name || b.fullName || '') : b[sortField] || '';
+      
+      // Special case for status field
+      if (sortField === 'status') {
+        const statusA = getUserStatus(a);
+        const statusB = getUserStatus(b);
         
-        const matchesRole = roleFilter === '' || user.role === roleFilter;
-        
-        // Use the getUserStatus helper to check status consistently
-        const userStatus = getUserStatus(user);
-        const matchesStatus = statusFilter === '' || userStatus === statusFilter;
-        
-        return matchesSearch && matchesRole && matchesStatus;
-      })
-      .sort((a, b) => {
-        const fieldA = sortField === 'name' ? (a.name || a.fullName || '') : 
-                      a[sortField] || '';
-        const fieldB = sortField === 'name' ? (b.name || b.fullName || '') : 
-                      b[sortField] || '';
-        
-        // Special handling for status field due to possibly different formats
-        if (sortField === 'status') {
-          const statusA = getUserStatus(a);
-          const statusB = getUserStatus(b);
-          
-          if (sortOrder === 'asc') {
-            return statusA.localeCompare(statusB);
-          } else {
-            return statusB.localeCompare(statusA);
-          }
-        }
-        
-        // Normal string or date comparison
-        if (sortOrder === 'asc') {
-          return String(fieldA).localeCompare(String(fieldB));
-        } else {
-          return String(fieldB).localeCompare(String(fieldA));
-        }
-      });
-  }, [users, searchQuery, roleFilter, statusFilter, sortField, sortOrder]);
+        return sortOrder === 'asc' 
+          ? statusA.localeCompare(statusB)
+          : statusB.localeCompare(statusA);
+      }
+      
+      // Normal comparison
+      return sortOrder === 'asc'
+        ? String(fieldA).localeCompare(String(fieldB))
+        : String(fieldB).localeCompare(String(fieldA));
+    });
+  }, [users, searchQuery, roleFilter, statusFilter, sortField, sortOrder, loadedUsersCount]);
   
-  // Get paginated users
+  // Get paginated users (memoized)
   const paginatedUsers = useMemo(() => {
-    const start = page * rowsPerPage;
-    return filteredUsers.slice(start, start + rowsPerPage);
+    return getPaginatedUsers(filteredUsers, page, rowsPerPage);
   }, [filteredUsers, page, rowsPerPage]);
   
+  // Load more users when needed
+  useEffect(() => {
+    // If we're getting close to the end of loaded users, load more
+    if (filteredUsers.length > loadedUsersCount - ITEMS_PER_BATCH / 2 && loadedUsersCount < users.length) {
+      setLoadedUsersCount(prev => Math.min(prev + ITEMS_PER_BATCH, users.length));
+    }
+  }, [filteredUsers.length, loadedUsersCount, users.length]);
+  
+  // Reset loaded count when filters change
+  useEffect(() => {
+    setLoadedUsersCount(ITEMS_PER_BATCH);
+    setPage(0);
+  }, [searchQuery, roleFilter, statusFilter]);
+
   // Filter activity logs
   const filteredActivityLogs = useMemo(() => {
     return activityLogs
@@ -1097,6 +977,23 @@ const AdminDashboardPage = () => {
       }
     }
   };
+  
+  // Use virtualized list for large data sets
+  const handleTableScroll = () => {
+    // If scrolled near the bottom, load more users
+    const scrollPosition = document.documentElement.scrollTop + window.innerHeight;
+    const scrollHeight = document.documentElement.scrollHeight;
+    
+    if (scrollPosition > scrollHeight - 500 && loadedUsersCount < users.length) {
+      setLoadedUsersCount(prev => Math.min(prev + ITEMS_PER_BATCH, users.length));
+    }
+  };
+
+  // Add scroll listener
+  useEffect(() => {
+    window.addEventListener('scroll', handleTableScroll);
+    return () => window.removeEventListener('scroll', handleTableScroll);
+  }, [loadedUsersCount, users.length]);
   
   return (
     <Container maxWidth="xl" sx={{ pb: 6 }}>
@@ -1470,7 +1367,9 @@ const AdminDashboardPage = () => {
                 onPageChange={handleChangePage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 labelRowsPerPage="Baris per halaman"
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} dari ${count}`}
+                labelDisplayedRows={({ from, to, count }) => {
+                  return `${from}-${to} dari ${count} (${users.length > loadedUsersCount ? 'memuat... ' + loadedUsersCount + ' dari ' + users.length : 'semua dimuat'})`
+                }}
               />
             </CardContent>
           </StyledCard>

@@ -228,54 +228,74 @@ export const updateApplication = async (uuid, updateData) => {
  */
 export const getAllApplications = async () => {
   try {
-    // Find all applications with allowDiskUse option to prevent memory limit errors
-    const applications = await JobApplication.find({})
-      .sort({ submissionDate: -1 })
-      .allowDiskUse(true)
-      .lean(); // Use lean() for better performance
-    
-    // Process applications to properly populate job posting details
-    const populatedApplications = [];
-    
-    for (const application of applications) {
-      try {
-        // Find the job posting by UUID
-        const jobPosting = await JobPosting.findOne({ 
-          uuid: application.jobPostingId 
-        }).lean(); // Use lean() for better performance
-        
-        // Find candidate details
-        const candidate = await User.findOne({
-          uuid: application.candidateId
-        }).lean(); // Use lean() for better performance
-        
-        // Add candidate information
-        if (candidate) {
-          application.candidateInfo = {
-            name: candidate.name,
-            email: candidate.email
-          };
+    // Use MongoDB aggregation pipeline with $lookup to join collections in a single query
+    const populatedApplications = await JobApplication.aggregate([
+      { $sort: { submissionDate: -1 } },
+      // Join with users collection to get candidate info
+      {
+        $lookup: {
+          from: "users", // MongoDB collection name (usually lowercase model name + 's')
+          let: { candidateId: "$candidateId" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$uuid", "$$candidateId"] } } },
+            { $project: { _id: 0, name: 1, email: 1 } }
+          ],
+          as: "candidateInfo"
         }
-        
-        // Manually assign job posting if found
-        if (jobPosting) {
-          application.jobPostingId = {
-            title: jobPosting.title,
-            companyName: jobPosting.title, // Assuming company name is in title
-            jobPosition: jobPosting.jobPosition,
-            location: jobPosting.location,
-            salary: jobPosting.salary,
-            deadline: jobPosting.deadline
-          };
+      },
+      // Unwind the candidateInfo array (converts array to object)
+      {
+        $unwind: {
+          path: "$candidateInfo",
+          preserveNullAndEmptyArrays: true
         }
-        
-        populatedApplications.push(application);
-      } catch (err) {
-        console.error(`Error populating job posting for application ${application.uuid}:`, err);
-        // Include the application even if population fails
-        populatedApplications.push(application);
+      },
+      // Join with job postings collection
+      {
+        $lookup: {
+          from: "jobpostings", // MongoDB collection name
+          let: { jobId: "$jobPostingId" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$uuid", "$$jobId"] } } },
+            { $project: { _id: 0, title: 1, jobPosition: 1, location: 1, salary: 1, deadline: 1 } }
+          ],
+          as: "jobInfo"
+        }
+      },
+      // Unwind the jobInfo array
+      {
+        $unwind: {
+          path: "$jobInfo",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // Reshape the result for consistency with the previous implementation
+      {
+        $project: {
+          _id: 0,
+          uuid: 1,
+          candidateId: 1,
+          submissionDate: 1,
+          status: 1,
+          notes: 1,
+          statusHistory: 1,
+          // Personal info fields
+          nama_ktp: 1,
+          jenis_kelamin: 1,
+          nik: 1,
+          tanggal_lahir: 1,
+          // Other application fields
+          email: 1, 
+          no_hp: 1,
+          posisi_dilamar: 1,
+          // Nested fields from lookups
+          candidateInfo: 1,
+          jobPostingId: "$jobInfo", // Replace jobPostingId with the joined job data
+          createdAt: 1,
+          updatedAt: 1
+        }
       }
-    }
+    ]).allowDiskUse(true);
     
     return populatedApplications;
   } catch (error) {
