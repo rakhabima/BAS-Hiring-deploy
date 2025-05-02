@@ -28,7 +28,12 @@ const userSchema = new mongoose.Schema({
     status: {
         type: Boolean,
         default: true
-    }, 
+    },
+    employmentStatus: {
+        type: String,
+        enum: ["NONE", "ON_JOB"],
+        default: "NONE"
+    },
     isDeleted: {
         type: Boolean,
         default: false

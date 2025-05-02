@@ -17,15 +17,28 @@ import DashboardPage from './pages/gm/DashboardPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import ProfileUser from './pages/ProfileUser';
+import ApplicationList from './pages/public/ApplicationList';
+import DetailOnJob from './pages/public/DetailOnJob';
+import DetailTechnicalTest from './pages/public/DetailTechnicalTest';
+import DetailWawancara from './pages/public/DetailWawancara';
+import JobApplicationEditForm from './pages/public/JobApplicationEditForm';
+import JobApplicationForm from './pages/public/JobApplicationForm';
 import OutsourcingRequestPage from './pages/public/OutsourcingRequestPage';
+import PortalInformasi from './pages/public/PortalInformasi';
 import PublicJobDetailPage from './pages/public/PublicJobDetailPage';
 import PublicJobListPage from './pages/public/PublicJobListPage';
+import RingkasanFormulir from './pages/public/RingkasanFormulir';
 import PublicServiceDetailPage from './pages/PublicServiceDetailPage';
 import PublicServiceListPage from './pages/PublicServiceListPage';
+import CandidateDetailPage from './pages/recruiter/CandidateDetailPage';
+import CandidateInterviewPage from './pages/recruiter/CandidateInterviewPage';
+import CandidateInterviewPreview from './pages/recruiter/CandidateInterviewPreview';
+import CandidatesPage from './pages/recruiter/CandidatesPage';
 import CreateJobPage from './pages/recruiter/CreateJobPage';
 import EditJobPage from './pages/recruiter/EditJobPage';
 import JobDetailPage from './pages/recruiter/JobDetailPage';
 import JobPublicationsPage from './pages/recruiter/JobPublicationsPage';
+import SchedulingPage from './pages/recruiter/SchedulingPage';
 import RegisterPage from './pages/RegisterPage';
 
 // ScrollToTop component that handles URL hash fragments for scrolling to sections
@@ -179,7 +192,7 @@ const AppContent = () => {
           
           {/* Protected Dashboard routes */}
           <Route path="/admin/dashboard" element={<AdminRoute element={<AdminDashboardPage />} />} />
-          <Route path="/recruiter/dashboard" element={<ProtectedRoute element={<div>Recruiter Dashboard</div>} />} />
+          <Route path="/recruiter/dashboard" element={<RecruiterRoute element={<CandidatesPage />} />} />
           <Route path="/gm/dashboard" element={<GMRoute element={<DashboardPage />} />} />
           
           {/* GM Routes - Service Publications */}
@@ -192,10 +205,12 @@ const AppContent = () => {
           <Route path="/korlap/dashboard" element={<ProtectedRoute element={<div>Koordinator Lapangan Dashboard</div>} />} />
           
           {/* Recruiter Routes */}
-          <Route path="/recruiter/dashboard" element={<RecruiterRoute element={<div>Recruiter Dashboard</div>} />} />
+          <Route path="/recruiter/candidate-detail/:candidateId" element={<RecruiterRoute element={<CandidateDetailPage />} />} />
+          <Route path="/recruiter/candidate-interview/:candidateId" element={<RecruiterRoute element={<CandidateInterviewPage />} />} />
+          <Route path="/recruiter/candidate-interview-preview/:candidateId" element={<RecruiterRoute element={<CandidateInterviewPreview />} />} />
+          <Route path="/recruiter/technical-test/:candidateId" element={<RecruiterRoute element={<div>Technical Test</div>} />} />
           <Route path="/recruiter/service-form" element={<RecruiterRoute element={<div>Outsourcing Service Form</div>} />} />
-          <Route path="/recruiter/outsourcing" element={<RecruiterRoute element={<div>Recruiter Outsource Services</div>} />} />
-          <Route path="/recruiter/outsourcing/:id" element={<RecruiterRoute element={<div>Outsourcing Service Details</div>} />} />
+          <Route path="/recruiter/scheduling" element={<RecruiterRoute element={<SchedulingPage />} />} />
           
           {/* Job Vacancy Routes */}
           <Route path="/recruiter/job-publications" element={<RecruiterRoute element={<JobPublicationsPage />} />} />
@@ -206,6 +221,16 @@ const AppContent = () => {
           {/* Public Job Vacancy Routes */}
           <Route path="/lowongan" element={<PublicJobListPage />} />
           <Route path="/lowongan/:id" element={<PublicJobDetailPage />} />
+          <Route path="/lowongan/:id/apply" element={<ProtectedRoute element={<JobApplicationForm />} />} />
+          
+          {/* Candidate Routes - Job Application Information Portal */}
+          <Route path="/candidate/portal-informasi" element={<ProtectedRoute element={<ApplicationList />} />} />
+          <Route path="/candidate/portal-informasi/:uuid" element={<ProtectedRoute element={<PortalInformasi />} />} />
+          <Route path="/candidate/portal-informasi/ringkasan-formulir/:uuid" element={<ProtectedRoute element={<RingkasanFormulir />} />} />
+          <Route path="/candidate/portal-informasi/detail-wawancara/:uuid" element={<ProtectedRoute element={<DetailWawancara />} />} />
+          <Route path="/candidate/portal-informasi/detail-technical-test/:uuid" element={<ProtectedRoute element={<DetailTechnicalTest />} />} />
+          <Route path="/candidate/portal-informasi/detail-on-job/:uuid" element={<ProtectedRoute element={<DetailOnJob />} />} />
+          <Route path="/candidate/portal-informasi/edit-formulir/:uuid" element={<ProtectedRoute element={<JobApplicationEditForm />} />} />
           
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />

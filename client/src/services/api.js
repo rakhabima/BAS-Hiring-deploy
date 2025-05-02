@@ -797,6 +797,253 @@ export const jobVacancyService = {
   }
 };
 
+// Job Application services
+export const jobApplicationService = {
+  // Submit job application
+  submitApplication: async (applicationData) => {
+    try {
+      const formData = new FormData();
+      
+      // Handle text fields
+      for (const key in applicationData) {
+        if (!key.startsWith('foto_')) {
+          // For empty SIM type, use the default "Tidak Punya"
+          if (key === 'tipe_sim' && (!applicationData[key] || applicationData[key] === '')) {
+            formData.append(key, 'Tidak Punya');
+          }
+          // For date fields that might be null
+          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan') 
+              && applicationData[key] === null) {
+            formData.append(key, 'null');
+          } 
+          // For regular fields 
+          else if (applicationData[key] !== undefined) {
+            formData.append(key, applicationData[key]);
+          }
+        }
+      }
+      
+      // Handle file uploads
+      const fileFields = [
+        'foto_diri', 'foto_ktp', 'foto_sim', 
+        'foto_stnk_hal_1', 'foto_stnk_hal_2', 'foto_ijazah'
+      ];
+      
+      fileFields.forEach(field => {
+        if (applicationData[field] instanceof File) {
+          formData.append(field, applicationData[field]);
+        }
+      });
+      
+      const response = await api.post(logEndpoint('/jobApplication/submit'), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      showNotification('Lamaran berhasil dikirim', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengirim lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get job applications for a candidate
+  getCandidateApplications: async () => {
+    try {
+      const response = await api.get(logEndpoint('/jobApplication/candidate'));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil data lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get application details by ID
+  getApplicationById: async (uuid) => {
+    try {
+      const response = await api.get(logEndpoint(`/jobApplication/${uuid}`));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil detail lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Update job application (for revision)
+  updateApplication: async (uuid, applicationData) => {
+    try {
+      const formData = new FormData();
+      
+      // Handle text fields
+      for (const key in applicationData) {
+        if (!key.startsWith('foto_')) {
+          // For empty SIM type, use the default "Tidak Punya"
+          if (key === 'tipe_sim' && (!applicationData[key] || applicationData[key] === '')) {
+            formData.append(key, 'Tidak Punya');
+          }
+          // For date fields that might be null
+          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan') 
+              && applicationData[key] === null) {
+            formData.append(key, 'null');
+          } 
+          // For regular fields 
+          else if (applicationData[key] !== undefined) {
+            formData.append(key, applicationData[key]);
+          }
+        }
+      }
+      
+      // Handle file uploads
+      const fileFields = [
+        'foto_diri', 'foto_ktp', 'foto_sim', 
+        'foto_stnk_hal_1', 'foto_stnk_hal_2', 'foto_ijazah'
+      ];
+      
+      fileFields.forEach(field => {
+        if (applicationData[field] instanceof File) {
+          formData.append(field, applicationData[field]);
+        }
+      });
+      
+      const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update`), formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      showNotification('Lamaran berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Get all job applications (for recruiters)
+  getAllApplications: async () => {
+    try {
+      const response = await api.get(logEndpoint('/jobApplication/all'));
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal mengambil data lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  },
+  
+  // Update application status (for recruiters)
+  updateApplicationStatus: async (uuid, statusData) => {
+    try {
+      const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update-status`), statusData);
+      showNotification('Status lamaran berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Gagal memperbarui status lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      throw error;
+    }
+  }
+};
+
+// Interview services
+export const interviewService = {
+  // Create new interview
+  createInterview: async (interviewData) => {
+    try {
+      const response = await api.post(logEndpoint('/interviews'), interviewData);
+      return response.data;
+    } catch (error) {
+      let errorMsg = 'Gagal membuat jadwal wawancara.';
+      
+      if (error.response && error.response.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  },
+
+  // Get interview by application ID
+  getInterviewByApplicationId: async (applicationId) => {
+    try {
+      const response = await api.get(logEndpoint(`/interviews/application/${applicationId}`));
+      return response.data;
+    } catch (error) {
+      // Don't show notification for not found errors as this might be expected
+      if (error.response && error.response.status !== 404) {
+        let errorMsg = 'Gagal memuat data wawancara.';
+        
+        if (error.response && error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        
+        showNotification(errorMsg, 'error');
+      }
+      
+      // For debugging in console only
+      if (error.response && error.response.status === 404) {
+        console.log('No interview found for application:', applicationId);
+      } else {
+        console.error('Error getting interview by application ID:', error);
+      }
+      
+      throw error;
+    }
+  },
+
+  // Get all interviews
+  getAllInterviews: async () => {
+    try {
+      const response = await api.get(logEndpoint('/interviews'));
+      return response.data;
+    } catch (error) {
+      let errorMsg = 'Gagal memuat data jadwal wawancara.';
+      
+      if (error.response && error.response.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  },
+
+  // Update interview
+  updateInterview: async (interviewId, interviewData) => {
+    try {
+      const response = await api.put(logEndpoint(`/interviews/${interviewId}`), interviewData);
+      return response.data;
+    } catch (error) {
+      let errorMsg = 'Gagal memperbarui jadwal wawancara.';
+      
+      if (error.response && error.response.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  },
+
+  // Update candidate response (attendance confirmation)
+  updateInterviewResponse: async (interviewId, responseData) => {
+    try {
+      const response = await api.put(logEndpoint(`/interviews/${interviewId}/response`), responseData);
+      return response.data;
+    } catch (error) {
+      let errorMsg = 'Gagal mengirim konfirmasi kehadiran.';
+      
+      if (error.response && error.response.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  }
+};
+
 // Helper functions for mock data
 const getMockUserData = () => {
   // Get any existing mock data from localStorage

@@ -7,6 +7,8 @@ import express from "express";
 import connectDB from "./db/connectDb.js";
 import authRoute from "./routes/auth.js";
 import guestRoute from "./routes/guest.js";
+import interviewRoute from "./routes/interview.js";
+import jobApplicationRoute from "./routes/jobApplication.js";
 import jobVacancyRoute from "./routes/jobVacancy.js";
 import outsourceRoute from "./routes/outsourcing.js";
 import userRoute from "./routes/user.js";
@@ -49,6 +51,8 @@ app.use("/guest", guestRoute);
 app.use("/jobVacancy", jobVacancyRoute);
 app.use("/outsource", outsourceRoute);
 app.use("/user", userRoute);
+app.use("/jobApplication", jobApplicationRoute);
+app.use("/interviews", interviewRoute);
 
 // Middleware penanganan error
 app.use((err, req, res, next) => {
