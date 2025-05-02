@@ -84,10 +84,10 @@ const ProfileUser = () => {
         [name]: null
       });
     }
-
+    
     // Real-time validation for different fields
     const newErrors = { ...errors };
-
+    
     if (name === 'email') {
       // Validasi format email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -107,7 +107,7 @@ const ProfileUser = () => {
       } else {
         newErrors.newPassword = null;
       }
-
+      
       // Juga validasi kecocokan dengan konfirmasi password
       if (value && formData.confirmPassword && value !== formData.confirmPassword) {
         newErrors.confirmPassword = 'Konfirmasi kata sandi tidak cocok';
@@ -123,14 +123,14 @@ const ProfileUser = () => {
         newErrors.confirmPassword = null;
       }
     }
-
+    
     setErrors(newErrors);
   };
 
   // Validate form
   const validateForm = (field) => {
     const newErrors = { ...errors };
-
+    
     if (field === 'name' || field === 'all') {
       if (!formData.name.trim()) {
         newErrors.name = 'Nama tidak boleh kosong';
@@ -138,7 +138,7 @@ const ProfileUser = () => {
         newErrors.name = null;
       }
     }
-
+    
     if (field === 'email' || field === 'all') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!formData.email.trim()) {
@@ -149,7 +149,7 @@ const ProfileUser = () => {
         newErrors.email = null;
       }
     }
-
+    
     if (field === 'password' || field === 'all') {
       if (formData.newPassword) {
         if (!formData.currentPassword) {
@@ -173,13 +173,13 @@ const ProfileUser = () => {
         }
       }
     }
-
+    
     setErrors(newErrors);
-
+    
     if (field === 'all') {
       return !Object.values(newErrors).some(error => error);
     }
-
+    
     return !newErrors[field];
   };
 
@@ -192,7 +192,7 @@ const ProfileUser = () => {
         try {
           // Verifikasi password saat ini
           const isValid = await userService.verifyCurrentPassword(user.uuid, formData.currentPassword);
-
+          
           if (!isValid) {
             setErrors({
               ...errors,
@@ -202,7 +202,7 @@ const ProfileUser = () => {
             setLoading(false);
             return;
           }
-
+          
           // Password valid, lanjutkan dengan dialog konfirmasi
           setFieldToUpdate(field);
           setOpenDialog(true);
@@ -231,30 +231,30 @@ const ProfileUser = () => {
   // Handle update submission
   const handleUpdate = async () => {
     setOpenDialog(false);
-
+    
     if (!user || !user.uuid) {
       setErrors({ general: 'Informasi pengguna tidak ditemukan' });
       return;
     }
-
+    
     try {
       let updateData = {};
-
+      
       if (fieldToUpdate === 'name') {
         updateData = { name: formData.name };
       } else if (fieldToUpdate === 'email') {
         updateData = { email: formData.email };
       } else if (fieldToUpdate === 'password') {
-        updateData = {
+        updateData = { 
           password: formData.newPassword,
-          currentPassword: formData.currentPassword
+          currentPassword: formData.currentPassword 
         };
       }
-
+      
       setLoading(true);
       const response = await userService.updateUser(user.uuid, updateData);
       setLoading(false);
-
+      
       if (response && response.success) {
         // Update local storage with new user data
         const updatedUser = {
@@ -264,10 +264,10 @@ const ProfileUser = () => {
           password: undefined,
           currentPassword: undefined
         };
-
+        
         localStorage.setItem('user', JSON.stringify(updatedUser));
         setUser(updatedUser);
-
+        
         // Reset password fields
         if (fieldToUpdate === 'password') {
           setFormData({
@@ -277,9 +277,9 @@ const ProfileUser = () => {
             confirmPassword: ''
           });
         }
-
+        
         setUpdateSuccess(true);
-
+        
         // Hide success message after 3 seconds
         setTimeout(() => {
           setUpdateSuccess(false);
@@ -287,7 +287,7 @@ const ProfileUser = () => {
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      setErrors({
+      setErrors({ 
         general: error.response?.data?.message || 'Gagal memperbarui profil'
       });
       setLoading(false);
@@ -299,38 +299,38 @@ const ProfileUser = () => {
     // Validasi ulang password saat ini untuk memastikan persyaratan kompleksitas terpenuhi
     if (formData.newPassword) {
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-
+      
       if (!passwordRegex.test(formData.newPassword)) {
         return true; // Password tidak memenuhi persyaratan kompleksitas
       }
-
+      
       if (formData.newPassword !== formData.confirmPassword) {
         return true; // Konfirmasi password tidak cocok
       }
-
+      
       if (!formData.currentPassword) {
         return true; // Password saat ini tidak diisi
       }
     }
-
+    
     return Boolean(
-      errors.currentPassword ||
-      errors.newPassword ||
+      errors.currentPassword || 
+      errors.newPassword || 
       errors.confirmPassword
     );
   };
-
+  
   // Check if there are email errors
   const hasEmailErrors = () => {
     if (!formData.email || !formData.email.trim()) {
       return true; // Email kosong
     }
-
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       return true; // Format email tidak valid
     }
-
+    
     return Boolean(errors.email);
   };
 
@@ -349,27 +349,27 @@ const ProfileUser = () => {
           <PersonIcon fontSize="large" sx={{ mr: 2 }} />
           <Typography variant="h4">Profil Pengguna</Typography>
         </Box>
-
+        
         <Typography variant="subtitle1" color="text.secondary" mb={2}>
           Atur informasi nama dan akun anda disini.
         </Typography>
-
+        
         <Divider sx={{ mb: 4 }} />
-
+        
         {updateSuccess && (
           <Alert severity="success" sx={{ mb: 3 }}>
             Profil berhasil diperbarui!
           </Alert>
         )}
-
+        
         {errors.general && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {errors.general}
           </Alert>
         )}
-
+        
         <Typography variant="h6" sx={{ mb: 2 }}>Data Diri</Typography>
-
+        
         <Grid container spacing={3}>
           {/* Nama */}
           <Grid item xs={12} md={6}>
@@ -397,7 +397,7 @@ const ProfileUser = () => {
               </Box>
             </Box>
           </Grid>
-
+        
           {/* Email */}
           <Grid item xs={12} md={6}>
             <Box sx={{ mb: 3 }}>
@@ -426,9 +426,9 @@ const ProfileUser = () => {
             </Box>
           </Grid>
         </Grid>
-
+        
         <Typography variant="h6" sx={{ mb: 2, mt: 2 }}>Password</Typography>
-
+        
         <Box sx={{ mb: 3 }}>
           <Grid container spacing={3}>
             {/* Current Password */}
@@ -459,7 +459,7 @@ const ProfileUser = () => {
                 }}
               />
             </Grid>
-
+            
             {/* New Password */}
             <Grid item xs={12} md={4}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Kata Sandi Baru</Typography>
@@ -488,7 +488,7 @@ const ProfileUser = () => {
                 }}
               />
             </Grid>
-
+            
             {/* Confirm Password */}
             <Grid item xs={12} md={4}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Konfirmasi Kata Sandi</Typography>
@@ -533,7 +533,7 @@ const ProfileUser = () => {
             </Grid>
           </Grid>
         </Box>
-
+        
         {/* Special section for CANDIDATE role */}
         {user && user.role === 'CANDIDATE' && (
           <>
@@ -545,9 +545,9 @@ const ProfileUser = () => {
             <Typography variant="body1" paragraph>
               Anda dapat melihat dan mengatur lamaran pekerjaan yang telah Anda ajukan.
             </Typography>
-            <Button
-              variant="contained"
-              color="primary"
+            <Button 
+              variant="contained" 
+              color="primary" 
               startIcon={<WorkIcon />}
               onClick={() => navigate('/candidate/portal-informasi')}
               sx={{ mt: 2 }}
@@ -557,7 +557,7 @@ const ProfileUser = () => {
           </>
         )}
       </Paper>
-
+      
       {/* Confirmation Dialog */}
       <Dialog
         open={openDialog}
