@@ -228,9 +228,11 @@ export const updateApplication = async (uuid, updateData) => {
  */
 export const getAllApplications = async () => {
   try {
-    // Find all applications
+    // Find all applications with allowDiskUse option to prevent memory limit errors
     const applications = await JobApplication.find({})
-      .sort({ submissionDate: -1 });
+      .sort({ submissionDate: -1 })
+      .allowDiskUse(true)
+      .lean(); // Use lean() for better performance
     
     // Process applications to properly populate job posting details
     const populatedApplications = [];
@@ -240,19 +242,16 @@ export const getAllApplications = async () => {
         // Find the job posting by UUID
         const jobPosting = await JobPosting.findOne({ 
           uuid: application.jobPostingId 
-        });
+        }).lean(); // Use lean() for better performance
         
         // Find candidate details
         const candidate = await User.findOne({
           uuid: application.candidateId
-        });
-        
-        // Create a copy of the application as a plain object
-        const appObject = application.toObject();
+        }).lean(); // Use lean() for better performance
         
         // Add candidate information
         if (candidate) {
-          appObject.candidateInfo = {
+          application.candidateInfo = {
             name: candidate.name,
             email: candidate.email
           };
@@ -260,7 +259,7 @@ export const getAllApplications = async () => {
         
         // Manually assign job posting if found
         if (jobPosting) {
-          appObject.jobPostingId = {
+          application.jobPostingId = {
             title: jobPosting.title,
             companyName: jobPosting.title, // Assuming company name is in title
             jobPosition: jobPosting.jobPosition,
@@ -270,11 +269,11 @@ export const getAllApplications = async () => {
           };
         }
         
-        populatedApplications.push(appObject);
+        populatedApplications.push(application);
       } catch (err) {
         console.error(`Error populating job posting for application ${application.uuid}:`, err);
         // Include the application even if population fails
-        populatedApplications.push(application.toObject());
+        populatedApplications.push(application);
       }
     }
     

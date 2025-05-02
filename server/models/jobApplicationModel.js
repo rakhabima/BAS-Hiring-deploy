@@ -218,6 +218,9 @@ const jobApplicationSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Add index for sorting by submissionDate
+jobApplicationSchema.index({ submissionDate: -1 });
+
 // Add middleware to track status changes
 jobApplicationSchema.pre('save', function(next) {
     const application = this;
