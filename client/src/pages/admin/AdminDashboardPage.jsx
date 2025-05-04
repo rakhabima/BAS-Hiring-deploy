@@ -1,6 +1,5 @@
 import {
   AccountCircle,
-  Error,
   EventNote,
   Login,
   ManageAccounts,
@@ -52,27 +51,17 @@ import {
 import { alpha, styled, useTheme } from '@mui/material/styles';
 import {
   ArcElement,
-  BarElement,
-  CategoryScale,
   Chart as ChartJS,
   Tooltip as ChartTooltip,
   Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
   Title
 } from 'chart.js';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bar, Doughnut } from 'react-chartjs-2';
-import api, { userService } from '../../services/api'; // Import api as default import
+import { Doughnut } from 'react-chartjs-2';
+import { showNotification, userService } from '../../services/api'; // Import api as default import, ensure showNotification is exported/imported
 
 // Register ChartJS components
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
   ArcElement,
   Title,
   ChartTooltip,
@@ -128,42 +117,8 @@ const StatusChip = styled(Chip)(({ theme, status }) => {
       color = theme.palette.warning.main;
       break;
     default:
-      break;
-  }
-  
-  return {
-    backgroundColor,
-    color,
-    fontWeight: 'bold',
-    '& .MuiChip-label': {
-      padding: '0 12px'
-    }
-  };
-});
-
-// Activity type chip styling
-const ActivityChip = styled(Chip)(({ theme, type }) => {
-  let color = theme.palette.text.primary;
-  let backgroundColor = theme.palette.grey[300];
-  
-  switch (type) {
-    case "LOGIN":
-      backgroundColor = alpha(theme.palette.success.main, 0.15);
-      color = theme.palette.success.dark;
-      break;
-    case "LOGOUT":
-      backgroundColor = alpha(theme.palette.info.main, 0.15);
-      color = theme.palette.info.dark;
-      break;
-    case "DATA_CHANGE":
-      backgroundColor = alpha(theme.palette.warning.light, 0.2);
-      color = theme.palette.warning.main;
-      break;
-    case "ERROR":
-      backgroundColor = alpha(theme.palette.error.main, 0.15);
-      color = theme.palette.error.dark;
-      break;
-    default:
+      backgroundColor = alpha(theme.palette.grey[500], 0.15);
+      color = theme.palette.grey[700];
       break;
   }
   
@@ -179,183 +134,46 @@ const ActivityChip = styled(Chip)(({ theme, type }) => {
 
 // Helper function to count by role
 const countByRole = (users) => {
-  // Daftar role yang mungkin ada
   const allRoles = [
-    'ADMIN', 
-    'GENERAL_MANAGER', 
-    'RECRUITER', 
-    'KOORDINATOR_LAPANGAN', 
-    'CANDIDATE', 
+    'ADMIN',
+    'GENERAL_MANAGER',
+    'RECRUITER',
+    'KOORDINATOR_LAPANGAN',
+    'CANDIDATE',
     'KARYAWAN',
     'GUEST'
   ];
-  
-  // Inisialisasi counts dengan semua role diset ke 0
   const counts = {};
   allRoles.forEach(role => counts[role] = 0);
-  
-  // Hitung jumlah user per role
   users.forEach(user => {
     if (user && user.role) {
       if (counts[user.role] !== undefined) {
         counts[user.role]++;
       } else {
-        // Jika ditemukan role baru yang belum terdaftar
         counts[user.role] = 1;
       }
     }
   });
-  
-  // Filter hanya role yang ada usernya (jumlah > 0)
   const filteredCounts = {};
   Object.keys(counts).forEach(role => {
     if (counts[role] > 0) {
       filteredCounts[role] = counts[role];
     }
   });
-  
   return filteredCounts;
 };
-
-// Helper function to count by activity type
-const countByActivityType = (logs) => {
-  return logs.reduce((acc, log) => {
-    acc[log.type] = (acc[log.type] || 0) + 1;
-    return acc;
-  }, {});
-};
-
-// Helper function to group activities by date
-const groupActivitiesByDate = (activities, period, selectedMonth) => {
-  const grouped = {};
-  const currentYear = new Date().getFullYear();
-  
-  activities.forEach(activity => {
-    let dateKey;
-    const activityDate = new Date(activity.timestamp);
-    const activityMonth = activityDate.getMonth();
-    const activityFullYear = activityDate.getFullYear();
-    
-    if (period === 'yearly') {
-      if (activityFullYear === currentYear) {
-        dateKey = activityDate.toLocaleDateString('id-ID', { month: 'long' });
-      }
-    } else if (period === 'monthly') {
-      if (activityMonth === selectedMonth) {
-        const weekNumber = Math.ceil(activityDate.getDate() / 7);
-        dateKey = `Minggu ${weekNumber}`;
-      }
-    } else if (period === 'weekly') {
-      const dayName = activityDate.toLocaleDateString('id-ID', { weekday: 'long' });
-      const dateOfMonth = activityDate.getDate();
-      const month = activityDate.getMonth() + 1;
-      dateKey = `${dayName} (${dateOfMonth}/${month})`;
-    }
-    
-    if (dateKey) {
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = {
-          total: 0,
-          LOGIN: 0,
-          LOGOUT: 0,
-          DATA_CHANGE: 0,
-          ERROR: 0,
-          dateObject: activityDate,
-        };
-      }
-      
-      grouped[dateKey].total++;
-      grouped[dateKey][activity.type]++;
-    }
-  });
-  
-  return grouped;
-};
-
-// Generate mock activity logs for demonstration
-const generateMockActivityLogs = (users, count = 50) => {
-  if (!users || users.length === 0) return [];
-  
-  const activityTypes = ['LOGIN', 'LOGOUT', 'DATA_CHANGE', 'ERROR'];
-  const descriptions = {
-    LOGIN: ['User logged in', 'Successful login', 'Authentication successful'],
-    LOGOUT: ['User logged out', 'Session ended', 'Logout successful'],
-    DATA_CHANGE: ['Profile updated', 'Password changed', 'User information modified', 'Role updated'],
-    ERROR: ['Failed login attempt', 'Invalid credentials', 'Permission denied', 'Session expired']
-  };
-  
-  const ipAddresses = [
-    '192.168.1.1', '172.16.0.1', '10.0.0.1', '127.0.0.1', 
-    '192.168.0.100', '172.16.10.10', '10.0.1.25'
-  ];
-  
-  const logs = [];
-  const now = new Date();
-  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  
-  for (let i = 0; i < count; i++) {
-    const user = users[Math.floor(Math.random() * users.length)];
-    const type = activityTypes[Math.floor(Math.random() * activityTypes.length)];
-    const descriptions_for_type = descriptions[type];
-    const description = descriptions_for_type[Math.floor(Math.random() * descriptions_for_type.length)];
-    
-    // Generate random timestamp within the last week
-    const timestamp = new Date(
-      oneWeekAgo.getTime() + Math.random() * (now.getTime() - oneWeekAgo.getTime())
-    );
-    
-    logs.push({
-      id: `activity-${i}`,
-      timestamp: timestamp.toISOString(),
-      type,
-      userId: user.uuid || user.id,
-      userName: user.name || user.fullName || 'Unknown User',
-      description,
-      ipAddress: ipAddresses[Math.floor(Math.random() * ipAddresses.length)],
-      details: {
-        email: user.email,
-        role: user.role
-      }
-    });
-  }
-  
-  // Sort by timestamp descending (newest first)
-  return logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-};
-
-// Month names for dropdown
-const monthNames = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-];
 
 const AdminDashboardPage = () => {
   const theme = useTheme();
   
   // Helper to get user status display value
   const getUserStatus = (user) => {
-    // Handle different status formats:
-    // - Boolean: true/false
-    // - String: "ACTIVE"/"INACTIVE"
-    // - Property doesn't exist
-    
     if (!user || (user.status === undefined && user.isActive === undefined)) {
       return 'UNKNOWN';
     }
-    
-    if (typeof user.status === 'boolean') {
-      return user.status ? 'ACTIVE' : 'INACTIVE';
-    }
-    
-    if (typeof user.isActive === 'boolean') {
-      return user.isActive ? 'ACTIVE' : 'INACTIVE';
-    }
-    
-    if (user.status === 'ACTIVE' || user.status === 'INACTIVE') {
-      return user.status;
-    }
-    
-    // Default to string representation of whatever value we have
+    if (typeof user.status === 'boolean') return user.status ? 'ACTIVE' : 'INACTIVE';
+    if (typeof user.isActive === 'boolean') return user.isActive ? 'ACTIVE' : 'INACTIVE';
+    if (user.status === 'ACTIVE' || user.status === 'INACTIVE') return user.status;
     return String(user.status || user.isActive || 'UNKNOWN').toUpperCase();
   };
 
@@ -398,12 +216,7 @@ const AdminDashboardPage = () => {
   
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
-  const [activityLogs, setActivityLogs] = useState([]);
-  const [periodFilter, setPeriodFilter] = useState('weekly');
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [roleDistribution, setRoleDistribution] = useState({});
-  const [activityTypeCounts, setActivityTypeCounts] = useState({});
-  const [chartData, setChartData] = useState(null);
   const [doughnutChartData, setDoughnutChartData] = useState(null);
   
   // Detail dialog state
@@ -419,13 +232,7 @@ const AdminDashboardPage = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(15);
   
-  // Activity logs table states
-  const [activityPage, setActivityPage] = useState(0);
-  const [activityRowsPerPage, setActivityRowsPerPage] = useState(10);
-  const [activityTypeFilter, setActivityTypeFilter] = useState('');
-  const [activitySearchQuery, setActivitySearchQuery] = useState('');
-
-  // New state for lazy loading
+  // State for lazy loading
   const [loadedUsersCount, setLoadedUsersCount] = useState(ITEMS_PER_BATCH);
   
   // Memoize filtered users for better performance
@@ -460,24 +267,21 @@ const AdminDashboardPage = () => {
 
   // Prepare data for doughnut chart (memoized)
   const prepareDoughnutChartData = useCallback((roleCounts) => {
+    const labels = Object.keys(roleCounts).map(role => `${getRoleName(role)} (${roleCounts[role]})`);
+    const dataValues = Object.values(roleCounts);
+
+    // Generate distinct colors based on the number of roles
+    const backgroundColors = labels.map((_, index) => `hsl(${(index * 360 / labels.length) % 360}, 70%, 80%)`);
+    const borderColors = labels.map((_, index) => `hsl(${(index * 360 / labels.length) % 360}, 70%, 50%)`);
+
     const data = {
-      labels: Object.keys(roleCounts).map(role => `${role} (${roleCounts[role]})`),
+      labels: labels,
       datasets: [
         {
           label: 'Users by Role',
-          data: Object.values(roleCounts),
-          backgroundColor: [
-            alpha(theme.palette.primary.light, 0.7),
-            alpha(theme.palette.success.light, 0.7),
-            alpha(theme.palette.warning.light, 0.7),
-            alpha(theme.palette.error.light, 0.7),
-          ],
-          borderColor: [
-            theme.palette.primary.main,
-            theme.palette.success.main,
-            theme.palette.warning.main,
-            theme.palette.error.main,
-          ],
+          data: dataValues,
+          backgroundColor: backgroundColors,
+          borderColor: borderColors,
           borderWidth: 1,
         },
       ],
@@ -485,193 +289,62 @@ const AdminDashboardPage = () => {
     setDoughnutChartData(data);
   }, [theme]); // Add theme dependency
 
-  // Prepare data for activity chart (memoized)
-  const prepareChartData = useCallback((activities) => {
-    const groupedData = groupActivitiesByDate(activities, periodFilter, selectedMonth);
-    let sortedDates;
-
-    if (periodFilter === 'yearly') {
-      sortedDates = monthNames.filter(month => groupedData[month]);
-    } else if (periodFilter === 'monthly') {
-      sortedDates = Object.keys(groupedData).sort((a, b) => {
-        const weekA = parseInt(a.split(' ')[1]);
-        const weekB = parseInt(b.split(' ')[1]);
-        return weekA - weekB;
-      });
-    } else if (periodFilter === 'weekly') {
-      sortedDates = Object.keys(groupedData).sort((a, b) => {
-        return groupedData[a].dateObject - groupedData[b].dateObject;
-      });
-    } else {
-      sortedDates = []; // Handle potential undefined case
-    }
-
-    const chartData = {
-      labels: sortedDates,
-      datasets: [
-        {
-          label: 'Login',
-          data: sortedDates.map(date => groupedData[date]?.LOGIN || 0),
-          backgroundColor: 'rgba(76, 175, 80, 0.5)',
-          borderColor: 'rgba(76, 175, 80, 1)',
-          borderWidth: 1,
-          barPercentage: 0.6,
-        },
-        {
-          label: 'Logout',
-          data: sortedDates.map(date => groupedData[date]?.LOGOUT || 0),
-          backgroundColor: 'rgba(33, 150, 243, 0.5)',
-          borderColor: 'rgba(33, 150, 243, 1)',
-          borderWidth: 1,
-          barPercentage: 0.6,
-        },
-        {
-          label: 'Data Changes',
-          data: sortedDates.map(date => groupedData[date]?.DATA_CHANGE || 0),
-          backgroundColor: 'rgba(255, 193, 7, 0.5)',
-          borderColor: 'rgba(255, 193, 7, 1)',
-          borderWidth: 1,
-          barPercentage: 0.6,
-        },
-        {
-          label: 'Errors',
-          data: sortedDates.map(date => groupedData[date]?.ERROR || 0),
-          backgroundColor: 'rgba(244, 67, 54, 0.5)',
-          borderColor: 'rgba(244, 67, 54, 1)',
-          borderWidth: 1,
-          barPercentage: 0.6,
-        }
-      ],
-    };
-
-    setChartData(chartData);
-  }, [periodFilter, selectedMonth]); // Add dependencies
-
   // Fetch all necessary data (memoized)
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('Fetching user data...');
+      console.log('Fetching user data (optimized)...');
 
-      // Create an array of promises for parallel data fetching
-      const [staffResponse, candidatesResponse] = await Promise.all([
-        userService.getAllUsers().catch(error => {
-          console.error('Failed to fetch staff data:', error);
-          showError('Failed to fetch staff data: ' + (error.message || 'Server error occurred'));
-          return { data: [] }; // Return empty array on error
-        }),
-        api.get('/auth/candidates').catch(error => {
-          console.log('Failed to fetch candidates from primary endpoint:', error.message);
-          return api.get('/user/candidates').catch(err => {
-            console.log('Failed to fetch candidates from fallback endpoint:', err.message);
-            showError('Failed to fetch candidate data: ' + (err.message || 'Server error occurred'));
-            return { data: [] }; // Return empty array on error
-          });
-        })
-      ]);
+      // --- Hanya panggil getAllUsers ---
+      const response = await userService.getAllUsers().catch(error => {
+          console.error('Failed to fetch user data:', error);
+          showNotification('Failed to fetch user data: ' + (error.message || 'Server error occurred'), 'error');
+          return null; // Return null on error
+        });
+      // --------------------------------
 
-      // Process staff data (handle various potential response structures)
-      let staffUsers = [];
-      if (staffResponse?.data && Array.isArray(staffResponse.data)) {
-        staffUsers = staffResponse.data;
-      } else if (Array.isArray(staffResponse)) { // Handle direct array response
-        staffUsers = staffResponse;
-      } else if (staffResponse?.data && typeof staffResponse.data === 'object') {
-        // Look for arrays within a potential object response
-        for (const key in staffResponse.data) {
-          if (Array.isArray(staffResponse.data[key])) {
-            staffUsers = staffResponse.data[key];
-            break; // Use the first array found
-          }
-        }
+       // Process user data (handle various potential response structures)
+      let allUsers = [];
+      if (response?.data && Array.isArray(response.data)) {
+          allUsers = response.data;
+      } else if (response?.success && Array.isArray(response?.data)) { // Handle { success: true, data: [] }
+          allUsers = response.data;
+      } else if (Array.isArray(response)) { // Handle direct array response (fallback)
+         allUsers = response;
       }
+       // Add filtering for invalid users if necessary, though backend projection helps
+       allUsers = allUsers.filter(user => user && (user.uuid || user.id));
 
-      // Process candidate data (handle various potential response structures)
-      let candidateUsers = [];
-       if (candidatesResponse?.data && Array.isArray(candidatesResponse.data)) {
-        candidateUsers = candidatesResponse.data;
-      } else if (Array.isArray(candidatesResponse)) { // Handle direct array response
-        candidateUsers = candidatesResponse;
-      } else if (candidatesResponse?.data && typeof candidatesResponse.data === 'object') {
-         // Look for arrays within a potential object response
-        for (const key in candidatesResponse.data) {
-          if (Array.isArray(candidatesResponse.data[key])) {
-            candidateUsers = candidatesResponse.data[key];
-            break; // Use the first array found
-          }
-        }
-      }
-
-
-      // Ensure candidates have the CANDIDATE role and filter out invalid entries
-      candidateUsers = candidateUsers
-        .filter(user => user && (user.role === 'CANDIDATE' ||
-           (typeof user.role === 'string' && user.role.toUpperCase().includes('CANDIDATE'))))
-        .map(candidate => ({
-          ...candidate,
-          role: 'CANDIDATE' // Standardize role
-        }));
-
-      // Combine all valid users
-      const allUsers = [...staffUsers, ...candidateUsers].filter(user => user && (user.uuid || user.id)); // Ensure users have an identifier
-
-      console.log(`Fetched ${allUsers.length} users in total.`);
+      console.log(`Processed ${allUsers.length} users in total.`);
       setUsers(allUsers);
 
-      // --- REMOVED MOCK DATA LOGIC ---
-      // Generate mock activity logs based on REAL users fetched, IF users exist.
-      // If you have a real activity log endpoint, replace generateMockActivityLogs
+      // Update doughnut chart based on the fetched users
       if (allUsers.length > 0) {
-         // Replace with actual API call if available:
-         // const activityResponse = await api.get('/activity-logs');
-         // setActivityLogs(activityResponse.data);
-
-         // Keep generating mock logs FOR NOW if no real endpoint exists
-         // TODO: Replace this with a real API call for activity logs
-         const mockActivityLogs = generateMockActivityLogs(allUsers, 50); // Limit mock logs
-         console.log(`Generated ${mockActivityLogs.length} mock activity logs.`);
-         setActivityLogs(mockActivityLogs);
-
-         // Calculate role distribution from real data
          const roleCounts = countByRole(allUsers);
          setRoleDistribution(roleCounts);
-         prepareDoughnutChartData(roleCounts); // Update chart
-
-         // Calculate activity types from (mock) logs
-         const typeCounts = countByActivityType(mockActivityLogs);
-         setActivityTypeCounts(typeCounts);
-
-         // Prepare activity chart data from (mock) logs
-         prepareChartData(mockActivityLogs); // Update chart
+         prepareDoughnutChartData(roleCounts);
       } else {
-         // If no users are fetched, clear logs and chart data
-         console.log('No real users fetched, clearing logs and charts.');
-         setActivityLogs([]);
+         console.log('No users fetched, clearing role chart.');
          setRoleDistribution({});
-         setActivityTypeCounts({});
          prepareDoughnutChartData({});
-         prepareChartData([]);
       }
 
-
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      showError('Failed to load dashboard data: ' + (error.message || 'Server error occurred'));
-      setUsers([]); // Clear data on error
-      setActivityLogs([]);
+      // Catch any unexpected errors during processing
+      console.error('Error processing dashboard data:', error);
+      showNotification('Failed to process dashboard data: ' + (error.message || 'Unexpected error'), 'error');
+      setUsers([]);
       setRoleDistribution({});
-      setActivityTypeCounts({});
-       prepareDoughnutChartData({});
-       prepareChartData([]);
+      prepareDoughnutChartData({});
     } finally {
       setLoading(false);
     }
-  }, [prepareDoughnutChartData, prepareChartData]); // Keep dependencies
+  }, [prepareDoughnutChartData]); // Keep dependency
 
   // Fetch data on component mount
   useEffect(() => {
     fetchData();
-  }, [fetchData]); // Add fetchData as dependency
+  }, [fetchData]);
 
   // Update doughnut chart when users data changes
   useEffect(() => {
@@ -680,34 +353,10 @@ const AdminDashboardPage = () => {
       setRoleDistribution(roleCounts);
       prepareDoughnutChartData(roleCounts);
     }
-  }, [users, prepareDoughnutChartData]); // Add prepareDoughnutChartData as dependency
-
-  // Update bar chart when activity logs or filters change
-  useEffect(() => {
-    if (activityLogs.length > 0) {
-      // Update activity type counts
-      const typeCounts = countByActivityType(activityLogs);
-      setActivityTypeCounts(typeCounts);
-      
-      // Prepare chart data
-      prepareChartData(activityLogs);
-    }
-  }, [activityLogs, periodFilter, selectedMonth, prepareChartData]);
+  }, [users, prepareDoughnutChartData]);
 
   // --- Event Handlers ---
 
-  // Handle period filter change
-  const handlePeriodChange = (_, newPeriod) => {
-    if (newPeriod !== null) {
-      setPeriodFilter(newPeriod);
-    }
-  };
-  
-  // Handle month selection
-  const handleMonthChange = (event) => {
-    setSelectedMonth(parseInt(event.target.value));
-  };
-  
   // Handle search input change
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value);
@@ -726,18 +375,6 @@ const AdminDashboardPage = () => {
     setPage(0);
   };
   
-  // Handle activity type filter change
-  const handleActivityTypeFilterChange = (event) => {
-    setActivityTypeFilter(event.target.value);
-    setActivityPage(0);
-  };
-  
-  // Handle activity search change
-  const handleActivitySearchChange = (event) => {
-    setActivitySearchQuery(event.target.value);
-    setActivityPage(0);
-  };
-
   // Handle sort change
   const handleSort = (field) => {
     const isAsc = sortField === field && sortOrder === 'asc';
@@ -754,17 +391,6 @@ const AdminDashboardPage = () => {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
-  };
-  
-  // Handle activity page change
-  const handleActivityChangePage = (_, newPage) => {
-    setActivityPage(newPage);
-  };
-  
-  // Handle activity rows per page change
-  const handleActivityChangeRowsPerPage = (event) => {
-    setActivityRowsPerPage(parseInt(event.target.value, 10));
-    setActivityPage(0);
   };
   
   // Handle user details dialog open
@@ -824,111 +450,6 @@ const AdminDashboardPage = () => {
     setPage(0);
   }, [searchQuery, roleFilter, statusFilter]);
 
-  // Filter activity logs
-  const filteredActivityLogs = useMemo(() => {
-    return activityLogs
-      .filter(log => {
-        const matchesSearch = activitySearchQuery === '' || 
-          log.description.toLowerCase().includes(activitySearchQuery.toLowerCase()) ||
-          (log.userId && log.userId.toLowerCase().includes(activitySearchQuery.toLowerCase()));
-        
-        const matchesType = activityTypeFilter === '' || log.type === activityTypeFilter;
-        
-        return matchesSearch && matchesType;
-      })
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }, [activityLogs, activitySearchQuery, activityTypeFilter]);
-  
-  // Get paginated activity logs
-  const paginatedActivityLogs = useMemo(() => {
-    const start = activityPage * activityRowsPerPage;
-    return filteredActivityLogs.slice(start, start + activityRowsPerPage);
-  }, [filteredActivityLogs, activityPage, activityRowsPerPage]);
-  
-  // Calculate user metrics
-  const userMetrics = useMemo(() => {
-    const totalUsers = users.length;
-    const activeUsers = users.filter(user => getUserStatus(user) === 'ACTIVE').length;
-    const inactiveUsers = users.filter(user => getUserStatus(user) === 'INACTIVE').length;
-    const activePercentage = totalUsers > 0 ? (activeUsers / totalUsers) * 100 : 0;
-    
-    return {
-      totalUsers,
-      activeUsers,
-      inactiveUsers,
-      activePercentage
-    };
-  }, [users]);
-  
-  // Calculate activity metrics
-  const activityMetrics = useMemo(() => {
-    const totalActivities = activityLogs.length;
-    const loginCount = activityLogs.filter(log => log.type === 'LOGIN').length;
-    const logoutCount = activityLogs.filter(log => log.type === 'LOGOUT').length;
-    const dataChangeCount = activityLogs.filter(log => log.type === 'DATA_CHANGE').length;
-    const errorCount = activityLogs.filter(log => log.type === 'ERROR').length;
-    
-    // Get today's activities
-    const today = new Date().setHours(0, 0, 0, 0);
-    const todayActivities = activityLogs.filter(log => new Date(log.timestamp) >= today).length;
-    
-    return {
-      totalActivities,
-      loginCount,
-      logoutCount,
-      dataChangeCount,
-      errorCount,
-      todayActivities
-    };
-  }, [activityLogs]);
-  
-  // Bar chart options
-  const barChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: alpha(theme.palette.text.secondary, 0.1),
-        },
-        ticks: {
-          color: theme.palette.text.secondary,
-        }
-      },
-      x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          color: theme.palette.text.secondary,
-          maxRotation: 45,
-          minRotation: 45,
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        position: 'top',
-        labels: {
-          boxWidth: 12,
-          padding: 15,
-          color: theme.palette.text.primary,
-        }
-      },
-      tooltip: {
-        backgroundColor: alpha(theme.palette.background.paper, 0.95),
-        titleColor: theme.palette.text.primary,
-        bodyColor: theme.palette.text.secondary,
-        bodySpacing: 5,
-        padding: 10,
-        boxPadding: 5,
-        borderColor: theme.palette.divider,
-        borderWidth: 1,
-      }
-    }
-  };
-  
   // Doughnut chart options
   const doughnutChartOptions = {
     responsive: true,
@@ -955,7 +476,7 @@ const AdminDashboardPage = () => {
       }
     }
   };
-  
+
   // Use virtualized list for large data sets
   const handleTableScroll = () => {
     // If scrolled near the bottom, load more users
@@ -992,13 +513,13 @@ const AdminDashboardPage = () => {
       </Box>
       
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Monitor user activity, accounts, and system logs
+        Monitor user accounts and distribution
       </Typography>
       
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {/* Total Users Card */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={6}>
           <StyledCard>
             <CardContent>
               <Box display="flex" alignItems="center" mb={2}>
@@ -1006,11 +527,11 @@ const AdminDashboardPage = () => {
                 <Typography variant="h6">Total Users</Typography>
               </Box>
               <Typography variant="h3" component="div">
-                {userMetrics.totalUsers}
+                {users.length}
               </Typography>
               <Box display="flex" alignItems="center" mt={1}>
                 <Typography variant="body2" color="text.secondary">
-                  {userMetrics.activeUsers} Active ({userMetrics.activePercentage.toFixed(0)}%)
+                  {users.filter(user => getUserStatus(user) === 'ACTIVE').length} Active
                 </Typography>
               </Box>
             </CardContent>
@@ -1018,7 +539,7 @@ const AdminDashboardPage = () => {
         </Grid>
         
         {/* Active Users Card */}
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={6}>
           <StyledCard>
             <CardContent>
               <Box display="flex" alignItems="center" mb={2}>
@@ -1027,7 +548,7 @@ const AdminDashboardPage = () => {
               </Box>
               <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h3" component="div">
-                  {userMetrics.activeUsers}
+                  {users.filter(user => getUserStatus(user) === 'ACTIVE').length}
                 </Typography>
                 <Chip 
                   label="Active" 
@@ -1040,62 +561,10 @@ const AdminDashboardPage = () => {
                 />
               </Box>
               <Box display="flex" alignItems="center" mt={1}>
-                <TrendingUp sx={{ color: theme.palette.success.main, fontSize: 16, mr: 0.5 }} />
+                {users.filter(user => getUserStatus(user) === 'INACTIVE').length > 0 ? <TrendingDown sx={{ color: theme.palette.error.main, fontSize: 16, mr: 0.5 }} /> : <TrendingUp sx={{ color: theme.palette.success.main, fontSize: 16, mr: 0.5 }} />}
                 <Typography variant="body2" color="text.secondary">
-                  {userMetrics.inactiveUsers} users are inactive
+                  {users.filter(user => getUserStatus(user) === 'INACTIVE').length} users are inactive
                 </Typography>
-              </Box>
-            </CardContent>
-          </StyledCard>
-        </Grid>
-        
-        {/* Today's Activity Card */}
-        <Grid item xs={12} sm={6} md={3}>
-          <StyledCard>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <EventNote sx={{ fontSize: 30, color: theme.palette.warning.main, mr: 1 }} />
-                <Typography variant="h6">Today's Activity</Typography>
-              </Box>
-              <Typography variant="h3" component="div">
-                {activityMetrics.todayActivities}
-              </Typography>
-              <Box display="flex" alignItems="center" mt={1}>
-                <Typography variant="body2" color="text.secondary">
-                  From {activityMetrics.totalActivities} total activities
-                </Typography>
-              </Box>
-            </CardContent>
-          </StyledCard>
-        </Grid>
-        
-        {/* System Errors Card */}
-        <Grid item xs={12} sm={6} md={3}>
-          <StyledCard>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <Error sx={{ fontSize: 30, color: theme.palette.error.main, mr: 1 }} />
-                <Typography variant="h6">System Errors</Typography>
-              </Box>
-              <Typography variant="h3" component="div">
-                {activityMetrics.errorCount}
-              </Typography>
-              <Box display="flex" alignItems="center" mt={1}>
-                {activityMetrics.errorCount > 0 ? (
-                  <>
-                    <TrendingUp sx={{ color: theme.palette.error.main, fontSize: 16, mr: 0.5 }} />
-                    <Typography variant="body2" color="error">
-                      Needs attention
-                    </Typography>
-                  </>
-                ) : (
-                  <>
-                    <TrendingDown sx={{ color: theme.palette.success.main, fontSize: 16, mr: 0.5 }} />
-                    <Typography variant="body2" color="success.main">
-                      All systems operational
-                    </Typography>
-                  </>
-                )}
               </Box>
             </CardContent>
           </StyledCard>
@@ -1104,63 +573,15 @@ const AdminDashboardPage = () => {
       
       {/* Charts */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Activity Chart */}
-        <Grid item xs={12} md={8}>
-          <StyledCard sx={{ height: '100%' }}>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">System Activity</Typography>
-                <Box display="flex" alignItems="center" gap={2}>
-                  <FormControl variant="outlined" size="small">
-                    <Select
-                      value={periodFilter}
-                      onChange={(e) => setPeriodFilter(e.target.value)}
-                      displayEmpty
-                    >
-                      <MenuItem value="weekly">Weekly</MenuItem>
-                      <MenuItem value="monthly">Monthly</MenuItem>
-                      <MenuItem value="yearly">Yearly</MenuItem>
-                    </Select>
-                  </FormControl>
-                  
-                  {periodFilter === 'monthly' && (
-                    <FormControl variant="outlined" size="small">
-                      <Select
-                        value={selectedMonth}
-                        onChange={handleMonthChange}
-                        displayEmpty
-                      >
-                        {monthNames.map((month, index) => (
-                          <MenuItem key={month} value={index}>{month}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                </Box>
-              </Box>
-              
-              <Box sx={{ height: 300, mt: 2 }}>
-                {!chartData ? (
-                  <Box display="flex" alignItems="center" justifyContent="center" height="100%">
-                    <Typography color="text.secondary">Data aktivitas belum tersedia.</Typography>
-                  </Box>
-                ) : (
-                  <Bar data={chartData} options={barChartOptions} />
-                )}
-              </Box>
-            </CardContent>
-          </StyledCard>
-        </Grid>
-        
         {/* User Distribution Chart */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12}>
           <StyledCard sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>
-                User Distribution
+                User Distribution by Role
               </Typography>
               
-              <Box sx={{ height: 300, position: 'relative' }}>
+              <Box sx={{ height: 350, position: 'relative' }}>
                 {doughnutChartData ? (
                   <Doughnut data={doughnutChartData} options={doughnutChartOptions} />
                 ) : (
@@ -1230,6 +651,7 @@ const AdminDashboardPage = () => {
                       <MenuItem value="">All Statuses</MenuItem>
                       <MenuItem value="ACTIVE">Active</MenuItem>
                       <MenuItem value="INACTIVE">Inactive</MenuItem>
+                      <MenuItem value="UNKNOWN">Unknown</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -1346,118 +768,18 @@ const AdminDashboardPage = () => {
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 labelRowsPerPage="Baris per halaman"
                 labelDisplayedRows={({ from, to, count }) => {
-                  return `${from}-${to} dari ${count} (${users.length > loadedUsersCount ? 'memuat... ' + loadedUsersCount + ' dari ' + users.length : 'semua dimuat'})`
+                  const totalLoaded = Math.min(count, loadedUsersCount);
+                  const totalAvailable = users.length;
+                  const showingAllLoaded = to >= totalLoaded;
+                  const moreAvailable = loadedUsersCount < totalAvailable;
+
+                  let countText = count;
+                  if (moreAvailable) {
+                      countText = `sekitar ${totalLoaded}${showingAllLoaded ? '+' : ''}`;
+                  }
+
+                  return `${from}-${to} dari ${countText}${moreAvailable ? ` (total ${totalAvailable})` : ''}`;
                 }}
-              />
-            </CardContent>
-          </StyledCard>
-        </Grid>
-      </Grid>
-      
-      {/* Activity Logs Table */}
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <StyledCard>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Activity Logs
-              </Typography>
-              
-              {/* Filter Activity Logs */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    variant="outlined"
-                    size="small"
-                    label="Search Activities"
-                    value={activitySearchQuery}
-                    onChange={handleActivitySearchChange}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth variant="outlined" size="small">
-                    <InputLabel>Filter by Type</InputLabel>
-                    <Select
-                      value={activityTypeFilter}
-                      onChange={handleActivityTypeFilterChange}
-                      label="Filter by Type"
-                    >
-                      <MenuItem value="">All Types</MenuItem>
-                      <MenuItem value="LOGIN">Login</MenuItem>
-                      <MenuItem value="LOGOUT">Logout</MenuItem>
-                      <MenuItem value="DATA_CHANGE">Data Change</MenuItem>
-                      <MenuItem value="ERROR">Error</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-              
-              {/* Activity Logs Table */}
-              <TableContainer component={Paper} variant="outlined">
-                <Table sx={{ minWidth: 650 }} size="medium">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Timestamp</TableCell>
-                      <TableCell>Activity Type</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell>IP Address</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center">
-                          <LinearProgress />
-                        </TableCell>
-                      </TableRow>
-                    ) : paginatedActivityLogs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center">
-                          No activity logs found.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paginatedActivityLogs.map((log) => (
-                        <TableRow key={log.id} hover>
-                          <TableCell>{formatDate(log.timestamp)}</TableCell>
-                          <TableCell>
-                            <ActivityChip
-                              label={log.type}
-                              type={log.type}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>{log.userName}</TableCell>
-                          <TableCell>{log.description}</TableCell>
-                          <TableCell>{log.ipAddress}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              
-              <TablePagination
-                rowsPerPageOptions={[10, 25, 50]}
-                component="div"
-                count={filteredActivityLogs.length}
-                rowsPerPage={activityRowsPerPage}
-                page={activityPage}
-                onPageChange={handleActivityChangePage}
-                onRowsPerPageChange={handleActivityChangeRowsPerPage}
-                labelRowsPerPage="Baris per halaman"
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} dari ${count}`}
               />
             </CardContent>
           </StyledCard>

@@ -32,16 +32,28 @@ export const createUserService = async (userData) => {
 // Mengambil data seluruh user yang ada
 export const getAllUsersService = async () => {
     try {
-        console.log('Fetching all users from database...');
-        // Get all users who aren't deleted - no role filtering
+        console.log('Fetching all users from database for dashboard...');
+        // Select only necessary fields for the admin dashboard
+        const projection = {
+            _id: 0, // Exclude default MongoDB ID
+            uuid: 1,
+            name: 1,
+            fullName: 1, // Include if potentially used instead of name
+            email: 1,
+            role: 1,
+            status: 1,
+            isActive: 1, // Include if potentially used instead of status
+            lastLogin: 1,
+            createdAt: 1,
+            // Add any other field explicitly used by the dashboard table/dialog
+        };
+
         const users = await User.find(
-            { 
-                isDeleted: false
-            }, 
-            { password: 0 }
-        ); // Exclude password field
-        
-        console.log(`Found ${users.length} users total`);
+            { isDeleted: false },
+            projection // Apply the refined projection
+        );
+
+        console.log(`Found ${users.length} users total with projection`);
         return users;
     } catch (error) {
         console.error('Error in getAllUsersService:', error);
