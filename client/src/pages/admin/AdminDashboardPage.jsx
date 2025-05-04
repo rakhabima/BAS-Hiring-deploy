@@ -1,66 +1,66 @@
 import {
-    AccountCircle,
-    Error,
-    EventNote,
-    Login,
-    ManageAccounts,
-    PeopleAlt,
-    Person,
-    Refresh,
-    Search,
-    TrendingDown,
-    TrendingUp,
-    Visibility
+  AccountCircle,
+  Error,
+  EventNote,
+  Login,
+  ManageAccounts,
+  PeopleAlt,
+  Person,
+  Refresh,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  Visibility
 } from '@mui/icons-material';
 import {
-    Box,
-    Button,
-    Card,
-    CardContent,
-    Chip,
-    Container,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    FormControl,
-    Grid,
-    IconButton,
-    InputAdornment,
-    InputLabel,
-    LinearProgress,
-    List,
-    ListItem,
-    ListItemIcon,
-    ListItemText,
-    MenuItem,
-    Paper,
-    Select,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TablePagination,
-    TableRow,
-    TableSortLabel,
-    TextField,
-    Tooltip,
-    Typography
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControl,
+  Grid,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  LinearProgress,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  TableSortLabel,
+  TextField,
+  Tooltip,
+  Typography
 } from '@mui/material';
 import { alpha, styled, useTheme } from '@mui/material/styles';
 import {
-    ArcElement,
-    BarElement,
-    CategoryScale,
-    Chart as ChartJS,
-    Tooltip as ChartTooltip,
-    Legend,
-    LinearScale,
-    LineElement,
-    PointElement,
-    Title
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Tooltip as ChartTooltip,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title
 } from 'chart.js';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
@@ -552,143 +552,121 @@ const AdminDashboardPage = () => {
     setLoading(true);
     try {
       console.log('Fetching user data...');
-      
+
       // Create an array of promises for parallel data fetching
       const [staffResponse, candidatesResponse] = await Promise.all([
-        // Staff data
         userService.getAllUsers().catch(error => {
           console.error('Failed to fetch staff data:', error);
-          return { data: [] };
+          showError('Failed to fetch staff data: ' + (error.message || 'Server error occurred'));
+          return { data: [] }; // Return empty array on error
         }),
-        
-        // Candidate data - try the most likely endpoint
         api.get('/auth/candidates').catch(error => {
           console.log('Failed to fetch candidates from primary endpoint:', error.message);
-          // Try fallback endpoint
           return api.get('/user/candidates').catch(err => {
             console.log('Failed to fetch candidates from fallback endpoint:', err.message);
-            return { data: [] };
+            showError('Failed to fetch candidate data: ' + (err.message || 'Server error occurred'));
+            return { data: [] }; // Return empty array on error
           });
         })
       ]);
-      
-      // Process staff data
+
+      // Process staff data (handle various potential response structures)
       let staffUsers = [];
       if (staffResponse?.data && Array.isArray(staffResponse.data)) {
         staffUsers = staffResponse.data;
-      } else if (Array.isArray(staffResponse)) {
+      } else if (Array.isArray(staffResponse)) { // Handle direct array response
         staffUsers = staffResponse;
       } else if (staffResponse?.data && typeof staffResponse.data === 'object') {
-        // Look for arrays in the response
+        // Look for arrays within a potential object response
         for (const key in staffResponse.data) {
           if (Array.isArray(staffResponse.data[key])) {
             staffUsers = staffResponse.data[key];
-            break;
+            break; // Use the first array found
           }
         }
       }
-      
-      // Process candidate data
+
+      // Process candidate data (handle various potential response structures)
       let candidateUsers = [];
-      if (candidatesResponse?.data && Array.isArray(candidatesResponse.data)) {
+       if (candidatesResponse?.data && Array.isArray(candidatesResponse.data)) {
         candidateUsers = candidatesResponse.data;
-      } else if (Array.isArray(candidatesResponse)) {
+      } else if (Array.isArray(candidatesResponse)) { // Handle direct array response
         candidateUsers = candidatesResponse;
       } else if (candidatesResponse?.data && typeof candidatesResponse.data === 'object') {
-        // Look for arrays in the response
+         // Look for arrays within a potential object response
         for (const key in candidatesResponse.data) {
           if (Array.isArray(candidatesResponse.data[key])) {
             candidateUsers = candidatesResponse.data[key];
-            break;
+            break; // Use the first array found
           }
         }
       }
-      
-      // Ensure candidates have the CANDIDATE role
+
+
+      // Ensure candidates have the CANDIDATE role and filter out invalid entries
       candidateUsers = candidateUsers
-        .filter(user => user && (user.role === 'CANDIDATE' || 
+        .filter(user => user && (user.role === 'CANDIDATE' ||
            (typeof user.role === 'string' && user.role.toUpperCase().includes('CANDIDATE'))))
         .map(candidate => ({
           ...candidate,
           role: 'CANDIDATE' // Standardize role
         }));
-      
-      // Combine all users
-      const allUsers = [...staffUsers, ...candidateUsers];
-      
-      // Use mock data if no real data is found
-      if (allUsers.length === 0) {
-        console.warn('No user data found! Using mock data...');
-        
-        // Basic mock data for testing
-        const mockUsers = [
-          {
-            uuid: 'mock-1',
-            name: 'Admin Test',
-            email: 'admin@example.com',
-            role: 'ADMIN',
-            status: true,
-            lastLogin: new Date().toISOString(),
-            createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-          },
-          {
-            uuid: 'mock-2',
-            name: 'Kandidat Test 1',
-            email: 'kandidat1@example.com',
-            role: 'CANDIDATE',
-            status: true,
-            lastLogin: new Date().toISOString(),
-            createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
-          },
-          // Other mock users...
-        ];
-        
-        setUsers(mockUsers);
-        
-        // Generate mock activity logs
-        const mockActivityLogs = generateMockActivityLogs(mockUsers, 50);
-        setActivityLogs(mockActivityLogs);
-        
-        // Calculate role distribution once
-        const roleCounts = countByRole(mockUsers);
-        setRoleDistribution(roleCounts);
-        prepareDoughnutChartData(roleCounts);
-        
-        // Calculate activity types once
-        const typeCounts = countByActivityType(mockActivityLogs);
-        setActivityTypeCounts(typeCounts);
-        
-        // Prepare chart data
-        prepareChartData(mockActivityLogs);
+
+      // Combine all valid users
+      const allUsers = [...staffUsers, ...candidateUsers].filter(user => user && (user.uuid || user.id)); // Ensure users have an identifier
+
+      console.log(`Fetched ${allUsers.length} users in total.`);
+      setUsers(allUsers);
+
+      // --- REMOVED MOCK DATA LOGIC ---
+      // Generate mock activity logs based on REAL users fetched, IF users exist.
+      // If you have a real activity log endpoint, replace generateMockActivityLogs
+      if (allUsers.length > 0) {
+         // Replace with actual API call if available:
+         // const activityResponse = await api.get('/activity-logs');
+         // setActivityLogs(activityResponse.data);
+
+         // Keep generating mock logs FOR NOW if no real endpoint exists
+         // TODO: Replace this with a real API call for activity logs
+         const mockActivityLogs = generateMockActivityLogs(allUsers, 50); // Limit mock logs
+         console.log(`Generated ${mockActivityLogs.length} mock activity logs.`);
+         setActivityLogs(mockActivityLogs);
+
+         // Calculate role distribution from real data
+         const roleCounts = countByRole(allUsers);
+         setRoleDistribution(roleCounts);
+         prepareDoughnutChartData(roleCounts); // Update chart
+
+         // Calculate activity types from (mock) logs
+         const typeCounts = countByActivityType(mockActivityLogs);
+         setActivityTypeCounts(typeCounts);
+
+         // Prepare activity chart data from (mock) logs
+         prepareChartData(mockActivityLogs); // Update chart
       } else {
-        // Set real user data
-        setUsers(allUsers);
-        
-        // Generate mock activity logs based on real users
-        const mockActivityLogs = generateMockActivityLogs(allUsers, 50);
-        setActivityLogs(mockActivityLogs);
-        
-        // Calculate role distribution once
-        const roleCounts = countByRole(allUsers);
-        setRoleDistribution(roleCounts);
-        prepareDoughnutChartData(roleCounts);
-        
-        // Calculate activity types once
-        const typeCounts = countByActivityType(mockActivityLogs);
-        setActivityTypeCounts(typeCounts);
-        
-        // Prepare chart data
-        prepareChartData(mockActivityLogs);
+         // If no users are fetched, clear logs and chart data
+         console.log('No real users fetched, clearing logs and charts.');
+         setActivityLogs([]);
+         setRoleDistribution({});
+         setActivityTypeCounts({});
+         prepareDoughnutChartData({});
+         prepareChartData([]);
       }
+
+
     } catch (error) {
-      console.error('Main error:', error);
-      showError('Failed to load user data: ' + (error.message || 'Server error occurred'));
-      setUsers([]);
+      console.error('Error fetching dashboard data:', error);
+      showError('Failed to load dashboard data: ' + (error.message || 'Server error occurred'));
+      setUsers([]); // Clear data on error
       setActivityLogs([]);
+      setRoleDistribution({});
+      setActivityTypeCounts({});
+       prepareDoughnutChartData({});
+       prepareChartData([]);
     } finally {
       setLoading(false);
     }
-  }, [prepareDoughnutChartData, prepareChartData]);
+  }, [prepareDoughnutChartData, prepareChartData]); // Keep dependencies
 
   // Fetch data on component mount
   useEffect(() => {

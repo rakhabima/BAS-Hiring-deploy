@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { getAllApplicationsController, getApplicationByIdController, getCandidateApplicationsController, submitApplicationController, updateApplicationController, updateApplicationStatusController } from "../controllers/jobApplicationController.js";
+import { getAllApplicationsController, getApplicationByIdController, getApplicationStageStatsController, getApplicationStatusDistributionController, getApplicationTrendsController, getCandidateApplicationsController, submitApplicationController, updateApplicationController, updateApplicationStatusController } from "../controllers/jobApplicationController.js";
 import { authenticateUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -48,5 +48,14 @@ router.put("/:uuid/update", authenticateUser, upload.fields(uploadFields), updat
 
 // Update application status by recruiter (requires authentication)
 router.put("/:uuid/update-status", authenticateUser, updateApplicationStatusController);
+
+// Get statistics for application stages (requires authentication)
+router.get("/stats/stages", authenticateUser, getApplicationStageStatsController);
+
+// Get application status distribution (requires authentication)
+router.get("/stats/status-distribution", authenticateUser, getApplicationStatusDistributionController);
+
+// Get application trends (requires authentication)
+router.get("/stats/trends", authenticateUser, getApplicationTrendsController);
 
 export default router; 

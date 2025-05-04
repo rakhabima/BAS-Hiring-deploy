@@ -1,5 +1,5 @@
 import JobApplication from "../models/jobApplicationModel.js";
-import { getAllApplications, getApplicationById, getCandidateApplications, submitApplication, updateApplication } from "../services/jobApplicationService.js";
+import { getAllApplications, getApplicationById, getApplicationStageStats, getApplicationStatusDistribution, getApplicationTrends, getCandidateApplications, submitApplication, updateApplication } from "../services/jobApplicationService.js";
 import { checkUserRole } from "../utils/roleValidator.js";
 
 // Controller for submitting a job application
@@ -207,21 +207,87 @@ export const updateApplicationStatusController = async (req, res) => {
 // Controller for getting all applications (for recruiters)
 export const getAllApplicationsController = async (req, res) => {
   try {
-    // Ensure user is a recruiter or general manager
     if (!checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"])) {
-      return res.status(403).json({
+      return res.status(403).json({ 
         message: "Unauthorized: Only recruiters can view all applications"
       });
     }
 
-    // Get all applications
-    const applications = await getAllApplications();
-    
+    // Pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    // Filter parameters from query string
+    const filters = {
+      searchTerm: req.query.searchTerm || '',
+      stageFilter: req.query.stageFilter || 'all',
+      statusFilter: req.query.statusFilter || 'all',
+      positionFilter: req.query.positionFilter || 'all'
+    };
+
+    // Get filtered and paginated applications
+    const { applications, totalCount } = await getAllApplications(filters, page, limit); // Pass filters
+
     res.status(200).json({
-      data: applications
+      data: applications,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount: totalCount,
+        limit: limit
+      }
     });
   } catch (error) {
     console.error("Error getting all applications:", error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Controller for getting application stage statistics
+export const getApplicationStageStatsController = async (req, res) => {
+  try {
+    // Optional: Tambahkan pengecekan role jika diperlukan
+    if (!checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"])) {
+      return res.status(403).json({
+        message: "Unauthorized: Access denied"
+      });
+    }
+
+    const stats = await getApplicationStageStats();
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error("Error in getApplicationStageStatsController:", error);
+    res.status(500).json({ success: false, message: "Failed to get application statistics" });
+  }
+};
+
+// Controller for getting status distribution
+export const getApplicationStatusDistributionController = async (req, res) => {
+  try {
+     if (!checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"])) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    const period = req.query.period || 'all'; // Get period from query
+    const distribution = await getApplicationStatusDistribution(period);
+    res.status(200).json({ success: true, data: distribution });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to get status distribution" });
+  }
+};
+
+// Controller for getting application trends
+export const getApplicationTrendsController = async (req, res) => {
+  try {
+     if (!checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"])) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    const period = req.query.period || 'week'; // Default to week if not specified
+    const trends = await getApplicationTrends(period);
+    res.status(200).json({ success: true, data: trends });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to get application trends" });
   }
 }; 

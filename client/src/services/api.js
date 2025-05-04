@@ -4,7 +4,7 @@ import axios from 'axios';
 export const SHOW_NOTIFICATION = 'SHOW_NOTIFICATION';
 
 // Helper function to show notifications
-const showNotification = (message, severity) => {
+export const showNotification = (message, severity) => {
   const event = new CustomEvent(SHOW_NOTIFICATION, {
     detail: { message, severity }
   });
@@ -921,10 +921,20 @@ export const jobApplicationService = {
     }
   },
   
-  // Get all job applications (for recruiters)
-  getAllApplications: async () => {
+  // Get all job applications (for recruiters) with pagination and filtering
+  getAllApplications: async (page = 1, limit = 10, filters = {}) => {
     try {
-      const response = await api.get(logEndpoint('/jobApplication/all'));
+      // Build query string from filters
+      const queryParams = new URLSearchParams({
+        page: page,
+        limit: limit,
+        ...(filters.searchTerm && { searchTerm: filters.searchTerm }),
+        ...(filters.stageFilter && filters.stageFilter !== 'all' && { stageFilter: filters.stageFilter }),
+        ...(filters.statusFilter && filters.statusFilter !== 'all' && { statusFilter: filters.statusFilter }),
+        ...(filters.positionFilter && filters.positionFilter !== 'all' && { positionFilter: filters.positionFilter }),
+      }).toString();
+
+      const response = await api.get(logEndpoint(`/jobApplication/all?${queryParams}`));
       return response.data;
     } catch (error) {
       showNotification('Gagal mengambil data lamaran: ' + (error.response?.data?.message || error.message), 'error');
@@ -942,7 +952,60 @@ export const jobApplicationService = {
       showNotification('Gagal memperbarui status lamaran: ' + (error.response?.data?.message || error.message), 'error');
       throw error;
     }
-  }
+  },
+
+  // Get overall application stage statistics
+  getApplicationStageStats: async () => {
+    try {
+      const response = await api.get(logEndpoint('/jobApplication/stats/stages'));
+      // Data should be in response.data.data if controller follows the pattern
+      if (response.data && response.data.success && response.data.data) {
+         return response.data.data;
+      } else {
+         console.warn("Unexpected format for stage stats:", response.data);
+         // Return default stats or throw error
+         return { pending: 0, interview: 0, technicalTest: 0, accepted: 0, rejected: 0 };
+      }
+    } catch (error) {
+      showNotification('Gagal mengambil statistik lamaran: ' + (error.response?.data?.message || error.message), 'error');
+      // Return default stats or rethrow
+      return { pending: 0, interview: 0, technicalTest: 0, accepted: 0, rejected: 0 };
+      // throw error;
+    }
+  },
+
+  // Get status distribution data for charts
+  getApplicationStatusDistribution: async (period = 'all') => {
+    try {
+      const response = await api.get(logEndpoint(`/jobApplication/stats/status-distribution?period=${period}`));
+      // Data should be in response.data.data if controller follows the pattern
+      if (response.data && response.data.success) {
+        return response.data.data; // Returns { STATUS1: count, STATUS2: count, ... }
+      } else {
+         console.warn("Unexpected format for status distribution:", response.data);
+         return {}; // Return empty object on failure
+      }
+    } catch (error) {
+      showNotification('Gagal mengambil data distribusi status: ' + (error.response?.data?.message || error.message), 'error');
+      return {};
+    }
+  },
+
+  // Get application trends data for charts
+  getApplicationTrends: async (period = 'week') => {
+    try {
+      const response = await api.get(logEndpoint(`/jobApplication/stats/trends?period=${period}`));
+       if (response.data && response.data.success) {
+        return response.data.data; // Returns { timeLabel1: count, timeLabel2: count, ... }
+      } else {
+         console.warn("Unexpected format for application trends:", response.data);
+         return {};
+      }
+    } catch (error) {
+      showNotification('Gagal mengambil data tren aplikasi: ' + (error.response?.data?.message || error.message), 'error');
+      return {};
+    }
+  },
 };
 
 // Interview services
