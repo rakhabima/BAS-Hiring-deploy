@@ -934,7 +934,55 @@ export const jobApplicationService = {
         ...(filters.positionFilter && filters.positionFilter !== 'all' && { positionFilter: filters.positionFilter }),
       }).toString();
 
+      // Create a cache key for this specific query
+      const cacheKey = `applications_${queryParams}`;
+      let cachedData = null;
+      
+      // Try to get cached data, but don't fail if storage access fails
+      try {
+        const storedData = sessionStorage.getItem(cacheKey);
+        if (storedData) {
+          cachedData = JSON.parse(storedData);
+        }
+      } catch (storageError) {
+        console.warn('Failed to access sessionStorage:', storageError);
+      }
+      
+      // Return data from cache if available and recent (less than 30 seconds old)
+      if (cachedData) {
+        const { data, timestamp } = cachedData;
+        const now = new Date().getTime();
+        if (now - timestamp < 30000) { // 30 seconds cache validity
+          console.log('Using cached application data');
+          return data;
+        }
+      }
+
+      console.time('clientFetch');
       const response = await api.get(logEndpoint(`/jobApplication/all?${queryParams}`));
+      console.timeEnd('clientFetch');
+      
+      // Try to cache the result with timestamp, but don't fail if storage is full
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          data: response.data,
+          timestamp: new Date().getTime()
+        }));
+      } catch (storageError) {
+        console.warn('Failed to cache application data:', storageError);
+        // If quota exceeded, clear the oldest items to make room
+        if (storageError.name === 'QuotaExceededError' || 
+            storageError.message.includes('exceeded the quota')) {
+          try {
+            // Clear session storage to make room
+            sessionStorage.clear();
+            console.log('Session storage cleared due to quota exceeded');
+          } catch (clearError) {
+            console.error('Failed to clear session storage:', clearError);
+          }
+        }
+      }
+      
       return response.data;
     } catch (error) {
       showNotification('Gagal mengambil data lamaran: ' + (error.response?.data?.message || error.message), 'error');

@@ -252,123 +252,156 @@ export const getAllApplications = async (filters = {}, page = 1, limit = 10) => 
     const skip = (page - 1) * limit;
     const { searchTerm, stageFilter, statusFilter, positionFilter } = filters;
 
-    // ---- Build the initial $match stage for filtering ----
-    const matchStage = {};
-
-    // Status filter (exact match)
-    if (statusFilter && statusFilter !== 'all') {
-      matchStage.status = statusFilter;
+    // Create a cache key for this specific query
+    const cacheKey = `applications_${page}_${limit}_${searchTerm || ''}_${stageFilter || 'all'}_${statusFilter || 'all'}_${positionFilter || 'all'}`;
+    
+    // Check if we have a cached result
+    if (global.queryCache && global.queryCache[cacheKey]) {
+      console.log(`Using cached results for query: ${cacheKey}`);
+      return global.queryCache[cacheKey];
     }
 
-    // Stage filter (maps to multiple statuses)
+    console.time('applicationQuery');
+
+    // ---- Build $match stages ----
+    const preLookupMatch = {};
+    const postLookupMatch = {};
+    // Status/Stage Filters -> preLookupMatch
+    if (statusFilter && statusFilter !== 'all') preLookupMatch.status = statusFilter;
     if (stageFilter && stageFilter !== 'all') {
       const statuses = getStatusesForStage(stageFilter);
       if (statuses) {
-        // If statusFilter is also applied, ensure it matches one of the stage statuses
-        if (matchStage.status && !statuses.includes(matchStage.status)) {
-           // Impossible condition, no results will match both stage and status
-           matchStage._id = null; // Force no match
-        } else if (!matchStage.status) {
-           matchStage.status = { $in: statuses };
-        }
+        if (preLookupMatch.status && !statuses.includes(preLookupMatch.status)) preLookupMatch._id = null;
+        else if (!preLookupMatch.status) preLookupMatch.status = { $in: statuses };
       }
     }
-
-    // Position filter (can be on jobPostingId or posisi_dilamar)
-    // This needs to happen AFTER $lookup for jobInfo if filtering on jobPostingId.jobPosition
-    // Or we can match on 'posisi_dilamar' field directly if available. Let's try that first.
+    // Position Filter (Try on 'posisi_dilamar' first) -> preLookupMatch
     if (positionFilter && positionFilter !== 'all') {
-       // Assuming 'posisi_dilamar' exists directly on JobApplication model
-       matchStage.posisi_dilamar = positionFilter;
-       // If not, we'll need to move this filter after the $lookup and $unwind for jobInfo
+      preLookupMatch.posisi_dilamar = positionFilter;
     }
-
-    // Search Term Filter (on candidate name/email)
-    // This needs to happen AFTER the $lookup for candidateInfo.
-    const searchMatchStage = {};
+    // Search Term Filter
     if (searchTerm) {
-      const searchRegex = new RegExp(searchTerm, 'i'); // Case-insensitive regex
-      searchMatchStage.$or = [
-        { 'candidateInfo.name': searchRegex },
-        { 'candidateInfo.email': searchRegex },
-        // Add other searchable fields if needed, e.g., 'nama_ktp'
-        { 'nama_ktp': searchRegex }
-      ];
+      const searchRegex = new RegExp(searchTerm, 'i');
+      // Part 1 -> preLookupMatch (Fields on JobApplication)
+      const preLookupOr = [];
+      preLookupOr.push({ 'nama_ktp': searchRegex });
+      // Add other direct fields if needed
+      if (!preLookupMatch.posisi_dilamar && positionFilter == 'all') { // Avoid adding if position already matched/filtered
+           preLookupOr.push({ 'posisi_dilamar': searchRegex }); // Also search position if not filtered
+      }
+      if(preLookupOr.length > 0) {
+        preLookupMatch.$or = (preLookupMatch.$or || []).concat(preLookupOr);
+      }
+
+      // Part 2 -> postLookupMatch (Fields needing lookup)
+      postLookupMatch.$or = postLookupMatch.$or || [];
+      postLookupMatch.$or.push({ 'candidateInfo.name': searchRegex });
+      postLookupMatch.$or.push({ 'candidateInfo.email': searchRegex });
+      // Add post-lookup position search if needed
+      if (positionFilter == 'all' && !preLookupMatch.posisi_dilamar) {
+           postLookupMatch.$or.push({ 'jobInfo.jobPosition': searchRegex });
+      }
+       if(postLookupMatch.$or.length === 0) delete postLookupMatch.$or;
     }
+     // Cleanup empty $or in preLookupMatch if only search was added but didn't find direct fields
+     if (preLookupMatch.$or && preLookupMatch.$or.length === 0) {
+        delete preLookupMatch.$or;
+     }
     // ------------------------------------------------------
 
-
-    const aggregationPipeline = [
-      // ---- Initial Match (can be applied before lookups) ----
-      ...(Object.keys(matchStage).length > 0 ? [{ $match: matchStage }] : []),
-      // ---------------------------------------------------------
-
-      // Sorting (can stay early if needed, or moved after lookups if sorting on joined fields)
-      { $sort: { submissionDate: -1 } },
-
-      // Lookups (remain the same)
+    // ---- Use $facet to run both count and data queries in a single aggregation ----
+    const facetPipeline = [
+      // Apply pre-lookup filters first
+      ...(Object.keys(preLookupMatch).length > 0 ? [{ $match: preLookupMatch }] : []),
+      
+      // Perform necessary lookups ONLY if post-lookup filters exist or for final projection
       { $lookup: { from: "users", let: { candidateId: "$candidateId" }, pipeline: [ { $match: { $expr: { $eq: ["$uuid", "$$candidateId"] } } }, { $project: { _id: 0, name: 1, email: 1 } } ], as: "candidateInfo" } },
       { $unwind: { path: "$candidateInfo", preserveNullAndEmptyArrays: true } },
+      
+      // Optional: Add jobposting lookup here if needed for postLookupMatch or final projection
       { $lookup: { from: "jobpostings", let: { jobId: "$jobPostingId" }, pipeline: [ { $match: { $expr: { $eq: ["$uuid", "$$jobId"] } } }, { $project: { _id: 0, title: 1, jobPosition: 1, location: 1, salary: 1, deadline: 1 } } ], as: "jobInfo" } },
       { $unwind: { path: "$jobInfo", preserveNullAndEmptyArrays: true } },
-
-      // ---- Match Stage for Search Term (applied AFTER lookups) ----
-       ...(Object.keys(searchMatchStage).length > 0 ? [{ $match: searchMatchStage }] : []),
-      // ---- (Optional) Add match for positionFilter here if 'posisi_dilamar' doesn't exist ----
-      /*
-      ...(positionFilter && positionFilter !== 'all' ? [{
-          $match: { 'jobInfo.jobPosition': positionFilter }
-      }] : []),
-      */
-      // --------------------------------------------------------------
-
-      // Final Projection (remains the same)
-      {
-        $project: {
-          _id: 0,
-          uuid: 1,
-          candidateId: 1,
-          submissionDate: 1,
-          status: 1,
-          notes: 1,
-          statusHistory: 1,
-          nama_ktp: 1,
-          jenis_kelamin: 1,
-          nik: 1,
-          tanggal_lahir: 1,
-          email: 1, 
-          no_hp: 1,
-          posisi_dilamar: 1,
-          candidateInfo: 1,
-          jobPostingId: "$jobInfo",
-          createdAt: 1,
-          updatedAt: 1
-        }
-      }
-    ];
-
-
-    // Use $facet for pagination and count AFTER filtering
-    const results = await JobApplication.aggregate([
+      
+      // Apply post-lookup filters
+      ...(Object.keys(postLookupMatch).length > 0 ? [{ $match: postLookupMatch }] : []),
+      
+      // Use $facet to get both data and count in one query
       {
         $facet: {
-          metadata: [
-            ...aggregationPipeline, // Apply all filters/joins for counting
-            { $count: "totalCount" }
-          ],
+          // Data facet - includes sorting, pagination and projection
           data: [
-            ...aggregationPipeline, // Apply all filters/joins for data
+            { $sort: { submissionDate: -1 } },
             { $skip: skip },
-            { $limit: limit }
+            { $limit: limit },
+            { 
+              $project: {
+                _id: 0, uuid: 1, candidateId: 1, submissionDate: 1, status: 1,
+                notes: 1, statusHistory: 1, nama_ktp: 1, jenis_kelamin: 1, 
+                email: 1, no_hp: 1, posisi_dilamar: 1,
+                candidateInfo: 1, 
+                jobPostingId: {
+                  jobPosition: "$jobInfo.jobPosition",
+                  title: "$jobInfo.title"
+                }
+                // Remove fields that aren't needed for table display
+              }
+            }
+          ],
+          // Count facet - just counts documents
+          count: [
+            { $count: "total" }
           ]
         }
       }
-    ]).allowDiskUse(true);
-
-    const applications = results[0]?.data || [];
-    const totalCount = results[0]?.metadata[0]?.totalCount || 0;
-
-    return { applications, totalCount };
+    ];
+    
+    const results = await JobApplication.aggregate(facetPipeline).allowDiskUse(true);
+    console.timeEnd('applicationQuery');
+    
+    // Extract data and count from facet results
+    const applications = results[0].data || [];
+    const totalCount = results[0].count[0]?.total || 0;
+    
+    const response = { applications, totalCount };
+    
+    // Cache the results for 30 seconds if there's not too many results
+    // Initialize cache if it doesn't exist
+    if (!global.queryCache) {
+      global.queryCache = {};
+      global.queryCacheSize = 0;
+      global.queryCacheKeys = [];
+    }
+    
+    // Only cache if result set is not too large (less than 100 items)
+    if (applications.length <= 100) {
+      // Check if we need to clean up the cache (keep it under 50 entries)
+      if (global.queryCacheKeys.length >= 50) {
+        // Remove oldest cache entries
+        const keysToRemove = global.queryCacheKeys.slice(0, 5); // Remove 5 oldest
+        keysToRemove.forEach(key => {
+          delete global.queryCache[key];
+        });
+        global.queryCacheKeys = global.queryCacheKeys.slice(5);
+        console.log('Cleaned up 5 oldest cache entries');
+      }
+      
+      // Add new cache entry
+      global.queryCache[cacheKey] = response;
+      global.queryCacheKeys.push(cacheKey);
+      
+      // Set timeout to clear this cache entry after 30 seconds
+      setTimeout(() => {
+        if (global.queryCache && global.queryCache[cacheKey]) {
+          delete global.queryCache[cacheKey];
+          global.queryCacheKeys = global.queryCacheKeys.filter(key => key !== cacheKey);
+        }
+      }, 30000); // 30 seconds cache
+    } else {
+      console.log('Result set too large, not caching');
+    }
+    
+    console.log(`Found ${applications.length} applications for page ${page}, total count: ${totalCount}`);
+    return response;
 
   } catch (error) {
     console.error("Error getting all applications:", error);

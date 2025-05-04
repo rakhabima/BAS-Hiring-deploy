@@ -228,8 +228,24 @@ export const getAllApplicationsController = async (req, res) => {
     // Get filtered and paginated applications
     const { applications, totalCount } = await getAllApplications(filters, page, limit); // Pass filters
 
+    // Return optimized response to reduce payload size
     res.status(200).json({
-      data: applications,
+      data: applications.map(app => ({
+        uuid: app.uuid,
+        candidateId: app.candidateId,
+        status: app.status,
+        submissionDate: app.submissionDate,
+        posisi_dilamar: app.posisi_dilamar,
+        nama_ktp: app.nama_ktp,
+        candidateInfo: app.candidateInfo ? {
+          name: app.candidateInfo.name,
+          email: app.candidateInfo.email
+        } : null,
+        jobPostingId: app.jobPostingId ? {
+          jobPosition: app.jobPostingId.jobPosition,
+          title: app.jobPostingId.title
+        } : null
+      })),
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalCount / limit),

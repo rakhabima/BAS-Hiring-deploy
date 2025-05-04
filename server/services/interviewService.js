@@ -75,19 +75,35 @@ export const getInterviewById = async (id) => {
   }
 };
 
-// Get interview by application ID
+// Get interview by application ID (Reverted to original logic)
 export const getInterviewByApplicationId = async (applicationId) => {
   try {
-    // Check if application exists
+    // Check if application exists first (as before)
     const application = await JobApplication.findOne({ uuid: applicationId });
     if (!application) {
+      // Throw error or return null based on how controller expects it
+      // Throwing error seems more consistent with other checks in this file
       throw new Error('Application not found');
     }
-    
-    return await interviewModel.getInterviewByApplicationId(applicationId);
+
+    // Call the specific function from the interview model (as before)
+    const interview = await interviewModel.getInterviewByApplicationId(applicationId);
+
+    // Handle case where the model function might return null/undefined
+    if (!interview) {
+        console.log(`No interview found via model function for application ID: ${applicationId}`);
+        return null; // Controller needs to handle this case (e.g., 404)
+    }
+
+    return interview;
   } catch (error) {
-    console.error('Error in getInterviewByApplicationId service:', error);
-    throw error;
+    // Log specific error source
+    if (error.message === 'Application not found') {
+        console.warn(`Application not found for ID: ${applicationId} when fetching interview.`);
+    } else {
+        console.error('Error in getInterviewByApplicationId service:', error);
+    }
+    throw error; // Rethrow for the controller
   }
 };
 

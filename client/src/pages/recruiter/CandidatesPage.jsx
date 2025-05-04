@@ -37,7 +37,7 @@ import {
   Tooltip
 } from 'chart.js';
 import { format } from 'date-fns';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Bar, Pie } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
 import { jobApplicationService, showNotification } from '../../services/api';
@@ -80,15 +80,29 @@ const getStatusLabel = (status) => {
 // Map stage names to colors and icons for the stats cards
 const stageInfo = {
   'Administrasi': { color: '#1976D2', icon: <PersonIcon sx={{ fontSize: 32, color: 'white' }} /> },
-  'Wawancara': { color: '#1565C0', icon: <VideoCallIcon sx={{ fontSize: 32, color: 'white' }} /> },
-  'Technical Test': { color: '#0D47A1', icon: <QuizIcon sx={{ fontSize: 32, color: 'white' }} /> },
-  'Diterima': { color: '#2E7D32', icon: <CheckCircleIcon sx={{ fontSize: 32, color: 'white' }} /> }
+  'Wawancara': { color: '#7B1FA2', icon: <VideoCallIcon sx={{ fontSize: 32, color: 'white' }} /> },
+  'Technical Test': { color: '#FF6D00', icon: <QuizIcon sx={{ fontSize: 32, color: 'white' }} /> },
+  'Diterima': { color: '#2E7D32', icon: <CheckCircleIcon sx={{ fontSize: 32, color: 'white' }} /> },
+  'Ditolak': { color: '#D32F2F', icon: <CheckCircleIcon sx={{ fontSize: 32, color: 'white' }} /> }
+};
+
+// Status color mapping for better UI
+const statusColors = {
+  'PENDING': '#42A5F5',
+  'REVIEWING': '#1976D2',
+  'REVISION': '#FFA726',
+  'INTERVIEW_SCHEDULED': '#7B1FA2',
+  'TECHNICAL_TEST': '#FF6D00',
+  'REJECTED': '#D32F2F',
+  'ACCEPTED': '#2E7D32',
+  'ON_JOB': '#43A047'
 };
 
 const CandidatesPage = () => {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [chartLoading, setChartLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
@@ -138,9 +152,21 @@ const CandidatesPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalApplications, setTotalApplications] = useState(0);
 
+  // Debounce timers
+  const searchDebounceTimer = useRef(null);
+  const filtersDebounceTimer = useRef(null);
+
+  // Combine all filters into one object to track changes
+  const currentFilters = {
+    searchTerm,
+    stageFilter,
+    statusFilter,
+    positionFilter
+  };
+
   const fetchApplications = useCallback(async (currentPage, currentLimit, currentFilters) => {
-    try {
-      setLoading(true);
+      try {
+        setLoading(true);
       const response = await jobApplicationService.getAllApplications(
         currentPage + 1, 
         currentLimit,
@@ -160,21 +186,68 @@ const CandidatesPage = () => {
             if (newOptions.length > 0) return [...prevOptions, ...newOptions];
             return prevOptions;
         });
-      } else {
-        setApplications([]);
+        } else {
+          setApplications([]);
         setTotalApplications(0);
-      }
-      setError(null);
-    } catch (err) {
+        }
+        setError(null);
+      } catch (err) {
       setError('Gagal memuat daftar lamaran.');
-      console.error('Error fetching applications:', err);
+        console.error('Error fetching applications:', err);
       setApplications([]);
       setTotalApplications(0);
-    } finally {
-      // Keep loading true until chart data is also fetched, or use separate loading states
-      // setLoading(false);
-    }
+      } finally {
+        // Set loading to false immediately after table data is loaded
+        setLoading(false);
+      }
   }, []);
+
+  // Handle search term changes with debounce
+  const handleSearchChange = (event) => {
+    const value = event.target.value;
+    
+    // Clear any existing timer
+    if (searchDebounceTimer.current) {
+      clearTimeout(searchDebounceTimer.current);
+    }
+    
+    // Set the search term immediately to update the input field
+    setSearchTerm(value);
+    
+    // Set a new timer for the actual data fetch
+    searchDebounceTimer.current = setTimeout(() => {
+      // Reset to first page when search changes
+      setPage(0);
+    }, 400); // 400ms debounce delay
+  };
+
+  // Handle filter changes with debounce
+  const handleFilterChange = (filterType, value) => {
+    // Set the filter value immediately to update the UI
+    switch (filterType) {
+      case 'stage':
+        setStageFilter(value);
+        break;
+      case 'status':
+        setStatusFilter(value);
+        break;
+      case 'position':
+        setPositionFilter(value);
+        break;
+      default:
+        break;
+    }
+    
+    // Clear any existing timer
+    if (filtersDebounceTimer.current) {
+      clearTimeout(filtersDebounceTimer.current);
+    }
+    
+    // Set a new timer for the actual data fetch and go back to first page
+    filtersDebounceTimer.current = setTimeout(() => {
+      setPage(0);
+    }, 400); // 400ms debounce delay
+  };
 
   // Fetch OVERALL stage statistics ONCE on mount
   useEffect(() => {
@@ -216,8 +289,8 @@ const CandidatesPage = () => {
   useEffect(() => {
     const fetchChartData = async () => {
       try {
-        // Start loading indicator if not already loading from application fetch
-         if (!loading) setLoading(true);
+        // Only set chart loading, not the main loading state
+        setChartLoading(true);
         console.log(`Fetching chart data for period: ${timePeriod}`);
 
         const [distributionData, trendsData] = await Promise.all([
@@ -314,16 +387,17 @@ const CandidatesPage = () => {
         showNotification('Gagal memuat data grafik.', 'error');
         setChartData({ statusDistribution: { labels: [], datasets: [] }, applicationTrends: { labels: [], datasets: [] } });
       } finally {
-         // Ensure loading is set to false after charts are also processed
-         setLoading(false);
+         // Only set chart loading to false, not affecting main table loading
+         setChartLoading(false);
       }
     };
 
     fetchChartData();
-  }, [timePeriod, theme]); // Rerun when timePeriod or theme changes
+  }, [timePeriod, theme]); // Only depends on timePeriod and theme
 
-  // Effect to fetch paginated applications (now depends on fetchApplications reference)
+  // Effect to fetch paginated applications (now depends on fetchApplications reference and uses debounced filters)
   useEffect(() => {
+    // Fetch applications whenever page, rowsPerPage or any filter changes
     const currentFilters = { searchTerm, stageFilter, statusFilter, positionFilter };
     fetchApplications(page, rowsPerPage, currentFilters);
   }, [page, rowsPerPage, searchTerm, stageFilter, statusFilter, positionFilter, fetchApplications]);
@@ -345,15 +419,28 @@ const CandidatesPage = () => {
   };
 
   // Handle card click to filter applications by stage
-  const handleCardClick = (stage) => {
-    const newStage = activeCard === stage ? 'all' : stage;
-    setActiveCard(newStage === 'all' ? null : newStage);
-    setStageFilter(newStage);
-    // Reset other filters when using cards for simplicity? Optional.
-    // setStatusFilter('all');
-    setPage(0); // Reset page when card filter changes
-
-    document.getElementById('applications-table')?.scrollIntoView({ behavior: 'smooth' });
+  const handleCardClick = (cardName) => {
+    setActiveCard(prevActiveCard => prevActiveCard === cardName ? null : cardName);
+    
+    switch (cardName) {
+      case 'pending':
+        handleFilterChange('stage', 'Administrasi');
+        break;
+      case 'interview':
+        handleFilterChange('stage', 'Wawancara');
+        break;
+      case 'technicalTest':
+        handleFilterChange('stage', 'Technical Test');
+        break;
+      case 'accepted':
+        handleFilterChange('stage', 'Diterima');
+        break;
+      case 'rejected':
+        handleFilterChange('stage', 'Ditolak');
+        break;
+      default:
+        break;
+    }
   };
 
   // View application details
@@ -394,33 +481,28 @@ const CandidatesPage = () => {
   };
 
   // Filter handlers
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-    setPage(0);
-  };
-
   const handleStageFilterChange = (event) => {
     const newStage = event.target.value;
-    setStageFilter(newStage);
+    handleFilterChange('stage', newStage);
     setActiveCard(newStage === 'all' ? null : newStage);
     setPage(0);
   };
 
   const handleStatusFilterChange = (event) => {
-    setStatusFilter(event.target.value);
+    handleFilterChange('status', event.target.value);
     setPage(0);
   };
 
   const handlePositionFilterChange = (event) => {
-    setPositionFilter(event.target.value);
+    handleFilterChange('position', event.target.value);
     setPage(0);
   };
 
   const handleResetFilters = () => {
     setSearchTerm('');
-    setStageFilter('all');
-    setStatusFilter('all');
-    setPositionFilter('all');
+    handleFilterChange('stage', 'all');
+    handleFilterChange('status', 'all');
+    handleFilterChange('position', 'all');
     setActiveCard(null);
     setPage(0); // Reset page on filter reset
   };
@@ -715,7 +797,7 @@ const CandidatesPage = () => {
               Distribusi Status Lamaran
             </Typography>
             <Box sx={{ height: 300, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              {(loading && !chartData.statusDistribution.labels.length) ? <CircularProgress /> : chartData.statusDistribution.labels.length > 0 ? (
+              {(chartLoading && !chartData.statusDistribution.labels.length) ? <CircularProgress /> : chartData.statusDistribution.labels.length > 0 ? (
                 <Pie data={chartData.statusDistribution} options={{
                     responsive: true,
                     maintainAspectRatio: false,
@@ -744,11 +826,11 @@ const CandidatesPage = () => {
                'Tren Aplikasi Tahunan'}
             </Typography>
             <Box sx={{ height: 300 }}>
-              {(loading && !chartData.applicationTrends.labels.length) ? <CircularProgress /> : chartData.applicationTrends.labels.length > 0 ? (
+              {(chartLoading && !chartData.applicationTrends.labels.length) ? <CircularProgress /> : chartData.applicationTrends.labels.length > 0 ? (
                 <Bar data={chartData.applicationTrends} options={{
                     responsive: true,
                     maintainAspectRatio: false,
-                     scales: {
+                    scales: {
                       y: { beginAtZero: true, ticks: { color: theme.palette.text.secondary }, grid: { color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' } },
                       x: { ticks: { color: theme.palette.text.secondary }, grid: { color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' } }
                     },
@@ -789,6 +871,12 @@ const CandidatesPage = () => {
               label="Tahapan"
               value={stageFilter}
               onChange={handleStageFilterChange}
+              SelectProps={{
+                MenuProps: {
+                  sx: { maxHeight: '300px' },
+                  disableScrollLock: true
+                }
+              }}
             >
               {stageOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -805,6 +893,12 @@ const CandidatesPage = () => {
               label="Posisi kerja"
               value={positionFilter}
               onChange={handlePositionFilterChange}
+              SelectProps={{
+                MenuProps: {
+                  sx: { maxHeight: '300px' },
+                  disableScrollLock: true
+                }
+              }}
             >
               {positionOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -821,6 +915,12 @@ const CandidatesPage = () => {
               label="Status"
               value={statusFilter}
               onChange={handleStatusFilterChange}
+              SelectProps={{
+                MenuProps: {
+                  sx: { maxHeight: '300px' },
+                  disableScrollLock: true
+                }
+              }}
             >
               {statusOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -830,35 +930,19 @@ const CandidatesPage = () => {
             </TextField>
           </Grid>
           
-          <Grid item xs={12} sm={4} md={1} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Grid item xs={12} md={1}>
             <Button 
-              variant="contained" 
-              color="primary"
-              sx={{ mt: { xs: 2, md: 0 } }}
+              variant="outlined" 
+              color="secondary" 
+              size="medium" 
               onClick={handleResetFilters}
+              fullWidth
+              sx={{ height: '40px' }}
             >
               Reset
             </Button>
           </Grid>
         </Grid>
-        
-        {activeCard && (
-          <Box sx={{ mt: 2, p: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
-            <Typography variant="body2" color="primary">
-              Menampilkan kandidat di Tahap {activeCard} ({applications.length} kandidat)
-              <Button 
-                size="small" 
-                onClick={() => {
-                  setStageFilter('all');
-                  setActiveCard(null);
-                }}
-                sx={{ ml: 1 }}
-              >
-                Hapus Filter
-              </Button>
-            </Typography>
-          </Box>
-        )}
       </Paper>
 
       {/* Applications Table */}
@@ -872,142 +956,149 @@ const CandidatesPage = () => {
             <Typography color="error">{error}</Typography>
           </Paper>
         ) : (
-          <>
-            <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 2 }}>
-              <Table>
+          <Paper elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
+            <TableContainer sx={{ 
+              maxHeight: 'calc(100vh - 350px)',
+              '&::-webkit-scrollbar': {
+                width: '8px',
+                height: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb:hover': {
+                background: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+              },
+            }}>
+              <Table stickyHeader>
                 <TableHead>
-                  <TableRow 
-                    sx={{ 
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f5f5f5',
-                    }}
-                  >
-                    <TableCell>
-                      <Typography fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
-                        Nama
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
-                        Tahapan
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
-                        Posisi Kerja
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
-                        Tanggal Aplikasi
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
-                        Status
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Typography fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
-                        Aksi
-                      </Typography>
-                    </TableCell>
+                  <TableRow>
+                    <TableCell sx={{ 
+                      fontWeight: 'bold', 
+                      bgcolor: theme.palette.background.paper,
+                      fontSize: '0.95rem',
+                      borderBottom: `2px solid ${theme.palette.divider}`,
+                      py: 2
+                    }}>Nama</TableCell>
+                    <TableCell sx={{ 
+                      fontWeight: 'bold', 
+                      bgcolor: theme.palette.background.paper,
+                      fontSize: '0.95rem',
+                      borderBottom: `2px solid ${theme.palette.divider}`,
+                      py: 2
+                    }}>Tahapan</TableCell>
+                    <TableCell sx={{ 
+                      fontWeight: 'bold', 
+                      bgcolor: theme.palette.background.paper,
+                      fontSize: '0.95rem',
+                      borderBottom: `2px solid ${theme.palette.divider}`,
+                      py: 2
+                    }}>Status</TableCell>
+                    <TableCell sx={{ 
+                      fontWeight: 'bold', 
+                      bgcolor: theme.palette.background.paper,
+                      fontSize: '0.95rem',
+                      borderBottom: `2px solid ${theme.palette.divider}`,
+                      py: 2
+                    }}>Posisi</TableCell>
+                    <TableCell sx={{ 
+                      fontWeight: 'bold',
+                      bgcolor: theme.palette.background.paper,
+                      fontSize: '0.95rem',
+                      borderBottom: `2px solid ${theme.palette.divider}`,
+                      py: 2
+                    }}>Tanggal Melamar</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {applications.length > 0 ? (
-                    applications.map((app) => (
-                      <TableRow key={app.uuid} hover>
+                    applications.map((application) => (
+                      <TableRow 
+                        key={application.uuid} 
+                        hover 
+                        onClick={() => handleViewApplication(application.uuid, application.status)}
+                        sx={{ 
+                          cursor: 'pointer',
+                          height: '64px', // Increase row height
+                          '&:hover': {
+                            backgroundColor: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.08)' 
+                              : 'rgba(0, 0, 0, 0.04)'
+                          }
+                        }}
+                      >
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box 
-                              sx={{ 
-                                width: 40, 
-                                height: 40, 
-                                borderRadius: '50%', 
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#e0e0e0', 
-                                display: 'flex', 
-                                alignItems: 'center', 
+                            <Box
+                              sx={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
                                 justifyContent: 'center',
+                                bgcolor: statusColors[application.status] || theme.palette.grey[500],
+                                color: '#fff',
+                                fontSize: '16px',
+                                fontWeight: 'bold',
                                 mr: 2
                               }}
                             >
-                              <Typography sx={{ color: theme.palette.text.primary }}>
-                                {(app.candidateInfo?.name || app.nama_ktp || 'U').charAt(0).toUpperCase()}
-                              </Typography>
+                              {(application.candidateInfo?.name || application.nama_ktp || 'N/A').charAt(0).toUpperCase()}
                             </Box>
-                            <Typography sx={{ color: theme.palette.text.primary }}>
-                              {app.candidateInfo?.name || app.nama_ktp || 'Unknown'}
+                            <Typography variant="body1" fontWeight="medium">
+                              {(application.candidateInfo?.name || application.nama_ktp || 'N/A')}
                             </Typography>
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography sx={{ color: theme.palette.text.primary }}>
-                            {getStageFromStatus(app.status)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell sx={{ color: theme.palette.text.primary }}>
-                          {app.jobPostingId?.jobPosition || app.posisi_dilamar || '-'}
-                        </TableCell>
-                        <TableCell sx={{ color: theme.palette.text.primary }}>
-                          {formatDate(app.submissionDate)}
-                        </TableCell>
-                        <TableCell>
                           <Chip 
-                            label={getStatusLabel(app.status)} 
-                            color={
-                              app.status === 'ACCEPTED' || app.status === 'ON_JOB' ? 'success' : 
-                              app.status === 'REJECTED' ? 'error' : 
-                              app.status === 'REVISION' ? 'warning' :
-                              'primary'
-                            }
+                            label={getStageFromStatus(application.status)} 
                             size="small"
                             sx={{ 
-                              fontWeight: 500,
-                              ...(theme.palette.mode === 'dark' && {
-                                backgroundColor: 
-                                  app.status === 'ACCEPTED' || app.status === 'ON_JOB' ? '#81c784' : 
-                                  app.status === 'REJECTED' ? '#f48fb1' : 
-                                  app.status === 'REVISION' ? '#ffcc80' : 
-                                  '#90caf9',
-                                '& .MuiChip-label': {
-                                  color: 
-                                    app.status === 'ACCEPTED' || app.status === 'ON_JOB' ? '#1b5e20' : 
-                                    app.status === 'REJECTED' ? '#880e4f' : 
-                                    app.status === 'REVISION' ? '#e65100' : 
-                                    '#0d47a1'
-                                }
-                              }),
-                              ...(theme.palette.mode === 'light' && app.status === 'REVISION' && {
-                                '& .MuiChip-label': {
-                                  color: '#5f2800'
-                                }
-                              })
+                              bgcolor: stageInfo[getStageFromStatus(application.status)]?.color || '#757575',
+                              color: '#fff',
+                              fontWeight: 'medium',
+                              fontSize: '0.85rem',
+                              height: '28px',
+                              '& .MuiChip-label': {
+                                px: 1.5
+                              }
                             }}
                           />
                         </TableCell>
-                        <TableCell align="center">
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleViewApplication(app.uuid, app.status)}
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
                             sx={{ 
-                              borderRadius: 4,
-                              color: theme.palette.mode === 'dark' ? theme.palette.primary.light : undefined,
-                              borderColor: theme.palette.mode === 'dark' ? theme.palette.primary.light : undefined,
+                              color: statusColors[application.status],
+                              fontWeight: 'medium'
                             }}
                           >
-                            Lihat
-                          </Button>
+                            {getStatusLabel(application.status)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {application.jobPostingId?.jobPosition || application.posisi_dilamar || 'N/A'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {formatDate(application.submissionDate)}
+                          </Typography>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <Typography variant="body1" sx={{ py: 2, color: theme.palette.text.primary }}>
-                          {searchTerm || stageFilter !== 'all' || statusFilter !== 'all' || positionFilter !== 'all'
-                            ? "Tidak ada aplikasi yang cocok dengan filter."
-                            : "Tidak ada data aplikasi"}
+                      <TableCell colSpan={5} align="center">
+                        <Typography variant="body1" sx={{ my: 3, color: theme.palette.text.secondary }}>
+                          Tidak ada data kandidat ditemukan.
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -1015,21 +1106,29 @@ const CandidatesPage = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-
             <TablePagination
-              rowsPerPageOptions={[10, 25, 50]}
               component="div"
+              rowsPerPageOptions={[5, 10, 25, 50]}
               count={totalApplications}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
               labelRowsPerPage="Baris per halaman:"
-              labelDisplayedRows={({ from, to, count }) =>
-                `${from}-${to} dari ${count !== -1 ? count : `lebih dari ${to}`}`
-              }
+              sx={{ 
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                borderTop: `1px solid ${theme.palette.divider}`,
+                '.MuiTablePagination-toolbar': {
+                  height: '56px',
+                  minHeight: '56px',
+                  padding: '0 16px'
+                },
+                '.MuiTablePagination-displayedRows, .MuiTablePagination-selectLabel': {
+                  fontWeight: 'medium'
+                }
+              }}
             />
-          </>
+          </Paper>
         )}
       </div>
     </Container>
