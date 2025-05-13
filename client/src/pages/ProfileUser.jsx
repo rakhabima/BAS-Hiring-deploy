@@ -43,6 +43,7 @@ const ProfileUser = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordVerificationFailed, setPasswordVerificationFailed] = useState(false)
 
   // Load user data on component mount
   useEffect(() => {
@@ -84,6 +85,21 @@ const ProfileUser = () => {
         [name]: null
       });
     }
+
+    if (name === "currentPassword") {
+      setPasswordVerificationFailed(false)
+      setErrors({
+        ...errors,
+        currentPassword: null,
+      })
+    }
+
+    if (["newPassword", "confirmPassword"].includes(name)) {
+      setErrors({
+        ...errors,
+        currentPassword: null,
+      })
+    }
     
     // Real-time validation for different fields
     const newErrors = { ...errors };
@@ -108,6 +124,10 @@ const ProfileUser = () => {
         newErrors.newPassword = null;
       }
       
+      if (value && formData.currentPassword && value === formData.currentPassword) {
+        newErrors.newPassword = "Kata sandi baru tidak boleh sama dengan kata sandi saat ini"
+      }
+
       // Juga validasi kecocokan dengan konfirmasi password
       if (value && formData.confirmPassword && value !== formData.confirmPassword) {
         newErrors.confirmPassword = 'Konfirmasi kata sandi tidak cocok';
@@ -121,6 +141,14 @@ const ProfileUser = () => {
         newErrors.confirmPassword = 'Konfirmasi kata sandi tidak cocok';
       } else {
         newErrors.confirmPassword = null;
+      }
+    } 
+    else if (name === "currentPassword") {
+      // When current password changes, check if it matches the new password
+      if (value && formData.newPassword && value === formData.newPassword) {
+        newErrors.newPassword = "Kata sandi baru tidak boleh sama dengan kata sandi saat ini"
+      } else if (formData.newPassword) {
+        newErrors.newPassword = null
       }
     }
     
@@ -166,6 +194,10 @@ const ProfileUser = () => {
           newErrors.newPassword = null;
         }
 
+        if (formData.currentPassword && formData.newPassword === formData.currentPassword) {
+          newErrors.newPassword = "Kata sandi baru tidak boleh sama dengan kata sandi saat ini"
+        }
+
         if (formData.newPassword !== formData.confirmPassword) {
           newErrors.confirmPassword = 'Konfirmasi kata sandi tidak cocok';
         } else {
@@ -194,24 +226,53 @@ const ProfileUser = () => {
           const isValid = await userService.verifyCurrentPassword(user.uuid, formData.currentPassword);
           
           if (!isValid) {
+            setPasswordVerificationFailed(true)
             setErrors({
               ...errors,
               currentPassword: 'Password saat ini tidak valid',
               general: null
             });
             setLoading(false);
-            return;
+
+            setFormData({
+              ...formData,
+              currentPassword: "",
+            })
+
+            setTimeout(() => {
+              setErrors({
+                ...errors,
+                currentPassword: null,
+              })
+            }, 1000)
+
+            return
           }
+
+          setPasswordVerificationFailed(false)
           
           // Password valid, lanjutkan dengan dialog konfirmasi
           setFieldToUpdate(field);
           setOpenDialog(true);
         } catch (error) {
           console.error('Error verifying password:', error);
+          setPasswordVerificationFailed(true)
           setErrors({
             ...errors,
             general: 'Gagal memverifikasi password saat ini'
           });
+
+          setFormData({
+            ...formData,
+            currentPassword: "",
+          })
+
+          setTimeout(() => {
+            setErrors({
+              ...errors,
+              currentPassword: null,
+            })
+          }, 2000)
         } finally {
           setLoading(false);
         }
@@ -263,7 +324,7 @@ const ProfileUser = () => {
           // Don't save password to localStorage
           password: undefined,
           currentPassword: undefined
-        };
+        };  
         
         localStorage.setItem('user', JSON.stringify(updatedUser));
         setUser(updatedUser);
@@ -276,6 +337,7 @@ const ProfileUser = () => {
             newPassword: '',
             confirmPassword: ''
           });
+          setPasswordVerificationFailed(false)
         }
         
         setUpdateSuccess(true);
@@ -283,7 +345,7 @@ const ProfileUser = () => {
         // Hide success message after 3 seconds
         setTimeout(() => {
           setUpdateSuccess(false);
-        }, 3000);
+        }, 2000);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -311,6 +373,14 @@ const ProfileUser = () => {
       if (!formData.currentPassword) {
         return true; // Password saat ini tidak diisi
       }
+
+      if (formData.currentPassword && formData.newPassword === formData.currentPassword) {
+        return true // Password baru sama dengan password saat ini
+      }
+    }
+
+    if (passwordVerificationFailed && formData.currentPassword) {
+      return Boolean(errors.newPassword || errors.confirmPassword)
     }
     
     return Boolean(

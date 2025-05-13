@@ -170,36 +170,74 @@ const JobApplicationForm = () => {
   
   // Handle input changes
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-    
+    const { name, value } = e.target
+
+    const numericOnlyFields = ["nik", "no_hp", "no_hp_darurat", "no_sim", "tahun_produksi_kendaraan", "no_rekening"]
+
+    if (numericOnlyFields.includes(name)) {
+      const numericValue = value.replace(/\D/g, "")
+      setFormData({
+        ...formData,
+        [name]: numericValue,
+      })
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      })
+    }
+
     // Clear error for this field if it exists
     if (formErrors[name]) {
       setFormErrors({
         ...formErrors,
-        [name]: ''
-      });
+        [name]: "",
+      })
     }
-  };
+  }
   
   // Handle date changes
   const handleDateChange = (name, date) => {
     setFormData({
       ...formData,
-      [name]: date
-    });
-    
+      [name]: date,
+    })
+
     // Clear error for this field if it exists
     if (formErrors[name]) {
       setFormErrors({
         ...formErrors,
-        [name]: ''
-      });
+        [name]: "",
+      })
     }
-  };
+
+    // Validate age if the field is tanggal_lahir
+    if (name === "tanggal_lahir" && date) {
+      const age = calculateAge(date)
+      if (age < 17 || age > 30) {
+        setFormErrors({
+          ...formErrors,
+          [name]: "Usia pelamar harus antara 17-30 tahun",
+        })
+      }
+    }
+
+    // Validate expiry dates are not in the past
+    if (
+      (name === "masa_berlaku_sim" || name === "masa_berlaku_stnk" || name === "masa_berlaku_pajak_kendaraan") &&
+      date
+    ) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Reset time part for accurate date comparison
+
+      if (date < today) {
+        setFormErrors({
+          ...formErrors,
+          [name]: "Tanggal masa berlaku tidak boleh kurang dari hari ini",
+        })
+      }
+    }
+  }
   
   // Handle file uploads
   const handleFileChange = (e) => {
@@ -228,6 +266,18 @@ const JobApplicationForm = () => {
         });
       }
     }
+  };
+
+  const calculateAge = (birthDate) => {
+    if (!birthDate) return 0;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
   };
   
   // Handle step navigation
@@ -265,16 +315,25 @@ const JobApplicationForm = () => {
       }
       
       if (!formData.nik) {
-        errors.nik = 'NIK wajib diisi';
-        isValid = false;
+        errors.nik = "NIK wajib diisi"
+        isValid = false
       } else if (formData.nik.length !== 16) {
-        errors.nik = 'NIK harus 16 digit';
-        isValid = false;
+        errors.nik = "NIK harus 16 digit"
+        isValid = false
+      } else if (!/^\d+$/.test(formData.nik)) {
+        errors.nik = "NIK hanya boleh berisi angka"
+        isValid = false
       }
       
       if (!formData.tanggal_lahir) {
-        errors.tanggal_lahir = 'Tanggal lahir wajib diisi';
+        errors.tanggal_lahir = "Tanggal lahir wajib diisi";
         isValid = false;
+      } else {
+        const age = calculateAge(formData.tanggal_lahir);
+        if (age < 17 || age > 30) {
+          errors.tanggal_lahir = "Usia pelamar harus antara 17-30 tahun";
+          isValid = false;
+        }
       }
       
       if (!formData.agama) {
@@ -297,13 +356,19 @@ const JobApplicationForm = () => {
       }
       
       if (!formData.no_hp) {
-        errors.no_hp = 'Nomor telepon wajib diisi';
-        isValid = false;
+        errors.no_hp = "Nomor telepon wajib diisi"
+        isValid = false
+      } else if (!/^\d+$/.test(formData.no_hp)) {
+        errors.no_hp = "Nomor telepon hanya boleh berisi angka"
+        isValid = false
       }
       
       if (!formData.no_hp_darurat) {
-        errors.no_hp_darurat = 'Nomor telepon darurat wajib diisi';
-        isValid = false;
+        errors.no_hp_darurat = "Nomor telepon darurat wajib diisi"
+        isValid = false
+      } else if (!/^\d+$/.test(formData.no_hp_darurat)) {
+        errors.no_hp_darurat = "Nomor telepon darurat hanya boleh berisi angka"
+        isValid = false
       }
       
       if (!formData.pemilik_no_hp_darurat) {
@@ -346,18 +411,28 @@ const JobApplicationForm = () => {
         isValid = false;
       }
       
-      // Only validate vehicle details if SIM is available and position is courier
-      if (formData.tipe_sim !== 'Tidak Punya' && isCourierPosition) {
-        if (!formData.no_sim) {
-          errors.no_sim = 'Nomor SIM wajib diisi';
-          isValid = false;
+      if (formData.tipe_sim !== 'Tidak Punya' && !formData.no_sim) {
+        errors.no_sim = 'Nomor SIM wajib diisi';
+        isValid = false;
+      } else if (!/^\d+$/.test(formData.no_sim)) {
+        errors.no_sim = "Nomor SIM hanya boleh berisi angka"
+        isValid = false
+      }
+      
+      if (formData.tipe_sim !== 'Tidak Punya' && !formData.masa_berlaku_sim) {
+        errors.masa_berlaku_sim = 'Masa berlaku SIM wajib diisi';
+        isValid = false;
+      } else {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        if (new Date(formData.masa_berlaku_sim) < today) {
+          errors.masa_berlaku_sim = "Masa berlaku SIM tidak boleh kurang dari hari ini"
+          isValid = false
         }
-        
-        if (!formData.masa_berlaku_sim) {
-          errors.masa_berlaku_sim = 'Masa berlaku SIM wajib diisi';
-          isValid = false;
-        }
-        
+      }
+      
+      // Only validate vehicle details if SIM is available
+      if (formData.tipe_sim !== 'Tidak Punya') {
         if (!formData.merk_kendaraan) {
           errors.merk_kendaraan = 'Jenis & merk kendaraan wajib diisi';
           isValid = false;
@@ -366,6 +441,16 @@ const JobApplicationForm = () => {
         if (!formData.tahun_produksi_kendaraan) {
           errors.tahun_produksi_kendaraan = 'Tahun produksi kendaraan wajib diisi';
           isValid = false;
+        } else if (!/^\d+$/.test(formData.tahun_produksi_kendaraan)) {
+          errors.tahun_produksi_kendaraan = "Tahun produksi kendaraan hanya boleh berisi angka"
+          isValid = false
+        } else {
+          const currentYear = new Date().getFullYear()
+          const year = Number.parseInt(formData.tahun_produksi_kendaraan, 10)
+          if (year > currentYear) {
+            errors.tahun_produksi_kendaraan = `Tahun produksi kendaraan tidak boleh lebih dari ${currentYear}`
+            isValid = false
+          }
         }
         
         if (!formData.no_pol_kendaraan) {
@@ -381,11 +466,25 @@ const JobApplicationForm = () => {
         if (!formData.masa_berlaku_stnk) {
           errors.masa_berlaku_stnk = 'Masa berlaku STNK wajib diisi';
           isValid = false;
+        } else {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          if (new Date(formData.masa_berlaku_stnk) < today) {
+            errors.masa_berlaku_stnk = "Masa berlaku STNK tidak boleh kurang dari hari ini"
+            isValid = false
+          }
         }
         
         if (!formData.masa_berlaku_pajak_kendaraan) {
           errors.masa_berlaku_pajak_kendaraan = 'Masa berlaku pajak kendaraan wajib diisi';
           isValid = false;
+        } else {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          if (new Date(formData.masa_berlaku_pajak_kendaraan) < today) {
+            errors.masa_berlaku_pajak_kendaraan = "Masa berlaku pajak kendaraan tidak boleh kurang dari hari ini"
+            isValid = false
+          }
         }
       }
       
@@ -584,7 +683,11 @@ const JobApplicationForm = () => {
                     onChange={handleChange}
                     error={!!formErrors.nik}
                     helperText={formErrors.nik}
-                    inputProps={{ maxLength: 16 }}
+                    inputProps={{
+                      maxLength: 16,
+                      pattern: "[0-9]*",
+                      inputMode: "numeric",
+                    }}
                   />
                 </Grid>
                 
@@ -695,6 +798,11 @@ const JobApplicationForm = () => {
                     InputProps={{
                       startAdornment: <Typography>+62</Typography>,
                     }}
+                    inputProps={{
+                      pattern: "[0-9]*",
+                      inputMode: "numeric",
+                      maxLength: 13,
+                    }}
                   />
                 </Grid>
                 
@@ -711,6 +819,11 @@ const JobApplicationForm = () => {
                     helperText={formErrors.no_hp_darurat}
                     InputProps={{
                       startAdornment: <Typography>+62</Typography>,
+                    }}
+                    inputProps={{
+                      pattern: "[0-9]*",
+                      inputMode: "numeric",
+                      maxLength: 13,
                     }}
                   />
                 </Grid>
@@ -854,7 +967,12 @@ const JobApplicationForm = () => {
                     error={!!formErrors.no_sim}
                     helperText={formErrors.no_sim}
                     disabled={formData.tipe_sim === 'Tidak Punya'}
-                    required={formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')}
+                    required={formData.tipe_sim !== 'Tidak Punya'}
+                    inputProps={{
+                      pattern: "[0-9]*",
+                      inputMode: "numeric",
+                      maxLength: 16,
+                    }}
                   />
                 </Grid>
                 
@@ -864,6 +982,7 @@ const JobApplicationForm = () => {
                       label="Masa Berlaku SIM"
                       value={formData.masa_berlaku_sim}
                       onChange={(date) => handleDateChange('masa_berlaku_sim', date)}
+                      minDate={new Date()}
                       slotProps={{
                         textField: {
                           fullWidth: true,
@@ -903,7 +1022,12 @@ const JobApplicationForm = () => {
                     error={!!formErrors.tahun_produksi_kendaraan}
                     helperText={formErrors.tahun_produksi_kendaraan}
                     disabled={formData.tipe_sim === 'Tidak Punya'}
-                    required={formData.tipe_sim !== 'Tidak Punya' && jobData?.jobPosition?.toLowerCase().includes('kurir')}
+                    required={formData.tipe_sim !== 'Tidak Punya'}
+                    inputProps={{
+                      pattern: "[0-9]*",
+                      inputMode: "numeric",
+                      maxLength: 4,
+                    }}
                   />
                 </Grid>
                 
@@ -943,6 +1067,7 @@ const JobApplicationForm = () => {
                       label="Masa Berlaku STNK"
                       value={formData.masa_berlaku_stnk}
                       onChange={(date) => handleDateChange('masa_berlaku_stnk', date)}
+                      minDate={new Date()}
                       slotProps={{
                         textField: {
                           fullWidth: true,
@@ -962,6 +1087,7 @@ const JobApplicationForm = () => {
                       label="Masa Berlaku Pajak Kendaraan"
                       value={formData.masa_berlaku_pajak_kendaraan}
                       onChange={(date) => handleDateChange('masa_berlaku_pajak_kendaraan', date)}
+                      minDate={new Date()}
                       slotProps={{
                         textField: {
                           fullWidth: true,
@@ -1960,4 +2086,4 @@ const JobApplicationForm = () => {
   );
 };
 
-export default JobApplicationForm; 
+export default JobApplicationForm;
