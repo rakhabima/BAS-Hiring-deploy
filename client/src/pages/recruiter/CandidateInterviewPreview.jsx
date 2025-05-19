@@ -279,7 +279,7 @@ const CandidateInterviewPreview = () => {
                     <AccessTimeIcon sx={{ mr: 1, color: 'primary.main' }} />
                     <Box>
                       <Typography variant="body2" fontWeight="bold">Waktu</Typography>
-                      <Typography variant="body2">{formatTimeOnly(interview.interviewDate)} WIB</Typography>
+                      <Typography variant="body2">{formatTimeOnly(interview.interviewDate)}</Typography>
                     </Box>
                   </Box>
                 </Grid>

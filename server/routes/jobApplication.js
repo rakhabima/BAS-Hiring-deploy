@@ -1,17 +1,18 @@
 import express from "express";
-import { upload } from "../utils/multer-storage-cloudinary.js";
 import {
-  getAllApplicationsController,
-  getApplicationByIdController,
-  getApplicationStageStatsController,
-  getApplicationStatusDistributionController,
-  getApplicationTrendsController,
-  getCandidateApplicationsController,
-  submitApplicationController,
-  updateApplicationController,
-  updateApplicationStatusController
+    getAllApplicationsController,
+    getApplicationByIdController,
+    getApplicationStageStatsController,
+    getApplicationStatusDistributionController,
+    getApplicationTrendsController,
+    getCandidateApplicationsController,
+    hardDeleteApplicationController,
+    submitApplicationController,
+    updateApplicationController,
+    updateApplicationStatusController
 } from "../controllers/jobApplicationController.js";
 import { authenticateUser } from "../middleware/authMiddleware.js";
+import { upload } from "../utils/multer-storage-cloudinary.js";
 
 const router = express.Router();
 
@@ -31,6 +32,7 @@ router.get("/all", authenticateUser, getAllApplicationsController);
 router.get("/:uuid", authenticateUser, getApplicationByIdController);
 router.put('/:uuid/update', uploadFields, authenticateUser, updateApplicationController);
 router.put("/:uuid/update-status", authenticateUser, updateApplicationStatusController);
+router.delete("/:uuid/delete", authenticateUser, hardDeleteApplicationController);
 router.get("/stats/stages", authenticateUser, getApplicationStageStatsController);
 router.get("/stats/status-distribution", authenticateUser, getApplicationStatusDistributionController);
 router.get("/stats/trends", authenticateUser, getApplicationTrendsController);

@@ -817,7 +817,6 @@
       }
     },
     
-    
     // Get job applications for a candidate
     getCandidateApplications: async () => {
       try {
@@ -1021,6 +1020,24 @@
       } catch (error) {
         showNotification('Gagal mengambil data tren aplikasi: ' + (error.response?.data?.message || error.message), 'error');
         return {};
+      }
+    },
+
+    // Hard delete application (for recruiters)
+    deleteApplication: async (uuid) => {
+      try {
+        const response = await api.delete(logEndpoint(`/jobApplication/${uuid}/delete`));
+        showNotification('Aplikasi berhasil dihapus secara permanen', 'success');
+        return response.data;
+      } catch (error) {
+        let errorMsg = 'Gagal menghapus aplikasi.';
+        
+        if (error.response && error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        
+        showNotification(errorMsg, 'error');
+        throw error;
       }
     },
   };

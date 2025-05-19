@@ -1,3 +1,4 @@
+import Interview from "../models/interviewModel.js";
 import JobApplication from "../models/jobApplicationModel.js";
 import JobPosting from "../models/jobPostingModel.js";
 import User from "../models/userModel.js";
@@ -569,6 +570,36 @@ export const getApplicationTrends = async (period = 'week') => {
 
   } catch (error) {
     console.error("Error getting application trends:", error);
+    throw error;
+  }
+};
+
+/**
+ * Hard delete a job application
+ * @param {String} uuid - The application UUID to delete
+ * @returns {Promise<Object>} - The deleted job application object
+ */
+export const hardDeleteApplication = async (uuid) => {
+  try {
+    // Find application by UUID
+    const application = await JobApplication.findOne({ uuid });
+    
+    if (!application) {
+      throw new Error('Application not found');
+    }
+    
+    // Delete all interviews associated with this application
+    console.log(`Checking for interviews associated with application ${uuid}...`);
+    const deletedInterviews = await Interview.deleteMany({ applicationId: uuid });
+    console.log(`Deleted ${deletedInterviews.deletedCount} interview(s) associated with application ${uuid}`);
+    
+    // Delete the application itself
+    const deletedApplication = await JobApplication.findOneAndDelete({ uuid });
+    
+    // Return the deleted application
+    return deletedApplication;
+  } catch (error) {
+    console.error("Error hard deleting application:", error);
     throw error;
   }
 }; 

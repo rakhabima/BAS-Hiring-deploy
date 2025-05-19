@@ -1,5 +1,5 @@
 import JobApplication from "../models/jobApplicationModel.js";
-import { getAllApplications, getApplicationById, getApplicationStageStats, getApplicationStatusDistribution, getApplicationTrends, getCandidateApplications, submitApplication, updateApplication } from "../services/jobApplicationService.js";
+import { getAllApplications, getApplicationById, getApplicationStageStats, getApplicationStatusDistribution, getApplicationTrends, getCandidateApplications, hardDeleteApplication, submitApplication, updateApplication } from "../services/jobApplicationService.js";
 import { checkUserRole } from "../utils/roleValidator.js";
 
 
@@ -306,5 +306,47 @@ export const getApplicationTrendsController = async (req, res) => {
     res.status(200).json({ success: true, data: trends });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to get application trends" });
+  }
+};
+
+// Controller for hard deleting an application
+export const hardDeleteApplicationController = async (req, res) => {
+  try {
+    // Ensure user is a recruiter or general manager
+    if (!checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"])) {
+      return res.status(403).json({
+        message: "Unauthorized: Only recruiters can delete applications"
+      });
+    }
+
+    const { uuid } = req.params;
+    
+    // Hard delete the application
+    const deletedApplication = await hardDeleteApplication(uuid);
+    
+    res.status(200).json({
+      success: true,
+      message: "Aplikasi berhasil dihapus secara permanen",
+      data: {
+        uuid: deletedApplication.uuid,
+        candidateId: deletedApplication.candidateId,
+        jobPostingId: deletedApplication.jobPostingId
+      }
+    });
+  } catch (error) {
+    console.error("Error deleting application:", error);
+    
+    // Handle "Application not found" error
+    if (error.message === "Application not found") {
+      return res.status(404).json({ 
+        success: false,
+        message: "Aplikasi tidak ditemukan"
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      message: "Gagal menghapus aplikasi: " + error.message 
+    });
   }
 }; 

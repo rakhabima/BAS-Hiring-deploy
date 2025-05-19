@@ -1,5 +1,6 @@
 import {
   CheckCircle as CheckCircleIcon,
+  Delete as DeleteIcon,
   Person as PersonIcon,
   Quiz as QuizIcon,
   Search as SearchIcon,
@@ -11,7 +12,13 @@ import {
   Chip,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Grid,
+  IconButton,
   InputAdornment,
   MenuItem,
   Paper,
@@ -23,6 +30,7 @@ import {
   TablePagination,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
   useTheme
 } from '@mui/material';
@@ -31,10 +39,10 @@ import {
   BarElement,
   CategoryScale,
   Chart as ChartJS,
+  Tooltip as ChartJSTooltip,
   Legend,
   LinearScale,
-  Title,
-  Tooltip
+  Title
 } from 'chart.js';
 import { format } from 'date-fns';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -48,7 +56,7 @@ ChartJS.register(
   LinearScale,
   BarElement,
   Title,
-  Tooltip,
+  ChartJSTooltip,
   Legend,
   ArcElement
 );
@@ -110,6 +118,13 @@ const CandidatesPage = () => {
   const [positionFilter, setPositionFilter] = useState('all');
   const [timePeriod, setTimePeriod] = useState('week');
   const [activeCard, setActiveCard] = useState(null);
+  
+  // Dialog delete state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [applicationToDelete, setApplicationToDelete] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const [stats, setStats] = useState({
     pending: 0,
     interview: 0,
@@ -498,6 +513,7 @@ const CandidatesPage = () => {
     setPage(0);
   };
 
+  // Handle reset filters
   const handleResetFilters = () => {
     setSearchTerm('');
     handleFilterChange('stage', 'all');
@@ -505,6 +521,63 @@ const CandidatesPage = () => {
     handleFilterChange('position', 'all');
     setActiveCard(null);
     setPage(0); // Reset page on filter reset
+  };
+  
+  // Handle opening delete dialog
+  const handleOpenDeleteDialog = (application, event) => {
+    // Stop event propagation to prevent navigation
+    event.stopPropagation();
+    setApplicationToDelete(application);
+    setDeleteConfirmText('');
+    setDeleteDialogOpen(true);
+  };
+  
+  // Handle closing delete dialog
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setApplicationToDelete(null);
+    setDeleteConfirmText('');
+  };
+  
+  // Handle delete confirmation text change
+  const handleDeleteConfirmTextChange = (event) => {
+    setDeleteConfirmText(event.target.value);
+  };
+  
+  // Handle delete application
+  const handleDeleteApplication = async () => {
+    if (deleteConfirmText !== 'Hapus') {
+      return; // Don't proceed if confirmation text is incorrect
+    }
+    
+    try {
+      setIsDeleting(true);
+      await jobApplicationService.deleteApplication(applicationToDelete.uuid);
+      
+      // Close dialog
+      setDeleteDialogOpen(false);
+      setApplicationToDelete(null);
+      setDeleteConfirmText('');
+      
+      // Refresh the applications list
+      fetchApplications(page, rowsPerPage, { searchTerm, stageFilter, statusFilter, positionFilter });
+      
+      // Refresh overall stats
+      const statsData = await jobApplicationService.getApplicationStageStats();
+      if (statsData) {
+        setStats({
+          pending: statsData.pending || 0,
+          interview: statsData.interview || 0,
+          technicalTest: statsData.technicalTest || 0,
+          accepted: statsData.accepted || 0,
+          rejected: statsData.rejected || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting application:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -1012,6 +1085,15 @@ const CandidatesPage = () => {
                       borderBottom: `2px solid ${theme.palette.divider}`,
                       py: 2
                     }}>Tanggal Melamar</TableCell>
+                    <TableCell sx={{ 
+                      fontWeight: 'bold',
+                      bgcolor: theme.palette.background.paper,
+                      fontSize: '0.95rem',
+                      borderBottom: `2px solid ${theme.palette.divider}`,
+                      py: 2,
+                      width: '80px',
+                      textAlign: 'center'
+                    }}>Aksi</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1092,11 +1174,27 @@ const CandidatesPage = () => {
                             {formatDate(application.submissionDate)}
                           </Typography>
                         </TableCell>
+                        <TableCell align="center">
+                          <Tooltip title="Hapus Aplikasi">
+                            <IconButton 
+                              size="medium" 
+                              color="error"
+                              onClick={(e) => handleOpenDeleteDialog(application, e)}
+                              sx={{ 
+                                '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)' },
+                                minWidth: '40px',
+                                height: '40px'
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         <Typography variant="body1" sx={{ my: 3, color: theme.palette.text.secondary }}>
                           Tidak ada data kandidat ditemukan.
                         </Typography>
@@ -1131,6 +1229,58 @@ const CandidatesPage = () => {
           </Paper>
         )}
       </div>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+        PaperProps={{
+          sx: {
+            width: '450px',
+            maxWidth: '95vw',
+            borderRadius: 2
+          }
+        }}
+      >
+        <DialogTitle id="delete-dialog-title" sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight="bold" color="error">
+            Konfirmasi Hapus Aplikasi
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description" sx={{ mb: 3 }}>
+            Anda akan menghapus aplikasi <strong>{applicationToDelete?.candidateInfo?.name || applicationToDelete?.nama_ktp || 'kandidat'}</strong> untuk posisi <strong>{applicationToDelete?.jobPostingId?.jobPosition || applicationToDelete?.posisi_dilamar || 'posisi'}</strong> secara <strong>permanen</strong>. Tindakan ini tidak dapat dibatalkan.
+          </DialogContentText>
+          <DialogContentText sx={{ mb: 1, color: 'text.primary' }}>
+            Ketik "<strong>Hapus</strong>" untuk mengkonfirmasi:
+          </DialogContentText>
+          <TextField
+            autoFocus
+            fullWidth
+            value={deleteConfirmText}
+            onChange={handleDeleteConfirmTextChange}
+            variant="outlined"
+            placeholder="Hapus"
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCloseDeleteDialog} variant="outlined">
+            Batal
+          </Button>
+          <Button 
+            onClick={handleDeleteApplication} 
+            variant="contained" 
+            color="error"
+            disabled={deleteConfirmText !== 'Hapus' || isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {isDeleting ? 'Menghapus...' : 'Hapus Permanen'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
