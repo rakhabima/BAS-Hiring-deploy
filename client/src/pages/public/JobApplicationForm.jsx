@@ -547,22 +547,31 @@ const JobApplicationForm = () => {
   const handleSubmit = async () => {
     setConfirmOpen(false);
     setSubmitting(true);
-    
+
     try {
-      // Get current user info
-      const user = JSON.parse(localStorage.getItem('user'));
-      
-      // Prepare form data for submission
-      const submissionData = {
-        ...formData,
-        candidateId: user.uuid,
-        time_stamp: new Date().toISOString()
-      };
-      
-      // Submit the form
-      await jobApplicationService.submitApplication(submissionData);
-      
-      // Show success dialog
+      const formDataPayload = new FormData();
+
+      // Tambah semua field selain file
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value instanceof File) {
+          formDataPayload.append(key, value);
+        } else if (value instanceof Date) {
+          formDataPayload.append(key, value.toISOString());
+        } else if (value !== null && value !== undefined) {
+          formDataPayload.append(key, value);
+        } else {
+          // Kalau field required, pastikan tetep dikirim dengan string kosong biar Mongoose gak error
+          formDataPayload.append(key, '');
+        }
+      });
+
+      // debug
+      for (let pair of formDataPayload.entries()) {
+        console.log(`${pair[0]}:`, pair[1]);
+      }
+
+      await jobApplicationService.submitApplication(formDataPayload);
+
       setSuccessOpen(true);
     } catch (error) {
       console.error('Error submitting application:', error);

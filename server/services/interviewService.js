@@ -1,174 +1,93 @@
-import * as interviewModel from '../models/interviewModel.js';
+import Interview from '../models/interviewModel.js';
 import JobApplication from '../models/jobApplicationModel.js';
+import { v4 as uuidv4 } from 'uuid';
 
-// Helper function to check for scheduling conflicts with a 1-hour buffer
+// Helper: Cek bentrok jadwal wawancara (±1 jam)
 const checkSchedulingConflicts = async (interviewDate, excludeInterviewId = null) => {
-  try {
-    // Get all scheduled interviews
-    const allInterviews = await interviewModel.getAllInterviews();
-    
-    // Convert the new interview time to milliseconds
-    const newInterviewTime = new Date(interviewDate).getTime();
-    
-    // Check if any existing interview conflicts with the new one (1-hour buffer)
-    const conflictingInterview = allInterviews.find(interview => {
-      // Skip checking against the interview being updated
-      if (excludeInterviewId && interview.id === excludeInterviewId) {
-        return false;
-      }
-      
-      const existingInterviewTime = new Date(interview.interviewDate).getTime();
-      
-      // Calculate time difference in milliseconds (1 hour = 3600000 milliseconds)
-      const timeDifference = Math.abs(existingInterviewTime - newInterviewTime);
-      
-      // If the time difference is less than 1 hour, there is a conflict
-      return timeDifference < 3600000;
-    });
-    
-    return conflictingInterview;
-  } catch (error) {
-    console.error('Error checking scheduling conflicts:', error);
-    throw error;
-  }
+  const allInterviews = await Interview.find();
+
+  const newTime = new Date(interviewDate).getTime();
+
+  return allInterviews.find(interview => {
+    if (excludeInterviewId && interview.id === excludeInterviewId) return false;
+
+    const existingTime = new Date(interview.interviewDate).getTime();
+    return Math.abs(existingTime - newTime) < 3600000;
+  });
 };
 
-// Create a new interview
-export const createInterview = async (interviewData) => {
-  try {
-    // Check if application exists
-    const application = await JobApplication.findOne({ uuid: interviewData.applicationId });
-    if (!application) {
-      throw new Error('Application not found');
-    }
+// ✅ Create
+export const createInterview = async (data) => {
+  const application = await JobApplication.findOne({ uuid: data.applicationId });
+  if (!application) throw new Error('Application not found');
 
-    // Check for scheduling conflicts
-    const conflictingInterview = await checkSchedulingConflicts(interviewData.interviewDate);
-    if (conflictingInterview) {
-      throw new Error('Scheduling conflict: Another interview is scheduled within 1 hour of this time');
-    }
+  const conflict = await checkSchedulingConflicts(data.interviewDate);
+  if (conflict) throw new Error('Scheduling conflict: Another interview is scheduled within 1 hour');
 
-    // Create interview
-    const interview = await interviewModel.createInterview(interviewData);
-    
-    // Update application status if not already set
-    if (application.status !== 'INTERVIEW_SCHEDULED') {
-      application.status = 'INTERVIEW_SCHEDULED';
-      application.notes = 'Wawancara dijadwalkan';
-      await application.save();
-    }
-    
-    return interview;
-  } catch (error) {
-    console.error('Error in createInterview service:', error);
-    throw error;
+  const interview = new Interview({
+    id: uuidv4(),
+    ...data
+  });
+
+  const savedInterview = await interview.save();
+
+  if (application.status !== 'INTERVIEW_SCHEDULED') {
+    application.status = 'INTERVIEW_SCHEDULED';
+    application.notes = 'Wawancara dijadwalkan';
+    await application.save();
   }
+
+  return savedInterview;
 };
 
-// Get interview by ID
+// ✅ Read - Get by ID
 export const getInterviewById = async (id) => {
-  try {
-    return await interviewModel.getInterviewById(id);
-  } catch (error) {
-    console.error('Error in getInterviewById service:', error);
-    throw error;
-  }
+  return await Interview.findOne({ id });
 };
 
-// Get interview by application ID (Reverted to original logic)
+// ✅ Read - Get by application ID
 export const getInterviewByApplicationId = async (applicationId) => {
-  try {
-    // Check if application exists first (as before)
-    const application = await JobApplication.findOne({ uuid: applicationId });
-    if (!application) {
-      // Throw error or return null based on how controller expects it
-      // Throwing error seems more consistent with other checks in this file
-      throw new Error('Application not found');
-    }
+  const application = await JobApplication.findOne({ uuid: applicationId });
+  if (!application) throw new Error('Application not found');
 
-    // Call the specific function from the interview model (as before)
-    const interview = await interviewModel.getInterviewByApplicationId(applicationId);
-
-    // Handle case where the model function might return null/undefined
-    if (!interview) {
-        console.log(`No interview found via model function for application ID: ${applicationId}`);
-        return null; // Controller needs to handle this case (e.g., 404)
-    }
-
-    return interview;
-  } catch (error) {
-    // Log specific error source
-    if (error.message === 'Application not found') {
-        console.warn(`Application not found for ID: ${applicationId} when fetching interview.`);
-    } else {
-        console.error('Error in getInterviewByApplicationId service:', error);
-    }
-    throw error; // Rethrow for the controller
-  }
+  return await Interview.findOne({ applicationId }).sort({ created_at: -1 });
 };
 
-// Update an existing interview
-export const updateInterview = async (id, interviewData) => {
-  try {
-    // Check if interview exists
-    const interview = await interviewModel.getInterviewById(id);
-    if (!interview) {
-      throw new Error('Interview not found');
-    }
-    
-    // If interview date is being updated, check for scheduling conflicts
-    if (interviewData.interviewDate) {
-      const conflictingInterview = await checkSchedulingConflicts(interviewData.interviewDate, id);
-      if (conflictingInterview) {
-        throw new Error('Scheduling conflict: Another interview is scheduled within 1 hour of this time');
-      }
-    }
-    
-    return await interviewModel.updateInterview(id, interviewData);
-  } catch (error) {
-    console.error('Error in updateInterview service:', error);
-    throw error;
-  }
-};
-
-// Update candidate response
-export const updateInterviewResponse = async (id, responseData) => {
-  try {
-    // Check if interview exists
-    const interview = await interviewModel.getInterviewById(id);
-    if (!interview) {
-      throw new Error('Interview not found');
-    }
-    
-    return await interviewModel.updateInterviewResponse(id, responseData);
-  } catch (error) {
-    console.error('Error in updateInterviewResponse service:', error);
-    throw error;
-  }
-};
-
-// Get all interviews
+// ✅ Read - All
 export const getAllInterviews = async () => {
-  try {
-    return await interviewModel.getAllInterviews();
-  } catch (error) {
-    console.error('Error in getAllInterviews service:', error);
-    throw error;
-  }
+  return await Interview.find().sort({ interviewDate: -1 });
 };
 
-// Delete an interview
-export const deleteInterview = async (id) => {
-  try {
-    // Check if interview exists
-    const interview = await interviewModel.getInterviewById(id);
-    if (!interview) {
-      throw new Error('Interview not found');
-    }
-    
-    return await interviewModel.deleteInterview(id);
-  } catch (error) {
-    console.error('Error in deleteInterview service:', error);
-    throw error;
+// ✅ Update
+export const updateInterview = async (id, data) => {
+  const interview = await Interview.findOne({ id });
+  if (!interview) throw new Error('Interview not found');
+
+  if (data.interviewDate) {
+    const conflict = await checkSchedulingConflicts(data.interviewDate, id);
+    if (conflict) throw new Error('Scheduling conflict: Another interview is scheduled within 1 hour');
   }
-}; 
+
+  return await Interview.findOneAndUpdate({ id }, { $set: data }, { new: true });
+};
+
+// ✅ Update candidate response
+export const updateInterviewResponse = async (id, data) => {
+  const interview = await Interview.findOne({ id });
+  if (!interview) throw new Error('Interview not found');
+
+  const fields = {};
+  if (data.candidateAttendance !== undefined) fields.candidateAttendance = data.candidateAttendance;
+  if (data.candidateResponse !== undefined) fields.candidateResponse = data.candidateResponse;
+  if (data.rescheduleRequest !== undefined) fields.rescheduleRequest = data.rescheduleRequest;
+
+  return await Interview.findOneAndUpdate({ id }, { $set: fields }, { new: true });
+};
+
+// ✅ Delete
+export const deleteInterview = async (id) => {
+  const interview = await Interview.findOne({ id });
+  if (!interview) throw new Error('Interview not found');
+
+  return await Interview.findOneAndDelete({ id });
+};

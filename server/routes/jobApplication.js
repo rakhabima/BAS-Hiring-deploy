@@ -1,61 +1,47 @@
 import express from "express";
-import multer from "multer";
-import { getAllApplicationsController, getApplicationByIdController, getApplicationStageStatsController, getApplicationStatusDistributionController, getApplicationTrendsController, getCandidateApplicationsController, submitApplicationController, updateApplicationController, updateApplicationStatusController } from "../controllers/jobApplicationController.js";
+import { upload } from "../utils/multer-storage-cloudinary.js";
+import {
+  getAllApplicationsController,
+  getApplicationByIdController,
+  getApplicationStageStatsController,
+  getApplicationStatusDistributionController,
+  getApplicationTrendsController,
+  getCandidateApplicationsController,
+  submitApplicationController,
+  updateApplicationController,
+  updateApplicationStatusController
+} from "../controllers/jobApplicationController.js";
 import { authenticateUser } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Configure multer to store files in memory
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  fileFilter: (req, file, cb) => {
-    // Accept only images
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only images are allowed!'), false);
-    }
-  },
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  }
-});
+const uploadFields = upload.fields([
+  { name: 'foto_diri' },
+  { name: 'foto_ktp' },
+  { name: 'foto_sim' },
+  { name: 'foto_stnk_hal_1' },
+  { name: 'foto_stnk_hal_2' },
+  { name: 'foto_ijazah' }
+]);
 
-// Define fields for multiple file uploads
-const uploadFields = [
-  { name: 'foto_diri', maxCount: 1 },
-  { name: 'foto_ktp', maxCount: 1 },
-  { name: 'foto_sim', maxCount: 1 },
-  { name: 'foto_stnk_hal_1', maxCount: 1 },
-  { name: 'foto_stnk_hal_2', maxCount: 1 },
-  { name: 'foto_ijazah', maxCount: 1 }
-];
+router.post('/submit', uploadFields, authenticateUser, submitApplicationController);
 
-// Submit job application (requires authentication)
-router.post("/submit", authenticateUser, upload.fields(uploadFields), submitApplicationController);
-
-// Get candidate's applications (requires authentication)
 router.get("/candidate", authenticateUser, getCandidateApplicationsController);
-
-// Get all applications (for recruiters - requires authentication)
 router.get("/all", authenticateUser, getAllApplicationsController);
-
-// Get application by ID (requires authentication)
 router.get("/:uuid", authenticateUser, getApplicationByIdController);
-
-// Update application for revision (requires authentication)
-router.put("/:uuid/update", authenticateUser, upload.fields(uploadFields), updateApplicationController);
-
-// Update application status by recruiter (requires authentication)
+router.put('/:uuid/update', uploadFields, authenticateUser, updateApplicationController);
 router.put("/:uuid/update-status", authenticateUser, updateApplicationStatusController);
-
-// Get statistics for application stages (requires authentication)
 router.get("/stats/stages", authenticateUser, getApplicationStageStatsController);
-
-// Get application status distribution (requires authentication)
 router.get("/stats/status-distribution", authenticateUser, getApplicationStatusDistributionController);
-
-// Get application trends (requires authentication)
 router.get("/stats/trends", authenticateUser, getApplicationTrendsController);
 
-export default router; 
+// 🔥 Catch-all error handler (multer/file error misalnya)
+router.use((err, req, res, next) => {
+  console.error('❌ ERROR DI ROUTE JOB APPLICATION:', err);
+  res.status(500).json({
+    message: "Gagal memproses permintaan",
+    error: err.message,
+  });
+});
+
+export default router;

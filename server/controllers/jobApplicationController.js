@@ -2,18 +2,23 @@ import JobApplication from "../models/jobApplicationModel.js";
 import { getAllApplications, getApplicationById, getApplicationStageStats, getApplicationStatusDistribution, getApplicationTrends, getCandidateApplications, submitApplication, updateApplication } from "../services/jobApplicationService.js";
 import { checkUserRole } from "../utils/roleValidator.js";
 
+
 // Controller for submitting a job application
 export const submitApplicationController = async (req, res) => {
   try {
-    // Ensure user is a candidate
     if (!checkUserRole(req.user, ["CANDIDATE"])) {
       return res.status(403).json({ message: "Unauthorized: Only candidates can apply for jobs" });
     }
+    console.log("INI MASUK KE CONTROLLER SUBMIT APPLICATION 1");
 
     const applicationData = { ...req.body };
     applicationData.candidateId = req.user.uuid;
 
-    // Check if candidate has already applied for this job
+    console.log("INI MASUK KE CONTROLLER SUBMIT APPLICATION 2");
+
+    console.log("req.body:", req.body);
+    console.log("req.files:", req.files);
+
     const existingApplication = await JobApplication.findOne({
       candidateId: applicationData.candidateId,
       jobPostingId: applicationData.jobPostingId
@@ -25,16 +30,16 @@ export const submitApplicationController = async (req, res) => {
       });
     }
 
-    // Handle file uploads
     if (req.files) {
-      // Process each uploaded file
       for (const fieldName in req.files) {
         const file = req.files[fieldName][0];
-        applicationData[fieldName] = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+        applicationData[fieldName] = file.path;
       }
     }
 
-    // Create a new job application with all fields explicitly set
+    console.log("🧾 Final applicationData:", applicationData);
+
+
     const newApplication = await submitApplication(applicationData);
 
     res.status(201).json({
@@ -50,6 +55,7 @@ export const submitApplicationController = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Controller for getting candidate applications
 export const getCandidateApplicationsController = async (req, res) => {
@@ -114,42 +120,36 @@ export const getApplicationByIdController = async (req, res) => {
 export const updateApplicationController = async (req, res) => {
   try {
     const { uuid } = req.params;
-    
-    // Get the application
+
     const application = await getApplicationById(uuid);
-    
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
-    
-    // Ensure user is the owner of this application
+
     if (application.candidateId !== req.user.uuid) {
       return res.status(403).json({
         message: "Unauthorized: You don't have permission to update this application"
       });
     }
-    
-    // Ensure application is in REVISION status
+
     if (application.status !== "REVISION") {
       return res.status(400).json({
         message: "Cannot update application: Application is not in revision status"
       });
     }
-    
+
     const updateData = { ...req.body };
-    
-    // Handle file uploads
+
+    // ✅ Ambil URL file hasil upload dari Cloudinary (via multer)
     if (req.files) {
-      // Process each uploaded file
       for (const fieldName in req.files) {
         const file = req.files[fieldName][0];
-        updateData[fieldName] = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+        updateData[fieldName] = file.path; // URL langsung dari Cloudinary
       }
     }
-    
-    // Update the application
+
     const updatedApplication = await updateApplication(uuid, updateData);
-    
+
     res.status(200).json({
       message: "Lamaran berhasil diperbarui",
       data: {
@@ -163,6 +163,7 @@ export const updateApplicationController = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Controller for updating application status (for recruiters)
 export const updateApplicationStatusController = async (req, res) => {
