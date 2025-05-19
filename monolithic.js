@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import connectDB from './server/db/connectDb.js';
 import authRoute from './server/routes/auth.js';
 import guestRoute from './server/routes/guest.js';
+import interviewRoute from './server/routes/interview.js';
 import jobApplicationRoute from './server/routes/jobApplication.js';
 import jobVacancyRoute from './server/routes/jobVacancy.js';
 import outsourceRoute from './server/routes/outsourcing.js';
@@ -46,6 +47,7 @@ app.use('/api/jobVacancy', jobVacancyRoute);
 app.use('/api/outsource', outsourceRoute);
 app.use('/api/user', userRoute);
 app.use('/api/jobApplication', jobApplicationRoute);
+app.use('/api/interviews', interviewRoute);
 
 // API root for checking connectivity
 app.get('/api', (req, res) => {
