@@ -162,6 +162,39 @@ const jobApplicationSchema = new mongoose.Schema({
         type: String
     },
     
+    // Fields tambahan untuk karyawan
+    divisi: {
+        type: String,
+        default: null
+    },
+    tanggal_bergabung: {
+        type: Date,
+        default: null
+    },
+    tanggal_berakhir_kontrak: {
+        type: Date,
+        default: null
+    },
+    status_kerja: {
+        type: Boolean,
+        default: true
+    },
+    
+    // Field untuk soft delete dari list karyawan
+    hidden_from_employee_list: {
+        type: Boolean,
+        default: false
+    },
+    deleted_from_employee_list_by: {
+        type: String,
+        ref: "User",
+        default: null
+    },
+    deleted_from_employee_list_at: {
+        type: Date,
+        default: null
+    },
+    
     // Dokumen
     foto_diri: {
         type: String,

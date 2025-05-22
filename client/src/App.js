@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import NotificationSnackbar from './components/NotificationSnackbar';
-import ThemeProvider from './components/ThemeProvider';
+import ThemeProvider, { useColorMode } from './components/ThemeProvider';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import CreateAccountPage from './pages/admin/CreateAccountPage';
 import CreateServicePage from './pages/admin/CreateServicePage';
@@ -14,6 +14,8 @@ import ServicePublicationsPage from './pages/admin/ServicePublicationsPage';
 import UserDetailPage from './pages/admin/UserDetailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/gm/DashboardPage';
+import KorlapEmployeeDetailPage from './pages/korlap/KorlapEmployeeDetailPage';
+import KorlapEmployeesPage from './pages/korlap/KorlapEmployeesPage';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import ProfileUser from './pages/ProfileUser';
@@ -36,8 +38,10 @@ import CandidateInterviewPreview from './pages/recruiter/CandidateInterviewPrevi
 import CandidatesPage from './pages/recruiter/CandidatesPage';
 import CreateJobPage from './pages/recruiter/CreateJobPage';
 import EditJobPage from './pages/recruiter/EditJobPage';
+import EmployeeDetailPage from './pages/recruiter/EmployeeDetailPage';
 import JobDetailPage from './pages/recruiter/JobDetailPage';
 import JobPublicationsPage from './pages/recruiter/JobPublicationsPage';
+import RecruiterEmployeesPage from './pages/recruiter/RecruiterEmployeesPage';
 import SchedulingPage from './pages/recruiter/SchedulingPage';
 import TechnicalTestForm from './pages/recruiter/TechnicalTestForm';
 import TechnicalTestPreview from './pages/recruiter/TechnicalTestPreview';
@@ -138,11 +142,28 @@ const RecruiterRoute = ({ element }) => {
   return element;
 };
 
+// Korlap Route component to check if user is authenticated and has KOORDINATOR_LAPANGAN role
+const KorlapRoute = ({ element }) => {
+  const isAuthenticated = localStorage.getItem('user') !== null;
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (user.role !== 'KOORDINATOR_LAPANGAN') {
+    return <Navigate to="/home" />;
+  }
+  
+  return element;
+};
+
 // Wrapper component to conditionally render Navbar
 const AppContent = () => {
   const location = useLocation();
   const hideNavbarPaths = ['/login', '/register', '/forgot-password'];
   const shouldShowNavbar = !hideNavbarPaths.includes(location.pathname);
+  const { mode } = useColorMode();
 
   return (
     <Box sx={{ 
@@ -204,7 +225,7 @@ const AppContent = () => {
           <Route path="/gm/service-publications/detail/:id" element={<GMRoute element={<ServiceDetailPage />} />} />
           
           <Route path="/candidate/dashboard" element={<ProtectedRoute element={<div>Candidate Dashboard</div>} />} />
-          <Route path="/korlap/dashboard" element={<ProtectedRoute element={<div>Koordinator Lapangan Dashboard</div>} />} />
+          <Route path="/korlap/dashboard" element={<KorlapRoute element={<div>Koordinator Lapangan Dashboard</div>} />} />
           
           {/* Recruiter Routes */}
           <Route path="/recruiter/candidate-detail/:candidateId" element={<RecruiterRoute element={<CandidateDetailPage />} />} />
@@ -214,6 +235,8 @@ const AppContent = () => {
           <Route path="/recruiter/technical-test-preview/:applicationId" element={<RecruiterRoute element={<TechnicalTestPreview />} />} />
           <Route path="/recruiter/service-form" element={<RecruiterRoute element={<div>Outsourcing Service Form</div>} />} />
           <Route path="/recruiter/scheduling" element={<RecruiterRoute element={<SchedulingPage />} />} />
+          <Route path="/recruiter/employees" element={<RecruiterRoute element={<RecruiterEmployeesPage />} />} />
+          <Route path="/recruiter/employee/:employeeId" element={<RecruiterRoute element={<EmployeeDetailPage />} />} />
           
           {/* Job Vacancy Routes */}
           <Route path="/recruiter/job-publications" element={<RecruiterRoute element={<JobPublicationsPage />} />} />
@@ -234,6 +257,10 @@ const AppContent = () => {
           <Route path="/candidate/portal-informasi/detail-technical-test/:uuid" element={<ProtectedRoute element={<DetailTechnicalTest />} />} />
           <Route path="/candidate/portal-informasi/detail-on-job/:uuid" element={<ProtectedRoute element={<DetailOnJob />} />} />
           <Route path="/candidate/portal-informasi/edit-formulir/:uuid" element={<ProtectedRoute element={<JobApplicationEditForm />} />} />
+          
+          {/* Koordinator Lapangan Routes */}
+          <Route path="/korlap/employees" element={<KorlapRoute element={<KorlapEmployeesPage />} />} />
+          <Route path="/korlap/employee/:employeeId" element={<KorlapRoute element={<KorlapEmployeeDetailPage />} />} />
           
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />

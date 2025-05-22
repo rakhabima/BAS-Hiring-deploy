@@ -18,8 +18,8 @@ export const submitApplication = async (applicationData) => {
       }
     });
 
-    // Ensure tipe_sim has a valid enum value
-    if (!applicationData.tipe_sim || applicationData.tipe_sim === "") {
+    // Ensure tipe_sim has a valid enum value - only set default if undefined or empty string
+    if (applicationData.tipe_sim === undefined || applicationData.tipe_sim === null || applicationData.tipe_sim === "") {
       applicationData.tipe_sim = "Tidak Punya";
     }
 
@@ -145,8 +145,8 @@ export const updateApplication = async (uuid, updateData) => {
       }
     });
     
-    // Ensure tipe_sim has a valid enum value
-    if (!updateData.tipe_sim || updateData.tipe_sim === "") {
+    // Ensure tipe_sim has a valid enum value - only set default if undefined or empty string
+    if (updateData.tipe_sim === undefined || updateData.tipe_sim === null || updateData.tipe_sim === "") {
       updateData.tipe_sim = "Tidak Punya";
     }
     
@@ -267,6 +267,10 @@ export const getAllApplications = async (filters = {}, page = 1, limit = 10) => 
     // ---- Build $match stages ----
     const preLookupMatch = {};
     const postLookupMatch = {};
+    
+    // Filter out soft deleted employees from employee list
+    preLookupMatch.hidden_from_employee_list = { $ne: true };
+    
     // Status/Stage Filters -> preLookupMatch
     if (statusFilter && statusFilter !== 'all') preLookupMatch.status = statusFilter;
     if (stageFilter && stageFilter !== 'all') {

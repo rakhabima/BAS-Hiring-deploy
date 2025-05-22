@@ -1,15 +1,18 @@
 import express from "express";
 import {
-    getAllApplicationsController,
-    getApplicationByIdController,
-    getApplicationStageStatsController,
-    getApplicationStatusDistributionController,
-    getApplicationTrendsController,
-    getCandidateApplicationsController,
-    hardDeleteApplicationController,
-    submitApplicationController,
-    updateApplicationController,
-    updateApplicationStatusController
+  deleteEmployeeFromListController,
+  getAllApplicationsController,
+  getApplicationByIdController,
+  getApplicationStageStatsController,
+  getApplicationStatusDistributionController,
+  getApplicationTrendsController,
+  getCandidateApplicationsController,
+  getEmployeeStatsController,
+  hardDeleteApplicationController,
+  submitApplicationController,
+  updateApplicationController,
+  updateApplicationStatusController,
+  updateEmployeeByStaffController
 } from "../controllers/jobApplicationController.js";
 import { authenticateUser } from "../middleware/authMiddleware.js";
 import { upload } from "../utils/multer-storage-cloudinary.js";
@@ -32,10 +35,13 @@ router.get("/all", authenticateUser, getAllApplicationsController);
 router.get("/:uuid", authenticateUser, getApplicationByIdController);
 router.put('/:uuid/update', uploadFields, authenticateUser, updateApplicationController);
 router.put("/:uuid/update-status", authenticateUser, updateApplicationStatusController);
+router.put("/:uuid/update-employee", uploadFields, authenticateUser, updateEmployeeByStaffController);
 router.delete("/:uuid/delete", authenticateUser, hardDeleteApplicationController);
+router.delete("/:uuid/delete-employee", authenticateUser, deleteEmployeeFromListController);
 router.get("/stats/stages", authenticateUser, getApplicationStageStatsController);
 router.get("/stats/status-distribution", authenticateUser, getApplicationStatusDistributionController);
 router.get("/stats/trends", authenticateUser, getApplicationTrendsController);
+router.get("/employee/stats", authenticateUser, getEmployeeStatsController);
 
 // 🔥 Catch-all error handler (multer/file error misalnya)
 router.use((err, req, res, next) => {

@@ -1,4 +1,4 @@
-import { ArrowBack, ArrowForward, CloudUpload } from '@mui/icons-material';
+import { ArrowBack, ArrowForward, Close, CloudUpload, Restore, ZoomIn, ZoomOut } from '@mui/icons-material';
 import {
     Box,
     Button,
@@ -66,6 +66,12 @@ const JobApplicationForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [navigateBackConfirmOpen, setNavigateBackConfirmOpen] = useState(false);
+  
+  // Image zoom modal state
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
+  const [zoomImageSrc, setZoomImageSrc] = useState('');
+  const [zoomImageTitle, setZoomImageTitle] = useState('');
+  const [zoomLevel, setZoomLevel] = useState(1);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -411,23 +417,29 @@ const JobApplicationForm = () => {
         isValid = false;
       }
       
-      if (formData.tipe_sim !== 'Tidak Punya' && !formData.no_sim) {
-        errors.no_sim = 'Nomor SIM wajib diisi';
-        isValid = false;
-      } else if (!/^\d+$/.test(formData.no_sim)) {
-        errors.no_sim = "Nomor SIM hanya boleh berisi angka"
-        isValid = false
+      // Validate nomor SIM only if tipe_sim is not "Tidak Punya" and not empty
+      if (formData.tipe_sim && formData.tipe_sim !== 'Tidak Punya') {
+        if (!formData.no_sim) {
+          errors.no_sim = 'Nomor SIM wajib diisi';
+          isValid = false;
+        } else if (!/^\d+$/.test(formData.no_sim)) {
+          errors.no_sim = "Nomor SIM hanya boleh berisi angka";
+          isValid = false;
+        }
       }
       
-      if (formData.tipe_sim !== 'Tidak Punya' && !formData.masa_berlaku_sim) {
-        errors.masa_berlaku_sim = 'Masa berlaku SIM wajib diisi';
-        isValid = false;
-      } else {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        if (new Date(formData.masa_berlaku_sim) < today) {
-          errors.masa_berlaku_sim = "Masa berlaku SIM tidak boleh kurang dari hari ini"
-          isValid = false
+      // Validate masa berlaku SIM only if tipe_sim is not "Tidak Punya" and not empty
+      if (formData.tipe_sim && formData.tipe_sim !== 'Tidak Punya') {
+        if (!formData.masa_berlaku_sim) {
+          errors.masa_berlaku_sim = 'Masa berlaku SIM wajib diisi';
+          isValid = false;
+        } else {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (new Date(formData.masa_berlaku_sim) < today) {
+            errors.masa_berlaku_sim = "Masa berlaku SIM tidak boleh kurang dari hari ini";
+            isValid = false;
+          }
         }
       }
       
@@ -596,6 +608,33 @@ const JobApplicationForm = () => {
       // Otherwise just navigate back
       navigate(`/lowongan/${id}`);
     }
+  };
+
+  // Handle image zoom modal
+  const handleImageClick = (imageSrc, imageTitle) => {
+    setZoomImageSrc(imageSrc);
+    setZoomImageTitle(imageTitle);
+    setZoomLevel(1);
+    setZoomModalOpen(true);
+  };
+
+  const handleZoomModalClose = () => {
+    setZoomModalOpen(false);
+    setZoomImageSrc('');
+    setZoomImageTitle('');
+    setZoomLevel(1);
+  };
+
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.25, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
+  };
+
+  const handleZoomReset = () => {
+    setZoomLevel(1);
   };
   
   if (loading) {
@@ -1196,9 +1235,14 @@ const JobApplicationForm = () => {
                           objectFit: 'contain',
                           border: '1px solid #ddd',
                           borderRadius: '4px',
-                          padding: '4px'
+                          padding: '4px',
+                          cursor: 'pointer'
                         }}
+                        onClick={() => handleImageClick(documentPreviews.foto_diri, 'Foto Pribadi')}
                       />
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                        Klik untuk memperbesar
+                      </Typography>
                     </Box>
                   ) : null}
                   
@@ -1243,9 +1287,14 @@ const JobApplicationForm = () => {
                           objectFit: 'contain',
                           border: '1px solid #ddd',
                           borderRadius: '4px',
-                          padding: '4px'
+                          padding: '4px',
+                          cursor: 'pointer'
                         }}
+                        onClick={() => handleImageClick(documentPreviews.foto_ktp, 'KTP')}
                       />
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                        Klik untuk memperbesar
+                      </Typography>
                     </Box>
                   ) : null}
                   
@@ -1290,9 +1339,14 @@ const JobApplicationForm = () => {
                           objectFit: 'contain',
                           border: '1px solid #ddd',
                           borderRadius: '4px',
-                          padding: '4px'
+                          padding: '4px',
+                          cursor: 'pointer'
                         }}
+                        onClick={() => handleImageClick(documentPreviews.foto_sim, 'SIM')}
                       />
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                        Klik untuk memperbesar
+                      </Typography>
                     </Box>
                   ) : null}
                   
@@ -1339,9 +1393,14 @@ const JobApplicationForm = () => {
                           objectFit: 'contain',
                           border: '1px solid #ddd',
                           borderRadius: '4px',
-                          padding: '4px'
+                          padding: '4px',
+                          cursor: 'pointer'
                         }}
+                        onClick={() => handleImageClick(documentPreviews.foto_stnk_hal_1, 'STNK Halaman Depan')}
                       />
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                        Klik untuk memperbesar
+                      </Typography>
                     </Box>
                   ) : null}
                   
@@ -1367,22 +1426,7 @@ const JobApplicationForm = () => {
                     <FormHelperText error>{formErrors.foto_stnk_hal_1}</FormHelperText>
                   )}
                   
-                  {documentPreviews.foto_stnk_hal_2 ? (
-                    <Box sx={{ my: 2 }}>
-                      <img 
-                        src={documentPreviews.foto_stnk_hal_2} 
-                        alt="STNK Halaman Belakang"
-                        style={{ 
-                          width: '100%', 
-                          maxHeight: '200px', 
-                          objectFit: 'contain',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          padding: '4px'
-                        }}
-                      />
-                    </Box>
-                  ) : null}
+                                    {documentPreviews.foto_stnk_hal_2 ? (                    <Box sx={{ my: 2 }}>                      <img                         src={documentPreviews.foto_stnk_hal_2}                         alt="STNK Halaman Belakang"                        style={{                           width: '100%',                           maxHeight: '200px',                           objectFit: 'contain',                          border: '1px solid #ddd',                          borderRadius: '4px',                          padding: '4px',                          cursor: 'pointer'                        }}                        onClick={() => handleImageClick(documentPreviews.foto_stnk_hal_2, 'STNK Halaman Belakang')}                      />                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>                        Klik untuk memperbesar                      </Typography>                    </Box>                  ) : null}
                   
                   <Button
                     component="label"
@@ -1415,10 +1459,7 @@ const JobApplicationForm = () => {
                     Minimal Ijazah SMP
                   </Typography>
                   
-                  {documentPreviews.foto_ijazah ? (
-                    <Box sx={{ mb: 2 }}>
-                      <img 
-                        src={documentPreviews.foto_ijazah} 
+                                    {documentPreviews.foto_ijazah ? (                    <Box sx={{ mb: 2 }}>                      <img                         src={documentPreviews.foto_ijazah} 
                         alt="Ijazah"
                         style={{ 
                           width: '100%', 
@@ -1426,11 +1467,15 @@ const JobApplicationForm = () => {
                           objectFit: 'contain',
                           border: '1px solid #ddd',
                           borderRadius: '4px',
-                          padding: '4px'
+                          padding: '4px',
+                          cursor: 'pointer'
                         }}
+                        onClick={() => handleImageClick(documentPreviews.foto_ijazah, 'Ijazah')}
                       />
-                    </Box>
-                  ) : null}
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                        Klik untuk memperbesar
+                      </Typography>
+                    </Box>                  ) : null}
                   
                   <Button
                     component="label"
@@ -1771,8 +1816,11 @@ const JobApplicationForm = () => {
                         height: '100px',
                         objectFit: 'cover',
                         border: '1px solid #ddd',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        padding: '4px',
+                        cursor: 'pointer'
                       }}
+                      onClick={() => handleImageClick(documentPreviews.foto_ktp, 'KTP')}
                     />
                   ) : (
                     <Box 
@@ -2091,8 +2139,19 @@ const JobApplicationForm = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
-  );
-};
-
-export default JobApplicationForm;
+      
+      {/* Image Zoom Modal */}
+      <Dialog
+        open={zoomModalOpen}
+        onClose={handleZoomModalClose}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(0, 0, 0, 0.9)',
+            boxShadow: 'none',
+          },
+        }}
+      >
+        <DialogTitle
+                                   sx={{             display: 'flex',             justifyContent: 'space-between',             alignItems: 'center',             color: 'white',             bgcolor: 'transparent',           }}         >           <Typography variant="h6" color="white">             {zoomImageTitle}           </Typography>           <Box>             <IconButton onClick={handleZoomOut} sx={{ color: 'white' }}>               <ZoomOut />             </IconButton>             <IconButton onClick={handleZoomReset} sx={{ color: 'white' }}>               <Restore />             </IconButton>             <IconButton onClick={handleZoomIn} sx={{ color: 'white' }}>               <ZoomIn />             </IconButton>             <IconButton onClick={handleZoomModalClose} sx={{ color: 'white' }}>               <Close />             </IconButton>           </Box>         </DialogTitle>         <DialogContent           sx={{             display: 'flex',             justifyContent: 'center',             alignItems: 'center',             bgcolor: 'transparent',             overflow: 'hidden',           }}         >           {zoomImageSrc && (             <img               src={zoomImageSrc}               alt={zoomImageTitle}               style={{                 maxWidth: '100%',                 maxHeight: '100%',                 transform: `scale(${zoomLevel})`,                 transition: 'transform 0.2s ease-in-out',                 objectFit: 'contain',               }}             />           )}         </DialogContent>       </Dialog>     </Container>   ); };  export default JobApplicationForm;

@@ -1,15 +1,19 @@
-import { ArrowBack } from '@mui/icons-material';
+import { ArrowBack, Close, Restore, ZoomIn, ZoomOut } from '@mui/icons-material';
 import {
-    Alert,
-    Box,
-    Button,
-    CircularProgress,
-    Container,
-    Divider,
-    Grid,
-    Paper,
-    Typography,
-    useTheme
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Grid,
+  IconButton,
+  Paper,
+  Typography,
+  useTheme
 } from '@mui/material';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
@@ -23,6 +27,12 @@ const RingkasanFormulir = () => {
   const [error, setError] = useState(null);
   const [application, setApplication] = useState(null);
   const theme = useTheme();
+  
+  // Image zoom modal state
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
+  const [zoomImageSrc, setZoomImageSrc] = useState('');
+  const [zoomImageTitle, setZoomImageTitle] = useState('');
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   useEffect(() => {
     const fetchApplicationDetails = async () => {
@@ -45,6 +55,33 @@ const RingkasanFormulir = () => {
   
   const handleBackToDetail = () => {
     navigate(`/candidate/portal-informasi/${uuid}`);
+  };
+
+  // Handle image zoom modal
+  const handleImageClick = (imageSrc, imageTitle) => {
+    setZoomImageSrc(imageSrc);
+    setZoomImageTitle(imageTitle);
+    setZoomLevel(1);
+    setZoomModalOpen(true);
+  };
+
+  const handleZoomModalClose = () => {
+    setZoomModalOpen(false);
+    setZoomImageSrc('');
+    setZoomImageTitle('');
+    setZoomLevel(1);
+  };
+
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.25, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
+  };
+
+  const handleZoomReset = () => {
+    setZoomLevel(1);
   };
   
   if (loading) {
@@ -350,16 +387,23 @@ const RingkasanFormulir = () => {
                 Foto Diri
               </Typography>
               {application.foto_diri ? (
-                <img 
-                  src={application.foto_diri} 
-                  alt="Foto Diri" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '120px', 
-                    objectFit: 'contain',
-                    border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none'
-                  }} 
-                />
+                <Box>
+                  <img 
+                    src={application.foto_diri} 
+                    alt="Foto Diri" 
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '120px', 
+                      objectFit: 'contain',
+                      border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => handleImageClick(application.foto_diri, 'Foto Diri')}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                    Klik untuk memperbesar
+                  </Typography>
+                </Box>
               ) : (
                 <Typography variant="body2" color={theme.palette.mode === 'dark' ? 'text.primary' : 'text.secondary'}>Tidak ada foto</Typography>
               )}
@@ -384,16 +428,23 @@ const RingkasanFormulir = () => {
                 Foto KTP
               </Typography>
               {application.foto_ktp ? (
-                <img 
-                  src={application.foto_ktp} 
-                  alt="Foto KTP" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '120px', 
-                    objectFit: 'contain',
-                    border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none'
-                  }} 
-                />
+                <Box>
+                  <img 
+                    src={application.foto_ktp} 
+                    alt="Foto KTP" 
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '120px', 
+                      objectFit: 'contain',
+                      border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => handleImageClick(application.foto_ktp, 'Foto KTP')}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                    Klik untuk memperbesar
+                  </Typography>
+                </Box>
               ) : (
                 <Typography variant="body2" color={theme.palette.mode === 'dark' ? 'text.primary' : 'text.secondary'}>Tidak ada foto</Typography>
               )}
@@ -418,16 +469,23 @@ const RingkasanFormulir = () => {
                 Foto Ijazah
               </Typography>
               {application.foto_ijazah ? (
-                <img 
-                  src={application.foto_ijazah} 
-                  alt="Foto Ijazah" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '120px', 
-                    objectFit: 'contain',
-                    border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none'
-                  }} 
-                />
+                <Box>
+                  <img 
+                    src={application.foto_ijazah} 
+                    alt="Foto Ijazah" 
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '120px', 
+                      objectFit: 'contain',
+                      border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => handleImageClick(application.foto_ijazah, 'Foto Ijazah')}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                    Klik untuk memperbesar
+                  </Typography>
+                </Box>
               ) : (
                 <Typography variant="body2" color={theme.palette.mode === 'dark' ? 'text.primary' : 'text.secondary'}>Tidak ada foto</Typography>
               )}
@@ -453,16 +511,23 @@ const RingkasanFormulir = () => {
                 <Typography variant="subtitle2" color={theme.palette.mode === 'dark' ? 'text.primary' : 'text.secondary'} gutterBottom>
                   Foto SIM
                 </Typography>
-                <img 
-                  src={application.foto_sim} 
-                  alt="Foto SIM" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '120px', 
-                    objectFit: 'contain',
-                    border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none'
-                  }} 
-                />
+                <Box>
+                  <img 
+                    src={application.foto_sim} 
+                    alt="Foto SIM" 
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '120px', 
+                      objectFit: 'contain',
+                      border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => handleImageClick(application.foto_sim, 'Foto SIM')}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                    Klik untuk memperbesar
+                  </Typography>
+                </Box>
               </Box>
             </Grid>
           )}
@@ -486,16 +551,23 @@ const RingkasanFormulir = () => {
                 <Typography variant="subtitle2" color={theme.palette.mode === 'dark' ? 'text.primary' : 'text.secondary'} gutterBottom>
                   Foto STNK (Depan)
                 </Typography>
-                <img 
-                  src={application.foto_stnk_hal_1} 
-                  alt="Foto STNK Depan" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '120px', 
-                    objectFit: 'contain',
-                    border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none'
-                  }} 
-                />
+                <Box>
+                  <img 
+                    src={application.foto_stnk_hal_1} 
+                    alt="Foto STNK Depan" 
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '120px', 
+                      objectFit: 'contain',
+                      border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => handleImageClick(application.foto_stnk_hal_1, 'Foto STNK (Depan)')}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                    Klik untuk memperbesar
+                  </Typography>
+                </Box>
               </Box>
             </Grid>
           )}
@@ -519,16 +591,23 @@ const RingkasanFormulir = () => {
                 <Typography variant="subtitle2" color={theme.palette.mode === 'dark' ? 'text.primary' : 'text.secondary'} gutterBottom>
                   Foto STNK (Belakang)
                 </Typography>
-                <img 
-                  src={application.foto_stnk_hal_2} 
-                  alt="Foto STNK Belakang" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '120px', 
-                    objectFit: 'contain',
-                    border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none'
-                  }} 
-                />
+                <Box>
+                  <img 
+                    src={application.foto_stnk_hal_2} 
+                    alt="Foto STNK Belakang" 
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '120px', 
+                      objectFit: 'contain',
+                      border: theme.palette.mode === 'dark' ? '1px solid #555' : 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => handleImageClick(application.foto_stnk_hal_2, 'Foto STNK (Belakang)')}
+                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                    Klik untuk memperbesar
+                  </Typography>
+                </Box>
               </Box>
             </Grid>
           )}
@@ -547,6 +626,71 @@ const RingkasanFormulir = () => {
           </Button>
         </Box>
       )}
+      
+      {/* Image Zoom Modal */}
+      <Dialog
+        open={zoomModalOpen}
+        onClose={handleZoomModalClose}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(0, 0, 0, 0.9)',
+            boxShadow: 'none',
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            color: 'white',
+            bgcolor: 'transparent',
+          }}
+        >
+          <Typography variant="h6" color="white">
+            {zoomImageTitle}
+          </Typography>
+          <Box>
+            <IconButton onClick={handleZoomOut} sx={{ color: 'white' }}>
+              <ZoomOut />
+            </IconButton>
+            <IconButton onClick={handleZoomReset} sx={{ color: 'white' }}>
+              <Restore />
+            </IconButton>
+            <IconButton onClick={handleZoomIn} sx={{ color: 'white' }}>
+              <ZoomIn />
+            </IconButton>
+            <IconButton onClick={handleZoomModalClose} sx={{ color: 'white' }}>
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            bgcolor: 'transparent',
+            overflow: 'hidden',
+          }}
+        >
+          {zoomImageSrc && (
+            <img
+              src={zoomImageSrc}
+              alt={zoomImageTitle}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                transform: `scale(${zoomLevel})`,
+                transition: 'transform 0.2s ease-in-out',
+                objectFit: 'contain',
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 };

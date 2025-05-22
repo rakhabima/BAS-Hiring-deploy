@@ -99,7 +99,7 @@ export const getApplicationByIdController = async (req, res) => {
     
     // Ensure user has permission to view this application
     const isOwner = application.candidateId === req.user.uuid;
-    const isStaff = checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"]);
+    const isStaff = checkUserRole(req.user, ["RECRUITER", "KOORDINATOR_LAPANGAN", "GENERAL_MANAGER"]);
     
     if (!isOwner && !isStaff) {
       return res.status(403).json({
@@ -208,9 +208,9 @@ export const updateApplicationStatusController = async (req, res) => {
 // Controller for getting all applications (for recruiters)
 export const getAllApplicationsController = async (req, res) => {
   try {
-    if (!checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"])) {
+    if (!checkUserRole(req.user, ["RECRUITER", "KOORDINATOR_LAPANGAN", "GENERAL_MANAGER"])) {
       return res.status(403).json({ 
-        message: "Unauthorized: Only recruiters can view all applications"
+        message: "Unauthorized: Only recruiters and koordinator lapangan can view all applications"
       });
     }
 
@@ -264,7 +264,7 @@ export const getAllApplicationsController = async (req, res) => {
 export const getApplicationStageStatsController = async (req, res) => {
   try {
     // Optional: Tambahkan pengecekan role jika diperlukan
-    if (!checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"])) {
+    if (!checkUserRole(req.user, ["RECRUITER", "KOORDINATOR_LAPANGAN", "GENERAL_MANAGER"])) {
       return res.status(403).json({
         message: "Unauthorized: Access denied"
       });
@@ -284,7 +284,7 @@ export const getApplicationStageStatsController = async (req, res) => {
 // Controller for getting status distribution
 export const getApplicationStatusDistributionController = async (req, res) => {
   try {
-     if (!checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"])) {
+     if (!checkUserRole(req.user, ["RECRUITER", "KOORDINATOR_LAPANGAN", "GENERAL_MANAGER"])) {
       return res.status(403).json({ message: "Unauthorized" });
     }
     const period = req.query.period || 'all'; // Get period from query
@@ -298,7 +298,7 @@ export const getApplicationStatusDistributionController = async (req, res) => {
 // Controller for getting application trends
 export const getApplicationTrendsController = async (req, res) => {
   try {
-     if (!checkUserRole(req.user, ["RECRUITER", "GENERAL_MANAGER"])) {
+     if (!checkUserRole(req.user, ["RECRUITER", "KOORDINATOR_LAPANGAN", "GENERAL_MANAGER"])) {
       return res.status(403).json({ message: "Unauthorized" });
     }
     const period = req.query.period || 'week'; // Default to week if not specified
@@ -309,7 +309,7 @@ export const getApplicationTrendsController = async (req, res) => {
   }
 };
 
-// Controller for hard deleting an application
+// Controller for hard-deleting an application (debug only)
 export const hardDeleteApplicationController = async (req, res) => {
   try {
     // Ensure user is a recruiter or general manager
@@ -322,31 +322,141 @@ export const hardDeleteApplicationController = async (req, res) => {
     const { uuid } = req.params;
     
     // Hard delete the application
-    const deletedApplication = await hardDeleteApplication(uuid);
+    const result = await hardDeleteApplication(uuid);
+    
+    if (!result) {
+      return res.status(404).json({ message: "Application not found" });
+    }
     
     res.status(200).json({
-      success: true,
-      message: "Aplikasi berhasil dihapus secara permanen",
-      data: {
-        uuid: deletedApplication.uuid,
-        candidateId: deletedApplication.candidateId,
-        jobPostingId: deletedApplication.jobPostingId
-      }
+      message: "Application permanently deleted",
+      uuid
     });
   } catch (error) {
     console.error("Error deleting application:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Controller for updating employee data by staff (Recruiter/Korlap)
+export const updateEmployeeByStaffController = async (req, res) => {
+  try {
+    // Ensure user is a recruiter, korlap, or general manager
+    if (!checkUserRole(req.user, ["RECRUITER", "KOORDINATOR_LAPANGAN", "GENERAL_MANAGER"])) {
+      return res.status(403).json({
+        message: "Unauthorized: Only staff can update employee data"
+      });
+    }
+
+    const { uuid } = req.params;
+    const updateData = { ...req.body };
     
-    // Handle "Application not found" error
-    if (error.message === "Application not found") {
-      return res.status(404).json({ 
-        success: false,
-        message: "Aplikasi tidak ditemukan"
+    // Add file paths if files were uploaded
+    if (req.files) {
+      for (const fieldName in req.files) {
+        const file = req.files[fieldName][0];
+        updateData[fieldName] = file.path;
+      }
+    }
+    
+    // Add updatedBy information
+    updateData.updatedBy = req.user.uuid;
+    
+    // IMPORTANT: Remove statusHistory from updateData to prevent casting issues
+    // This field is automatically handled by the pre-save middleware
+    delete updateData.statusHistory;
+    
+    // Update the application
+    const updatedApplication = await updateApplication(uuid, updateData);
+    
+    if (!updatedApplication) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+    
+    res.status(200).json({
+      message: "Data karyawan berhasil diperbarui",
+      data: updatedApplication
+    });
+  } catch (error) {
+    console.error("Error updating employee data:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Controller for soft deleting employee from list (Recruiter only)
+export const deleteEmployeeFromListController = async (req, res) => {
+  try {
+    // Ensure user is a recruiter only (not korlap)
+    if (!checkUserRole(req.user, ["RECRUITER"])) {
+      return res.status(403).json({
+        message: "Unauthorized: Only recruiters can delete employees from list"
+      });
+    }
+
+    const { uuid } = req.params;
+    
+    // Get the application to ensure it exists
+    const application = await getApplicationById(uuid);
+    
+    if (!application) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+    
+    // Check if employee is already in ON_JOB or ACCEPTED status
+    if (application.status !== 'ON_JOB' && application.status !== 'ACCEPTED') {
+      return res.status(400).json({ 
+        message: "Only employees with status ON_JOB or ACCEPTED can be deleted from list" 
       });
     }
     
-    res.status(500).json({ 
-      success: false,
-      message: "Gagal menghapus aplikasi: " + error.message 
+    // Perform soft delete by updating specific fields
+    const updateData = {
+      hidden_from_employee_list: true,
+      deleted_from_employee_list_by: req.user.uuid,
+      deleted_from_employee_list_at: new Date()
+    };
+    
+    // Update the application
+    const updatedApplication = await updateApplication(uuid, updateData);
+    
+    res.status(200).json({
+      message: "Karyawan berhasil dihapus dari daftar",
+      data: {
+        uuid: updatedApplication.uuid,
+        hidden_from_employee_list: updatedApplication.hidden_from_employee_list
+      }
     });
+  } catch (error) {
+    console.error("Error deleting employee from list:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Controller for getting employee statistics
+export const getEmployeeStatsController = async (req, res) => {
+  try {
+    if (!checkUserRole(req.user, ["RECRUITER", "KOORDINATOR_LAPANGAN", "GENERAL_MANAGER"])) {
+      return res.status(403).json({
+        message: "Unauthorized: Only staff can view employee statistics"
+      });
+    }
+    
+    // Get all employees (accepted and on-job candidates)
+    const employeeCandidates = await JobApplication.find({
+      status: { $in: ['ACCEPTED', 'ON_JOB'] },
+      hidden_from_employee_list: { $ne: true } // Don't count hidden employees
+    });
+    
+    // Calculate statistics
+    const total = employeeCandidates.length;
+    const active = employeeCandidates.filter(app => app.status === 'ON_JOB').length;
+    const inactive = employeeCandidates.filter(app => app.status === 'ACCEPTED').length;
+    
+    res.status(200).json({
+      data: { total, active, inactive }
+    });
+  } catch (error) {
+    console.error("Error getting employee statistics:", error);
+    res.status(500).json({ message: error.message });
   }
 }; 
