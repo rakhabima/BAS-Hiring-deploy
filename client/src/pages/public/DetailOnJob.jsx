@@ -29,11 +29,6 @@ const DetailOnJob = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [application, setApplication] = useState(null);
-<<<<<<< HEAD
-  
-=======
-
->>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -78,11 +73,6 @@ const DetailOnJob = () => {
       return dateString;
     }
   };
-<<<<<<< HEAD
-  
-=======
-
->>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
