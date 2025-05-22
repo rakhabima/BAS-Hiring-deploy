@@ -3,20 +3,31 @@ import EditIcon from '@mui/icons-material/Edit';
 import EventIcon from '@mui/icons-material/Event';
 import InfoIcon from '@mui/icons-material/Info';
 import LinkIcon from '@mui/icons-material/Link';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import {
-    Alert,
-    Box,
-    Button,
-    CircularProgress,
-    Container,
-    Divider,
-    Grid,
-    Paper,
-    Step,
-    StepLabel,
-    Stepper,
-    Typography,
-    useTheme
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
+  FormControl,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Step,
+  StepLabel,
+  Stepper,
+  TextField,
+  Typography,
+  useTheme
 } from '@mui/material';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
@@ -35,6 +46,13 @@ const TechnicalTestPreview = () => {
   const [error, setError] = useState(null);
   const [application, setApplication] = useState(null);
   const [technicalTest, setTechnicalTest] = useState(null);
+  const [evaluation, setEvaluation] = useState('');
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationText, setConfirmationText] = useState('');
+  const [confirmationError, setConfirmationError] = useState('');
+  const [processingDecision, setProcessingDecision] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   // Set to Technical Test stage (index 2)
   const activeStep = 2;
@@ -100,6 +118,114 @@ const TechnicalTestPreview = () => {
     } catch (error) {
       return dateString;
     }
+  };
+
+  const handleEvaluationChange = (event) => {
+    setEvaluation(event.target.value);
+  };
+
+  const handleOpenConfirmation = () => {
+    setConfirmationText('');
+    setConfirmationError('');
+    setConfirmationOpen(true);
+  };
+
+  const handleCloseConfirmation = () => {
+    setConfirmationOpen(false);
+  };
+
+  const handleConfirmationTextChange = (event) => {
+    setConfirmationText(event.target.value);
+    setConfirmationError('');
+  };
+
+  const handleConfirmDecision = async () => {
+    // Validate confirmation text
+    const expectedText = evaluation === 'PASSED' ? 'Lolos' : 'Ditolak';
+    
+    if (confirmationText !== expectedText) {
+      setConfirmationError(`Ketik "${expectedText}" untuk mengonfirmasi keputusan Anda`);
+      return;
+    }
+
+    try {
+      setProcessingDecision(true);
+      
+      // Update technical test result
+      const updateData = {
+        result: evaluation,
+        feedback: evaluation === 'PASSED' 
+          ? 'Kandidat lolos technical test' 
+          : 'Kandidat tidak lolos technical test'
+      };
+      
+      // Update technical test first
+      await technicalTestService.updateTechnicalTest(technicalTest.uuid, updateData);
+      
+      // Update application status - use ACCEPTED instead of ON_JOB for backend compatibility
+      const newStatus = evaluation === 'PASSED' ? 'ACCEPTED' : 'REJECTED';
+      await jobApplicationService.updateApplicationStatus(applicationId, {
+        status: newStatus,
+        notes: evaluation === 'PASSED' 
+          ? 'Kandidat diterima untuk bekerja' 
+          : 'Kandidat tidak lulus technical test'
+      });
+      
+      // Close dialog
+      setConfirmationOpen(false);
+      setProcessingDecision(false);
+      
+      // Navigate to application summary page with clear status
+      navigate(`/recruiter/candidate-detail/${applicationId}`, { 
+        state: { 
+          evaluationComplete: true,
+          evaluationResult: evaluation 
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error updating decision:', error);
+      setConfirmationError('Gagal memproses keputusan. Silakan coba lagi.');
+      setProcessingDecision(false);
+    }
+  };
+
+  // Function to handle reset evaluation
+  const handleResetEvaluation = async () => {
+    setResetConfirmOpen(true);
+  };
+  
+  const confirmResetEvaluation = async () => {
+    try {
+      setResetting(true);
+      
+      // Reset the technical test result
+      await technicalTestService.updateTechnicalTest(technicalTest.uuid, {
+        result: null,
+        feedback: null
+      });
+      
+      // Change application status back to TECHNICAL_TEST
+      await jobApplicationService.updateApplicationStatus(applicationId, {
+        status: 'TECHNICAL_TEST',
+        notes: 'Reset evaluasi technical test untuk penilaian ulang'
+      });
+      
+      // Reload the page to show updated status
+      window.location.reload();
+    } catch (error) {
+      console.error('Error resetting evaluation:', error);
+      window.dispatchEvent(new CustomEvent('SHOW_NOTIFICATION', {
+        detail: { message: 'Gagal mereset evaluasi', severity: 'error' }
+      }));
+    } finally {
+      setResetting(false);
+      setResetConfirmOpen(false);
+    }
+  };
+  
+  const closeResetDialog = () => {
+    setResetConfirmOpen(false);
   };
 
   if (loading) {
@@ -355,6 +481,92 @@ const TechnicalTestPreview = () => {
                 </Box>
               </Box>
             )}
+
+            {/* Evaluation Section (only show if test is completed) */}
+            {technicalTest.candidateHasCompleted && !technicalTest.result && (
+              <Box sx={{ mt: 4, p: 3, border: '1px dashed', borderColor: 'primary.main', borderRadius: 2 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Evaluasi Technical Test
+                </Typography>
+                
+                <Typography variant="body2" sx={{ mb: 3 }}>
+                  Tentukan keputusan untuk kandidat ini berdasarkan performa technical test. Pilih "Lolos" atau "Ditolak" dari dropdown di bawah.
+                </Typography>
+                
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel id="evaluation-select-label">Keputusan</InputLabel>
+                  <Select
+                    labelId="evaluation-select-label"
+                    id="evaluation-select"
+                    value={evaluation}
+                    label="Keputusan"
+                    onChange={handleEvaluationChange}
+                  >
+                    <MenuItem value="">- Pilih keputusan -</MenuItem>
+                    <MenuItem value="PASSED">Lolos</MenuItem>
+                    <MenuItem value="FAILED">Ditolak</MenuItem>
+                  </Select>
+                </FormControl>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    disabled={!evaluation}
+                    onClick={handleOpenConfirmation}
+                  >
+                    {evaluation ? 'Konfirmasi Keputusan' : 'Evaluasi Test'}
+                  </Button>
+                </Box>
+              </Box>
+            )}
+
+            {/* Show readonly result if already evaluated */}
+            {technicalTest.result && (
+              <Box sx={{ 
+                mt: 4, 
+                p: 3, 
+                bgcolor: technicalTest.result === 'PASSED' 
+                  ? 'rgba(76, 175, 80, 0.1)' 
+                  : 'rgba(244, 67, 54, 0.1)',
+                border: '1px solid',
+                borderColor: technicalTest.result === 'PASSED' 
+                  ? theme.palette.success.main 
+                  : theme.palette.error.main,
+                borderRadius: 2
+              }}>
+                <Typography 
+                  variant="h6" 
+                  fontWeight="bold" 
+                  gutterBottom
+                  sx={{ 
+                    color: technicalTest.result === 'PASSED' 
+                      ? theme.palette.success.main 
+                      : theme.palette.error.main 
+                  }}
+                >
+                  Hasil Evaluasi: {technicalTest.result === 'PASSED' ? 'Lolos' : 'Ditolak'}
+                </Typography>
+                
+                <Typography variant="body2" paragraph>
+                  {technicalTest.feedback || (technicalTest.result === 'PASSED' 
+                    ? 'Kandidat lolos technical test' 
+                    : 'Kandidat tidak lolos technical test'
+                  )}
+                </Typography>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Button
+                    variant="outlined"
+                    color="warning"
+                    startIcon={<RestartAltIcon />}
+                    onClick={handleResetEvaluation}
+                  >
+                    Reset Evaluasi
+                  </Button>
+                </Box>
+              </Box>
+            )}
           </Paper>
         ) : (
           <Paper elevation={3} sx={{ mb: 3, p: 3, borderRadius: 2 }}>
@@ -387,22 +599,72 @@ const TechnicalTestPreview = () => {
           >
             Kembali
           </Button>
-          
-          {/* This button would be for evaluating the test later */}
-          {technicalTest && technicalTest.candidateHasCompleted && (
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => {
-                // Navigate to evaluation page (to be implemented in the future)
-                alert('This functionality will be implemented in the future prompt');
-              }}
-            >
-              Evaluasi Test
-            </Button>
-          )}
         </Box>
       </Box>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmationOpen} onClose={handleCloseConfirmation}>
+        <DialogTitle>
+          Konfirmasi Keputusan {evaluation === 'PASSED' ? 'Lolos' : 'Ditolak'}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Anda akan {evaluation === 'PASSED' ? 'menerima' : 'menolak'} kandidat ini. Tindakan ini akan {evaluation === 'PASSED' ? 'mengubah status kandidat menjadi On Job' : 'menolak kandidat dan tidak dapat diubah'}.
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>
+            Untuk konfirmasi, ketik "{evaluation === 'PASSED' ? 'Lolos' : 'Ditolak'}" di bawah ini:
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="confirmation"
+            label="Konfirmasi"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={confirmationText}
+            onChange={handleConfirmationTextChange}
+            error={!!confirmationError}
+            helperText={confirmationError}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseConfirmation} disabled={processingDecision}>
+            Batal
+          </Button>
+          <Button 
+            onClick={handleConfirmDecision} 
+            variant="contained" 
+            color={evaluation === 'PASSED' ? 'success' : 'error'}
+            disabled={processingDecision}
+          >
+            {processingDecision ? <CircularProgress size={24} /> : 'Konfirmasi'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={resetConfirmOpen} onClose={closeResetDialog}>
+        <DialogTitle>Reset Evaluasi Technical Test</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Apakah Anda yakin ingin mereset evaluasi technical test ini? Status kandidat akan dikembalikan ke "Technical Test" dan Anda dapat melakukan evaluasi ulang.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeResetDialog} disabled={resetting}>
+            Batal
+          </Button>
+          <Button 
+            onClick={confirmResetEvaluation} 
+            variant="contained" 
+            color="warning"
+            disabled={resetting}
+          >
+            {resetting ? <CircularProgress size={24} /> : 'Reset Evaluasi'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

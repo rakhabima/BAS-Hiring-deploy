@@ -6,6 +6,7 @@ import {
     Box,
     Button,
     CircularProgress,
+    Grid,
     Paper,
     Step,
     StepLabel,
@@ -64,9 +65,8 @@ const getApplicationStatus = (status) => {
     case 'REJECTED':
       return 'Ditolak';
     case 'ACCEPTED':
-      return 'Diterima';
     case 'ON_JOB':
-      return 'Aktif Bekerja';
+      return 'Diterima';
     default:
       return status;
   }
@@ -263,6 +263,7 @@ const PortalInformasi = () => {
         navigate(`/candidate/portal-informasi/detail-technical-test/${uuid}`);
         break;
       case 'ON_JOB':
+      case 'ACCEPTED':
         navigate(`/candidate/portal-informasi/detail-on-job/${uuid}`);
         break;
       default:
@@ -404,7 +405,7 @@ const PortalInformasi = () => {
               }
             }}
           >
-            Selamat! Anda diterima di PT. Biro Administrasi Sejahtera. Kami akan menghubungi Anda untuk langkah selanjutnya.
+            Selamat! Anda diterima di PT. Barokah Amanah Sentosa. Kami akan menghubungi Anda untuk langkah selanjutnya.
           </Alert>
         ) : null}
       </Paper>
@@ -572,6 +573,139 @@ const PortalInformasi = () => {
               >
                 Mulai Technical Test
               </Button>
+            )}
+            
+            {(application.status === 'ON_JOB' || application.status === 'ACCEPTED') && (
+              <Box 
+                sx={{ 
+                  mt: 3, 
+                  p: 3, 
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(76, 175, 80, 0.15)' 
+                    : 'rgba(76, 175, 80, 0.1)', 
+                  borderRadius: 1, 
+                  border: `1px solid ${theme.palette.success.main}`
+                }}
+              >
+                <Typography 
+                  variant="subtitle1" 
+                  fontWeight="bold" 
+                  gutterBottom
+                  sx={{ 
+                    color: theme.palette.success.main
+                  }}
+                >
+                  Selamat! Anda Telah Diterima
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    mb: 2,
+                    color: theme.palette.mode === 'dark' 
+                      ? theme.palette.text.primary 
+                      : 'text.secondary' 
+                  }}
+                >
+                  Kami dengan senang hati mengumumkan bahwa Anda telah diterima untuk bergabung dengan PT. Barokah Amanah Sentosa (BAS).
+                </Typography>
+                
+                <Box sx={{ mb: 3 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="body2" fontWeight="bold">Posisi:</Typography>
+                      <Typography variant="body2">
+                        {application.jobPostingId?.jobPosition || application.posisi_dilamar || '-'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="body2" fontWeight="bold">Lokasi:</Typography>
+                      <Typography variant="body2">
+                        {application.jobPostingId?.location || 'Jakarta'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="body2" fontWeight="bold">Status:</Typography>
+                      <Typography variant="body2" sx={{ color: theme.palette.success.main, fontWeight: 'bold' }}>
+                        On Job
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
+                
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    Kami akan segera menghubungi Anda melalui email atau telepon untuk informasi lebih lanjut tentang langkah selanjutnya.
+                    Jika dalam 3 hari kerja Anda belum mendapatkan kabar, mohon hubungi admin@bas-indonesia.id atau +62 821-1240-2200.
+                  </Typography>
+                </Alert>
+                
+                <Button 
+                  variant="contained" 
+                  color="primary"
+                  onClick={() => handleStatusAction('ON_JOB')}
+                >
+                  Lihat Detail Informasi
+                </Button>
+              </Box>
+            )}
+            
+            {application.status === 'REJECTED' && (
+              <Box 
+                sx={{ 
+                  mt: 3, 
+                  p: 3, 
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(244, 67, 54, 0.15)' 
+                    : 'rgba(244, 67, 54, 0.1)', 
+                  borderRadius: 1, 
+                  border: `1px solid ${theme.palette.error.main}`
+                }}
+              >
+                <Typography 
+                  variant="subtitle1" 
+                  fontWeight="bold" 
+                  gutterBottom
+                  sx={{ 
+                    color: theme.palette.error.main
+                  }}
+                >
+                  Maaf, Anda Tidak Lolos ke Tahap Selanjutnya
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    mb: 2,
+                    color: theme.palette.mode === 'dark' 
+                      ? theme.palette.text.primary 
+                      : 'text.secondary' 
+                  }}
+                >
+                  Terima kasih atas partisipasi Anda dalam proses rekrutmen di PT. Barokah Amanah Sentosa. 
+                  Setelah meninjau dengan seksama, kami menyampaikan bahwa aplikasi Anda belum sesuai dengan kebutuhan kami saat ini.
+                </Typography>
+                
+                <Typography 
+                  variant="body2"
+                  sx={{ 
+                    mb: 2,
+                    fontStyle: 'italic',
+                    color: theme.palette.mode === 'dark' 
+                      ? theme.palette.text.primary 
+                      : 'text.secondary'
+                  }}
+                >
+                  Aplikasi Anda tetap kami simpan, dan kami mungkin menghubungi Anda di kemudian hari jika ada posisi yang sesuai.
+                  Silakan terus memantau halaman karir kami untuk kesempatan lainnya.
+                </Typography>
+                
+                <Button 
+                  variant="outlined" 
+                  color="primary"
+                  onClick={() => navigate('/lowongan')}
+                >
+                  Lihat Lowongan Lainnya
+                </Button>
+              </Box>
             )}
           </Box>
         </Paper>

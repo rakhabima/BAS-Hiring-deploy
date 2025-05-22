@@ -91,17 +91,25 @@ export const getTechnicalTestById = async (uuid) => {
  */
 export const updateTechnicalTest = async (uuid, updateData) => {
   try {
+    console.log(`Updating technical test ${uuid} with data:`, updateData);
+    
     const updatedTest = await TechnicalTest.findOneAndUpdate(
       { uuid },
       { $set: updateData },
       { new: true }
     );
+    
+    console.log('Updated test result:', updatedTest);
 
     // If updating result and it's PASSED or FAILED, update application status
     if (updateData.result && (updateData.result === 'PASSED' || updateData.result === 'FAILED')) {
+      console.log('Updating application status based on result:', updateData.result);
+      
       const test = await TechnicalTest.findOne({ uuid });
       if (test) {
         const newStatus = updateData.result === 'PASSED' ? 'ACCEPTED' : 'REJECTED';
+        console.log(`Changing application ${test.applicationId} status to ${newStatus}`);
+        
         const statusEntry = {
           status: newStatus,
           timestamp: new Date(),
@@ -117,6 +125,10 @@ export const updateTechnicalTest = async (uuid, updateData) => {
           }
         );
       }
+    } else if (updateData.result === null) {
+      // Handle reset case - intentionally setting result to null
+      console.log('Resetting technical test evaluation for test:', uuid);
+      // Note: Application status is updated separately via updateApplicationStatus
     }
 
     return updatedTest;

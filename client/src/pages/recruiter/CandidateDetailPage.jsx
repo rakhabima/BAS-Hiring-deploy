@@ -1,5 +1,6 @@
-import { Close, PictureAsPdf } from '@mui/icons-material';
+import { ArrowBack, Close, PictureAsPdf } from '@mui/icons-material';
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -23,7 +24,7 @@ import {
 } from '@mui/material';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { jobApplicationService } from '../../services/api';
 
 // Steps for the progress bar
@@ -51,6 +52,7 @@ const getStepFromStatus = (status) => {
 
 const CandidateDetailPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { candidateId } = useParams();
   const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +62,9 @@ const CandidateDetailPage = () => {
   const [notes, setNotes] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [evaluationComplete, setEvaluationComplete] = useState(false);
+  const [evaluationResult, setEvaluationResult] = useState(null);
+  const [isStatusDisabled, setIsStatusDisabled] = useState(false);
   
   // Fetch application data
   useEffect(() => {
@@ -85,6 +90,11 @@ const CandidateDetailPage = () => {
           } else {
             setStatus(response.data.status);
           }
+          
+          // Disable status dropdown if candidate is already accepted
+          if (response.data.status === 'ACCEPTED' || response.data.status === 'ON_JOB') {
+            setIsStatusDisabled(true);
+          }
         } else {
           navigate('/recruiter/candidates');
         }
@@ -97,7 +107,13 @@ const CandidateDetailPage = () => {
     };
     
     fetchApplication();
-  }, [candidateId, navigate]);
+    
+    // Check if we've been redirected from technical test evaluation
+    if (location.state?.evaluationComplete) {
+      setEvaluationComplete(true);
+      setEvaluationResult(location.state.evaluationResult);
+    }
+  }, [candidateId, navigate, location]);
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -181,6 +197,11 @@ const CandidateDetailPage = () => {
     }
   };
 
+  // Handle back to technical test preview
+  const handleBackToTechnicalTest = () => {
+    navigate(`/recruiter/technical-test-preview/${candidateId}`);
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
@@ -191,6 +212,17 @@ const CandidateDetailPage = () => {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      {/* Back button */}
+      <Box sx={{ display: 'flex', mb: 2 }}>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={handleBackToTechnicalTest}
+          sx={{ mb: 2 }}
+        >
+          Kembali ke Technical Test
+        </Button>
+      </Box>
+      
       {/* Progress Stepper */}
       <Box sx={{ width: '100%', mb: 4 }}>
         <Stepper activeStep={activeStep} alternativeLabel>
@@ -201,6 +233,25 @@ const CandidateDetailPage = () => {
           ))}
         </Stepper>
       </Box>
+      
+      {/* Evaluation Success Message */}
+      {evaluationComplete && (
+        <Alert 
+          severity={evaluationResult === 'PASSED' ? 'success' : 'info'} 
+          sx={{ mb: 4 }}
+        >
+          <Typography variant="subtitle1" fontWeight="bold">
+            {evaluationResult === 'PASSED' 
+              ? 'Kandidat berhasil diterima dan status telah diubah menjadi On Job' 
+              : 'Kandidat tidak lolos technical test dan telah ditolak'}
+          </Typography>
+          <Typography variant="body2">
+            {evaluationResult === 'PASSED'
+              ? 'Sistem akan otomatis memberitahu kandidat. Silakan hubungi kandidat untuk langkah selanjutnya.'
+              : 'Sistem akan otomatis memberitahu kandidat tentang hasil ini.'}
+          </Typography>
+        </Alert>
+      )}
       
       {/* Main content */}
       <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
@@ -640,12 +691,20 @@ const CandidateDetailPage = () => {
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             sx={{ maxWidth: 300 }}
+            disabled={isStatusDisabled}
           >
             <MenuItem value="REVIEWING">Sedang Ditinjau</MenuItem>
             <MenuItem value="INTERVIEW_SCHEDULED">Jadwalkan Wawancara</MenuItem>
             <MenuItem value="REVISION">Perlu Revisi</MenuItem>
             <MenuItem value="REJECTED">Ditolak</MenuItem>
+            {isStatusDisabled && <MenuItem value="ACCEPTED">Diterima</MenuItem>}
+            {isStatusDisabled && <MenuItem value="ON_JOB">On Job</MenuItem>}
           </TextField>
+          {isStatusDisabled && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              Status tidak dapat diubah karena kandidat sudah diterima
+            </Typography>
+          )}
         </Box>
         
         {/* Notes */}
