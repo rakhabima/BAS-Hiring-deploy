@@ -179,8 +179,9 @@ export const submitTechnicalTestResult = async (applicationId, submissionData) =
     const updateData = {
       submissionDate: new Date(),
       submissionFile: submissionData.fileUrl,
-      submissionNotes: submissionData.notes,
-      result: 'PENDING' // Reset result to PENDING if it was changed
+      submissionNotes: submissionData.notes || null,
+      result: 'PENDING', // Reset result to PENDING if it was changed
+      candidateHasCompleted: true  // Mark as completed
     };
 
     const updatedTest = await TechnicalTest.findOneAndUpdate(

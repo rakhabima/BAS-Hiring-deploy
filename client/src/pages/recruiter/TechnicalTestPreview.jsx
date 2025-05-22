@@ -446,23 +446,21 @@ const TechnicalTestPreview = () => {
                     </Typography>
                   </Grid>
                   
-                  {technicalTest.submissionNotes && (
-                    <Grid item xs={12}>
-                      <Typography variant="body2" fontWeight="bold">Catatan dari Kandidat:</Typography>
-                      <Box sx={{ 
-                        mt: 1, 
-                        p: 2, 
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.7)',
-                        borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'
-                      }}>
-                        <Typography variant="body2">
-                          {technicalTest.submissionNotes}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  )}
+                  <Grid item xs={12}>
+                    <Typography variant="body2" fontWeight="bold">Catatan dari Kandidat:</Typography>
+                    <Box sx={{ 
+                      mt: 1, 
+                      p: 2, 
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.7)',
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <Typography variant="body2">
+                        {technicalTest.submissionNotes || 'Kandidat tidak memberikan catatan tambahan'}
+                      </Typography>
+                    </Box>
+                  </Grid>
                 </Grid>
                 
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
@@ -483,7 +481,7 @@ const TechnicalTestPreview = () => {
             )}
 
             {/* Evaluation Section (only show if test is completed) */}
-            {technicalTest.candidateHasCompleted && !technicalTest.result && (
+            {technicalTest.candidateHasCompleted && (!technicalTest.result || technicalTest.result === 'PENDING') && (
               <Box sx={{ mt: 4, p: 3, border: '1px dashed', borderColor: 'primary.main', borderRadius: 2 }}>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
                   Evaluasi Technical Test
