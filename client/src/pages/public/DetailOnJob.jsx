@@ -524,11 +524,7 @@ const DetailOnJob = () => {
                   <Typography variant="body2" color="text.secondary">Departemen</Typography>
                   <Typography variant="body1" fontWeight="bold">
                     {application.jobPostingId?.department || 'Akan dikonfirmasi'}
-<<<<<<< HEAD
-                  </Typography>
-=======
         </Typography>
->>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
                 </Box>
               </Grid>
             </Grid>
@@ -541,16 +537,6 @@ const DetailOnJob = () => {
             <Typography variant="body2">
               Informasi di atas adalah ringkasan dari data yang Anda kirimkan saat pendaftaran. Jika ada informasi yang perlu diperbaiki,
               silakan hubungi admin@bas-indonesia.id secepat mungkin.
-<<<<<<< HEAD
-            </Typography>
-          </Alert>
-        </Box>
-      </Paper>
-      
-      <Box sx={{ textAlign: 'center' }}>
-        <Button 
-          variant="contained" 
-=======
         </Typography>
           </Alert>
         </Box>
@@ -559,7 +545,6 @@ const DetailOnJob = () => {
       <Box sx={{ textAlign: 'center' }}>
       <Button 
         variant="contained" 
->>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
           color="primary"
           onClick={handleBack}
           sx={{ mr: 2 }}
@@ -569,17 +554,10 @@ const DetailOnJob = () => {
         
         <Button 
           variant="outlined"
-<<<<<<< HEAD
-          onClick={() => navigate('/candidate/portal-informasi')}
-        >
-          Ke Daftar Lamaran
-        </Button>
-=======
         onClick={() => navigate('/candidate/portal-informasi')}
       >
           Ke Daftar Lamaran
       </Button>
->>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
       </Box>
     </Box>
   );
