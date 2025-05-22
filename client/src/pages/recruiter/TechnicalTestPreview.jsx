@@ -522,7 +522,11 @@ const TechnicalTestPreview = () => {
             )}
 
             {/* Show readonly result if already evaluated */}
+<<<<<<< HEAD
             {technicalTest.result && (
+=======
+            {technicalTest.result && technicalTest.result !== 'PENDING' && (
+>>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
               <Box sx={{ 
                 mt: 4, 
                 p: 3, 

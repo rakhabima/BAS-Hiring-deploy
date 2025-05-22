@@ -14,8 +14,17 @@ export const createTechnicalTest = async (data) => {
       throw new Error('Application not found');
     }
 
+<<<<<<< HEAD
     // Create new technical test
     const technicalTest = new TechnicalTest(data);
+=======
+    // Create new technical test with PENDING result
+    const technicalTest = new TechnicalTest({
+      ...data,
+      result: 'PENDING',
+      candidateHasCompleted: false
+    });
+>>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
     const savedTest = await technicalTest.save();
 
     // Update application status if not already in TECHNICAL_TEST
@@ -102,7 +111,11 @@ export const updateTechnicalTest = async (uuid, updateData) => {
     console.log('Updated test result:', updatedTest);
 
     // If updating result and it's PASSED or FAILED, update application status
+<<<<<<< HEAD
     if (updateData.result && (updateData.result === 'PASSED' || updateData.result === 'FAILED')) {
+=======
+    if (updateData.result && (updateData.result === 'PASSED' || updateData.result === 'FAILED') && updateData.result !== 'PENDING') {
+>>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
       console.log('Updating application status based on result:', updateData.result);
       
       const test = await TechnicalTest.findOne({ uuid });

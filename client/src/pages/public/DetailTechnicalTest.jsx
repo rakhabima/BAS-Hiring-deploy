@@ -231,7 +231,11 @@ const DetailTechnicalTest = () => {
             }
           }}
         >
+<<<<<<< HEAD
           Technical test information is not available yet. Please check back later.
+=======
+          Informasi Technical Test masih belum tersedia. Mohon tunggu beberapa saat lagi atau hubungi admin melalui office@bas-indonesia.com atau 0812-8032-2191
+>>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
         </Alert>
         <Button 
           variant="contained" 

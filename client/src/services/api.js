@@ -304,12 +304,429 @@ export const authService = {
           mockStaffList = JSON.parse(existingMockData);
         }
         
+<<<<<<< HEAD
         // Add new staff to the list
         mockStaffList.push(mockStaff);
         
         // Save updated list
         localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
         console.log('Created mock staff account:', mockStaff);
+=======
+        return response.data;
+      } catch (error) {
+        showNotification('Gagal mengambil data lamaran: ' + (error.response?.data?.message || error.message), 'error');
+        throw error;
+      }
+    },
+    
+    // Update application status (for recruiters)
+    updateApplicationStatus: async (uuid, statusData) => {
+      try {
+        const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update-status`), statusData);
+        showNotification('Status lamaran berhasil diperbarui', 'success');
+        return response.data;
+      } catch (error) {
+        showNotification('Gagal memperbarui status lamaran: ' + (error.response?.data?.message || error.message), 'error');
+        throw error;
+      }
+    },
+
+    // Get overall application stage statistics
+    getApplicationStageStats: async () => {
+      try {
+        const response = await api.get(logEndpoint('/jobApplication/stats/stages'));
+        // Data should be in response.data.data if controller follows the pattern
+        if (response.data && response.data.success && response.data.data) {
+          return response.data.data;
+        } else {
+          console.warn("Unexpected format for stage stats:", response.data);
+          // Return default stats or throw error
+          return { pending: 0, interview: 0, technicalTest: 0, accepted: 0, rejected: 0 };
+        }
+      } catch (error) {
+        showNotification('Gagal mengambil statistik lamaran: ' + (error.response?.data?.message || error.message), 'error');
+        // Return default stats or rethrow
+        return { pending: 0, interview: 0, technicalTest: 0, accepted: 0, rejected: 0 };
+        // throw error;
+      }
+    },
+
+    // Get status distribution data for charts
+    getApplicationStatusDistribution: async (period = 'all') => {
+      try {
+        const response = await api.get(logEndpoint(`/jobApplication/stats/status-distribution?period=${period}`));
+        // Data should be in response.data.data if controller follows the pattern
+        if (response.data && response.data.success) {
+          return response.data.data; // Returns { STATUS1: count, STATUS2: count, ... }
+        } else {
+          console.warn("Unexpected format for status distribution:", response.data);
+          return {}; // Return empty object on failure
+        }
+      } catch (error) {
+        showNotification('Gagal mengambil data distribusi status: ' + (error.response?.data?.message || error.message), 'error');
+        return {};
+      }
+    },
+
+    // Get application trends data for charts
+    getApplicationTrends: async (period = 'week') => {
+      try {
+        const response = await api.get(logEndpoint(`/jobApplication/stats/trends?period=${period}`));
+        if (response.data && response.data.success) {
+          return response.data.data; // Returns { timeLabel1: count, timeLabel2: count, ... }
+        } else {
+          console.warn("Unexpected format for application trends:", response.data);
+          return {};
+        }
+      } catch (error) {
+        showNotification('Gagal mengambil data tren aplikasi: ' + (error.response?.data?.message || error.message), 'error');
+        return {};
+      }
+    },
+
+  // Hard delete application (for recruiters)
+  deleteApplication: async (uuid) => {
+    try {
+      const response = await api.delete(logEndpoint(`/jobApplication/${uuid}/delete`));
+      showNotification('Aplikasi berhasil dihapus secara permanen', 'success');
+      return response.data;
+    } catch (error) {
+      let errorMsg = 'Gagal menghapus aplikasi.';
+      
+      if (error.response && error.response.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  },
+  };
+
+  // Interview services
+  export const interviewService = {
+    // Create new interview
+    createInterview: async (interviewData) => {
+      try {
+        const response = await api.post(logEndpoint('/interviews'), interviewData);
+        return response.data;
+      } catch (error) {
+        let errorMsg = 'Gagal membuat jadwal wawancara.';
+        
+        if (error.response && error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        
+        showNotification(errorMsg, 'error');
+        throw error;
+      }
+    },
+
+    // Get interview by application ID
+    getInterviewByApplicationId: async (applicationId) => {
+      try {
+        const response = await api.get(logEndpoint(`/interviews/application/${applicationId}`));
+        return response.data;
+      } catch (error) {
+        // Don't show notification for not found errors as this might be expected
+        if (error.response && error.response.status !== 404) {
+          let errorMsg = 'Gagal memuat data wawancara.';
+          
+          if (error.response && error.response.data?.message) {
+            errorMsg = error.response.data.message;
+          }
+          
+          showNotification(errorMsg, 'error');
+        }
+        
+        // For debugging in console only
+        if (error.response && error.response.status === 404) {
+          console.log('No interview found for application:', applicationId);
+        } else {
+          console.error('Error getting interview by application ID:', error);
+        }
+        
+        throw error;
+      }
+    },
+
+    // Get all interviews
+    getAllInterviews: async () => {
+      try {
+        const response = await api.get(logEndpoint('/interviews'));
+        return response.data;
+      } catch (error) {
+        let errorMsg = 'Gagal memuat data jadwal wawancara.';
+        
+        if (error.response && error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        
+        showNotification(errorMsg, 'error');
+        throw error;
+      }
+    },
+
+    // Update interview
+    updateInterview: async (interviewId, interviewData) => {
+      try {
+        const response = await api.put(logEndpoint(`/interviews/${interviewId}`), interviewData);
+        return response.data;
+      } catch (error) {
+        let errorMsg = 'Gagal memperbarui jadwal wawancara.';
+        
+        if (error.response && error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        
+        showNotification(errorMsg, 'error');
+        throw error;
+      }
+    },
+
+    // Update candidate response (attendance confirmation)
+    updateInterviewResponse: async (interviewId, responseData) => {
+      try {
+        const response = await api.put(logEndpoint(`/interviews/${interviewId}/response`), responseData);
+        return response.data;
+      } catch (error) {
+        let errorMsg = 'Gagal mengirim konfirmasi kehadiran.';
+        
+        if (error.response && error.response.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        
+        showNotification(errorMsg, 'error');
+        throw error;
+      }
+    }
+  };
+
+// Technical Test services
+export const technicalTestService = {
+  // Create a new technical test
+  createTechnicalTest: async (applicationId, testData) => {
+    try {
+      const response = await api.post(logEndpoint(`/technicalTest/${applicationId}`), testData);
+      showNotification('Technical test berhasil dibuat', 'success');
+      return response.data;
+    } catch (error) {
+      let errorMsg = 'Gagal membuat technical test';
+      if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  },
+
+  // Get technical test by application ID
+  getTechnicalTestByApplicationId: async (applicationId) => {
+    try {
+      const response = await api.get(logEndpoint(`/technicalTest/application/${applicationId}`));
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        // Not found is expected in some cases, so don't show notification
+        return { data: null };
+      }
+      
+      let errorMsg = 'Gagal mendapatkan detail technical test';
+      if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  },
+
+  // Submit technical test result from candidate
+  submitTechnicalTestResult: async (applicationId, formData) => {
+    try {
+      // Use form data for file upload
+      const response = await api.post(
+        logEndpoint(`/technicalTest/${applicationId}/submit`),
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      showNotification('Jawaban technical test berhasil dikirim', 'success');
+      return response.data;
+    } catch (error) {
+      let errorMsg = 'Gagal mengirim jawaban technical test';
+      if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  },
+
+  // Mark technical test as completed
+  markTechnicalTestCompleted: async (applicationId, notes = '') => {
+    try {
+      const response = await api.post(
+        logEndpoint(`/technicalTest/${applicationId}/complete`),
+        { notes }
+      );
+      showNotification('Technical test berhasil ditandai selesai', 'success');
+      return response.data;
+    } catch (error) {
+      let errorMsg = 'Gagal menandai technical test sebagai selesai';
+      if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  },
+
+  // Update technical test
+  updateTechnicalTest: async (uuid, updateData) => {
+    try {
+      const response = await api.put(logEndpoint(`/technicalTest/${uuid}`), updateData);
+      showNotification('Technical test berhasil diperbarui', 'success');
+      return response.data;
+    } catch (error) {
+      let errorMsg = 'Gagal memperbarui technical test';
+      if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      showNotification(errorMsg, 'error');
+      throw error;
+    }
+  },
+};
+
+  // Helper functions for mock data
+  const getMockUserData = () => {
+    // Get any existing mock data from localStorage
+    const existingMockData = localStorage.getItem('mockStaffList');
+    
+    if (existingMockData) {
+      return JSON.parse(existingMockData);
+    }
+    
+    // Create mock data if none exists
+    const mockStaffList = [
+      {
+        uuid: 'staff-001',
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        role: 'GENERAL_MANAGER',
+        status: true
+      },
+      {
+        uuid: 'staff-002',
+        name: 'Jane Smith',
+        email: 'jane.smith@example.com',
+        role: 'RECRUITER',
+        status: true
+      },
+      {
+        uuid: 'staff-003',
+        name: 'Bob Johnson',
+        email: 'bob.johnson@example.com',
+        role: 'KOORDINATOR_LAPANGAN',
+        status: false
+      }
+    ];
+    
+    // Save to localStorage for persistence
+    localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
+    
+    return { success: true, data: mockStaffList };
+  };
+
+  const getMockUserDetailData = (uuid) => {
+    // If API fails, use mock data
+    const mockStaffList = localStorage.getItem('mockStaffList');
+    
+    if (mockStaffList) {
+      try {
+        const staffList = JSON.parse(mockStaffList);
+        const user = staffList.find(staff => staff.uuid === uuid);
+        
+        if (user) {
+          console.log('Found matching mock user:', user);
+          return { success: true, data: user };
+        }
+      } catch (parseError) {
+        console.error('Error parsing mock staff list:', parseError);
+      }
+    }
+    
+    // If no matching user found, create a mock one for this UUID
+    const mockUser = {
+      uuid: uuid,
+      name: `User ${uuid.split('-').pop()}`,
+      email: `user-${uuid.split('-').pop()}@example.com`,
+      role: 'GENERAL_MANAGER',
+      status: true
+    };
+    
+    console.log('Created mock user:', mockUser);
+    return { success: true, data: mockUser };
+  };
+
+  const getMockUpdateUser = (uuid, userData) => {
+    // If API fails, update mock data
+    const mockStaffList = localStorage.getItem('mockStaffList');
+    
+    if (mockStaffList) {
+      try {
+        const staffList = JSON.parse(mockStaffList);
+        const updatedList = staffList.map(staff => {
+          if (staff.uuid === uuid) {
+            // Update user with new data
+            return { ...staff, ...userData };
+          }
+          return staff;
+        });
+        
+        // Save updated list back to localStorage
+        localStorage.setItem('mockStaffList', JSON.stringify(updatedList));
+        
+        // Return the updated user
+        const updatedUser = updatedList.find(staff => staff.uuid === uuid);
+        console.log('Mock user updated:', updatedUser);
+        
+        return { success: true, data: updatedUser };
+      } catch (parseError) {
+        console.error('Error parsing mock staff list:', parseError);
+      }
+    }
+    
+    // If no mock data exists, just return success with the input data
+    return { 
+      success: true, 
+      data: { uuid: uuid, ...userData },
+      message: 'User updated successfully (mock)'
+    };
+  };
+
+  const getMockDeleteUser = (uuid) => {
+    // If API fails, update mock data
+    const mockStaffList = localStorage.getItem('mockStaffList');
+    
+    if (mockStaffList) {
+      try {
+        const staffList = JSON.parse(mockStaffList);
+        
+        // Find user before removing
+        const userToDelete = staffList.find(staff => staff.uuid === uuid);
+        
+        // Filter out the user with the specified ID
+        const updatedList = staffList.filter(staff => staff.uuid !== uuid);
+        
+        // Save updated list back to localStorage
+        localStorage.setItem('mockStaffList', JSON.stringify(updatedList));
+        
+        console.log('Mock user deleted:', userToDelete);
+>>>>>>> 76e490d (fix: Create Informasi Technical Test (PBI-28) auto assign bug fix)
         
         return { 
           success: true, 
