@@ -11,6 +11,7 @@ import interviewRoute from "./routes/interview.js";
 import jobApplicationRoute from "./routes/jobApplication.js";
 import jobVacancyRoute from "./routes/jobVacancy.js";
 import outsourceRoute from "./routes/outsourcing.js";
+import technicalTestRoute from "./routes/technicalTest.js";
 import userRoute from "./routes/user.js";
 
 const app = express();
@@ -55,6 +56,7 @@ app.use("/outsource", outsourceRoute);
 app.use("/user", userRoute);
 app.use("/jobApplication", jobApplicationRoute);
 app.use("/interviews", interviewRoute);
+app.use("/technicalTest", technicalTestRoute);
 
 // Middleware penanganan error
 app.use((err, req, res, next) => {

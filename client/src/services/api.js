@@ -1141,6 +1141,105 @@
     }
   };
 
+  // Technical Test services
+  export const technicalTestService = {
+    // Create a new technical test
+    createTechnicalTest: async (applicationId, testData) => {
+      try {
+        const response = await api.post(logEndpoint(`/technicalTest/${applicationId}`), testData);
+        showNotification('Technical test berhasil dibuat', 'success');
+        return response.data;
+      } catch (error) {
+        let errorMsg = 'Gagal membuat technical test';
+        if (error.response?.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        showNotification(errorMsg, 'error');
+        throw error;
+      }
+    },
+
+    // Get technical test by application ID
+    getTechnicalTestByApplicationId: async (applicationId) => {
+      try {
+        const response = await api.get(logEndpoint(`/technicalTest/application/${applicationId}`));
+        return response.data;
+      } catch (error) {
+        if (error.response?.status === 404) {
+          // Not found is expected in some cases, so don't show notification
+          return { data: null };
+        }
+        
+        let errorMsg = 'Gagal mendapatkan detail technical test';
+        if (error.response?.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        showNotification(errorMsg, 'error');
+        throw error;
+      }
+    },
+
+    // Submit technical test result from candidate
+    submitTechnicalTestResult: async (applicationId, formData) => {
+      try {
+        // Use form data for file upload
+        const response = await api.post(
+          logEndpoint(`/technicalTest/${applicationId}/submit`),
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+        showNotification('Jawaban technical test berhasil dikirim', 'success');
+        return response.data;
+      } catch (error) {
+        let errorMsg = 'Gagal mengirim jawaban technical test';
+        if (error.response?.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        showNotification(errorMsg, 'error');
+        throw error;
+      }
+    },
+
+    // Mark technical test as completed
+    markTechnicalTestCompleted: async (applicationId, notes = '') => {
+      try {
+        const response = await api.post(
+          logEndpoint(`/technicalTest/${applicationId}/complete`),
+          { notes }
+        );
+        showNotification('Technical test berhasil ditandai selesai', 'success');
+        return response.data;
+      } catch (error) {
+        let errorMsg = 'Gagal menandai technical test sebagai selesai';
+        if (error.response?.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        showNotification(errorMsg, 'error');
+        throw error;
+      }
+    },
+
+    // Update technical test
+    updateTechnicalTest: async (uuid, updateData) => {
+      try {
+        const response = await api.put(logEndpoint(`/technicalTest/${uuid}`), updateData);
+        showNotification('Technical test berhasil diperbarui', 'success');
+        return response.data;
+      } catch (error) {
+        let errorMsg = 'Gagal memperbarui technical test';
+        if (error.response?.data?.message) {
+          errorMsg = error.response.data.message;
+        }
+        showNotification(errorMsg, 'error');
+        throw error;
+      }
+    },
+  };
+
   // Helper functions for mock data
   const getMockUserData = () => {
     // Get any existing mock data from localStorage

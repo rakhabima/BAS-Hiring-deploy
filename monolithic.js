@@ -15,6 +15,7 @@ import interviewRoute from './server/routes/interview.js';
 import jobApplicationRoute from './server/routes/jobApplication.js';
 import jobVacancyRoute from './server/routes/jobVacancy.js';
 import outsourceRoute from './server/routes/outsourcing.js';
+import technicalTestRoute from './server/routes/technicalTest.js';
 import userRoute from './server/routes/user.js';
 
 // Initialize Express
@@ -48,6 +49,7 @@ app.use('/api/outsource', outsourceRoute);
 app.use('/api/user', userRoute);
 app.use('/api/jobApplication', jobApplicationRoute);
 app.use('/api/interviews', interviewRoute);
+app.use('/api/technicalTest', technicalTestRoute);
 
 // API root for checking connectivity
 app.get('/api', (req, res) => {

@@ -106,7 +106,8 @@ const CandidateInterviewPreview = () => {
         detail: { message: 'Status berhasil diperbarui ke Technical Test', severity: 'success' }
       }));
       
-      navigate('/recruiter/dashboard');
+      // Navigate to technical test preview
+      navigate(`/recruiter/technical-test-preview/${candidateId}`);
     } catch (error) {
       console.error('Error updating status:', error);
       window.dispatchEvent(new CustomEvent('SHOW_NOTIFICATION', {

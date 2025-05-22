@@ -1,0 +1,410 @@
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EditIcon from '@mui/icons-material/Edit';
+import EventIcon from '@mui/icons-material/Event';
+import InfoIcon from '@mui/icons-material/Info';
+import LinkIcon from '@mui/icons-material/Link';
+import {
+    Alert,
+    Box,
+    Button,
+    CircularProgress,
+    Container,
+    Divider,
+    Grid,
+    Paper,
+    Step,
+    StepLabel,
+    Stepper,
+    Typography,
+    useTheme
+} from '@mui/material';
+import { format } from 'date-fns';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { jobApplicationService, technicalTestService } from '../../services/api';
+
+// Steps for the progress bar
+const steps = ['Administrasi', 'Wawancara', 'Technical Test', 'On Job'];
+
+const TechnicalTestPreview = () => {
+  const { applicationId } = useParams();
+  const navigate = useNavigate();
+  const theme = useTheme();
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [application, setApplication] = useState(null);
+  const [technicalTest, setTechnicalTest] = useState(null);
+
+  // Set to Technical Test stage (index 2)
+  const activeStep = 2;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!applicationId) {
+        navigate('/recruiter/dashboard');
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        
+        // Fetch application data
+        const appResponse = await jobApplicationService.getApplicationById(applicationId);
+        if (!appResponse || !appResponse.data) {
+          setError('Application not found');
+          setLoading(false);
+          return;
+        }
+        
+        setApplication(appResponse.data);
+        
+        // Fetch technical test data
+        try {
+          const testResponse = await technicalTestService.getTechnicalTestByApplicationId(applicationId);
+          if (testResponse && testResponse.data) {
+            setTechnicalTest(testResponse.data);
+          }
+        } catch (testError) {
+          console.log('No technical test found for this application');
+          // Not a fatal error, as we'll show a button to create one
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load data');
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [applicationId, navigate]);
+
+  const handleBack = () => {
+    navigate('/recruiter/dashboard');
+  };
+  
+  const handleCreateTest = () => {
+    navigate(`/recruiter/technical-test/${applicationId}`);
+  };
+  
+  const handleEditTest = () => {
+    navigate(`/recruiter/technical-test/${applicationId}`);
+  };
+  
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      return format(new Date(dateString), 'dd MMMM yyyy');
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+        <Button
+          variant="contained"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/recruiter/dashboard')}
+        >
+          Back to Dashboard
+        </Button>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      {/* Progress Stepper */}
+      <Stepper activeStep={activeStep}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      
+      <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={handleBack}
+          sx={{ mb: 3 }}
+        >
+          Kembali
+        </Button>
+        
+        <Typography variant="h5" component="h1" gutterBottom fontWeight="bold">
+          Technical Test Preview
+        </Typography>
+        
+        {/* Candidate Info Card */}
+        <Paper elevation={3} sx={{ mb: 3, p: 0, borderRadius: 2, overflow: 'hidden' }}>
+          <Box sx={{ bgcolor: '#182f5d', p: 2, color: 'white' }}>
+            <Typography variant="h6" fontWeight="bold">
+              {application?.nama_ktp || 'Candidate Name'}
+            </Typography>
+            <Typography variant="body2">
+              {application?.jobPostingId?.jobPosition || application?.posisi_dilamar || 'Position'}
+            </Typography>
+          </Box>
+          
+          <Box p={3}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="body2" color="text.secondary">Email</Typography>
+                <Typography variant="body1" gutterBottom fontWeight="medium">
+                  {application?.email || '-'}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Typography variant="body2" color="text.secondary">Phone</Typography>
+                <Typography variant="body1" gutterBottom fontWeight="medium">
+                  {application?.no_hp || '-'}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        </Paper>
+        
+        {/* Technical Test Details */}
+        {technicalTest ? (
+          <Paper elevation={3} sx={{ mb: 3, p: 3, borderRadius: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" fontWeight="bold">
+                Technical Test Detail
+              </Typography>
+              <Button
+                startIcon={<EditIcon />}
+                onClick={handleEditTest}
+                size="small"
+              >
+                Edit
+              </Button>
+            </Box>
+            
+            <Divider sx={{ mb: 3 }} />
+            
+            {/* Test Status Alert */}
+            {technicalTest.candidateHasCompleted ? (
+              <Alert 
+                severity="success" 
+                sx={{ 
+                  mb: 3,
+                  backgroundColor: theme.palette.success.light,
+                  color: theme.palette.success.contrastText
+                }}
+              >
+                <Typography variant="subtitle2" fontWeight="bold">
+                  Kandidat sudah mengerjakan technical test, harap periksa jawaban atau file submisi
+                </Typography>
+              </Alert>
+            ) : (
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  mb: 3,
+                  backgroundColor: theme.palette.info.light,
+                  color: theme.palette.info.contrastText
+                }}
+              >
+                <Typography variant="subtitle2" fontWeight="bold">
+                  Menunggu submisi kandidat
+                </Typography>
+              </Alert>
+            )}
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <EventIcon sx={{ mr: 1, color: 'primary.main' }} />
+                  <Box>
+                    <Typography variant="body2" fontWeight="bold">Deadline</Typography>
+                    <Typography variant="body2">
+                      {technicalTest.dateScheduled 
+                        ? format(new Date(technicalTest.dateScheduled), 'dd MMMM yyyy')
+                        : '-'
+                      }
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <LinkIcon sx={{ mr: 1, color: 'primary.main' }} />
+                  <Box>
+                    <Typography variant="body2" fontWeight="bold">Link Test</Typography>
+                    <Typography variant="body2">
+                      {technicalTest.testLink ? (
+                        <a 
+                          href={technicalTest.testLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ color: theme.palette.primary.main }}
+                        >
+                          {technicalTest.testLink}
+                        </a>
+                      ) : '-'}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Deskripsi
+              </Typography>
+              <Typography variant="body2" paragraph>
+                {technicalTest.description}
+              </Typography>
+              
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Instruksi
+              </Typography>
+              <Typography variant="body2" paragraph>
+                {technicalTest.instructions || '-'}
+              </Typography>
+            </Box>
+            
+            {/* Submission Details */}
+            {technicalTest.submissionFile && (
+              <Box sx={{ 
+                mt: 3, 
+                p: 3, 
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(50, 205, 50, 0.1)' : 'rgba(76, 175, 80, 0.1)', 
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: theme.palette.success.main
+              }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: theme.palette.success.main }}>
+                  File Submisi Kandidat
+                </Typography>
+                
+                <Divider sx={{ mb: 2 }}/>
+                
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <InfoIcon sx={{ mr: 1, color: theme.palette.success.main }} />
+                      <Typography variant="subtitle1" fontWeight="medium">
+                        Detail Submisi
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" fontWeight="bold">Nama File:</Typography>
+                    <Typography variant="body2">
+                      {technicalTest.submissionFile.split('/').pop() || 'File Jawaban'}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" fontWeight="bold">Waktu Submisi:</Typography>
+                    <Typography variant="body2">
+                      {technicalTest.submissionDate ? format(new Date(technicalTest.submissionDate), 'dd MMMM yyyy HH:mm') : '-'}
+                    </Typography>
+                  </Grid>
+                  
+                  {technicalTest.submissionNotes && (
+                    <Grid item xs={12}>
+                      <Typography variant="body2" fontWeight="bold">Catatan dari Kandidat:</Typography>
+                      <Box sx={{ 
+                        mt: 1, 
+                        p: 2, 
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.7)',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <Typography variant="body2">
+                          {technicalTest.submissionNotes}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  )}
+                </Grid>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    component="a"
+                    href={technicalTest.submissionFile}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    size="large"
+                    sx={{ px: 4 }}
+                  >
+                    Lihat File Submisi
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Paper>
+        ) : (
+          <Paper elevation={3} sx={{ mb: 3, p: 3, borderRadius: 2 }}>
+            <Alert 
+              severity="error"
+              sx={{ mb: 3 }}
+            >
+              <Typography variant="subtitle2" fontWeight="bold">
+                Belum memberikan rincian Technical Test, perlu tindak lanjut
+              </Typography>
+            </Alert>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleCreateTest}
+              >
+                Buat Technical Test untuk peserta ini
+              </Button>
+            </Box>
+          </Paper>
+        )}
+        
+        {/* Action Button */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+          <Button
+            variant="outlined"
+            onClick={handleBack}
+          >
+            Kembali
+          </Button>
+          
+          {/* This button would be for evaluating the test later */}
+          {technicalTest && technicalTest.candidateHasCompleted && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => {
+                // Navigate to evaluation page (to be implemented in the future)
+                alert('This functionality will be implemented in the future prompt');
+              }}
+            >
+              Evaluasi Test
+            </Button>
+          )}
+        </Box>
+      </Box>
+    </Container>
+  );
+};
+
+export default TechnicalTestPreview; 

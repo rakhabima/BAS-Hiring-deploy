@@ -18,6 +18,10 @@ const storage = new CloudinaryStorage({
                 allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
                 transformation: [{ width: 1000, height: 1000, crop: 'limit' }],
                 public_id: `${Date.now()}-${file.originalname}`,
+                resource_type: 'auto',
+                access_mode: 'public',
+                use_filename: true,
+                unique_filename: true,
             };
         } catch (err) {
             console.error("❌ ERROR di CloudinaryStorage PARAMS:", err);

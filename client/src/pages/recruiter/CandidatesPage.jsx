@@ -1,48 +1,48 @@
 import {
-  CheckCircle as CheckCircleIcon,
-  Delete as DeleteIcon,
-  Person as PersonIcon,
-  Quiz as QuizIcon,
-  Search as SearchIcon,
-  VideoCall as VideoCallIcon
+    CheckCircle as CheckCircleIcon,
+    Delete as DeleteIcon,
+    Person as PersonIcon,
+    Quiz as QuizIcon,
+    Search as SearchIcon,
+    VideoCall as VideoCallIcon
 } from '@mui/icons-material';
 import {
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Grid,
-  IconButton,
-  InputAdornment,
-  MenuItem,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-  useTheme
+    Box,
+    Button,
+    Chip,
+    CircularProgress,
+    Container,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    Grid,
+    IconButton,
+    InputAdornment,
+    MenuItem,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TablePagination,
+    TableRow,
+    TextField,
+    Tooltip,
+    Typography,
+    useTheme
 } from '@mui/material';
 import {
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Tooltip as ChartJSTooltip,
-  Legend,
-  LinearScale,
-  Title
+    ArcElement,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Tooltip as ChartJSTooltip,
+    Legend,
+    LinearScale,
+    Title
 } from 'chart.js';
 import { format } from 'date-fns';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -464,7 +464,7 @@ const CandidatesPage = () => {
     if (status === 'INTERVIEW_SCHEDULED') {
       navigate(`/recruiter/candidate-interview-preview/${appId}`);
     } else if (status === 'TECHNICAL_TEST') {
-      navigate(`/recruiter/technical-test/${appId}`);
+      navigate(`/recruiter/technical-test-preview/${appId}`);
     } else {
       navigate(`/recruiter/candidate-detail/${appId}`);
     }

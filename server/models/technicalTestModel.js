@@ -46,6 +46,19 @@ const technicalTestSchema = new mongoose.Schema({
     },
     feedback: {
         type: String
+    },
+    submissionDate: {
+        type: Date
+    },
+    submissionFile: {
+        type: String
+    },
+    submissionNotes: {
+        type: String
+    },
+    candidateHasCompleted: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

@@ -39,6 +39,8 @@ import EditJobPage from './pages/recruiter/EditJobPage';
 import JobDetailPage from './pages/recruiter/JobDetailPage';
 import JobPublicationsPage from './pages/recruiter/JobPublicationsPage';
 import SchedulingPage from './pages/recruiter/SchedulingPage';
+import TechnicalTestForm from './pages/recruiter/TechnicalTestForm';
+import TechnicalTestPreview from './pages/recruiter/TechnicalTestPreview';
 import RegisterPage from './pages/RegisterPage';
 
 // ScrollToTop component that handles URL hash fragments for scrolling to sections
@@ -208,7 +210,8 @@ const AppContent = () => {
           <Route path="/recruiter/candidate-detail/:candidateId" element={<RecruiterRoute element={<CandidateDetailPage />} />} />
           <Route path="/recruiter/candidate-interview/:candidateId" element={<RecruiterRoute element={<CandidateInterviewPage />} />} />
           <Route path="/recruiter/candidate-interview-preview/:candidateId" element={<RecruiterRoute element={<CandidateInterviewPreview />} />} />
-          <Route path="/recruiter/technical-test/:candidateId" element={<RecruiterRoute element={<div>Technical Test</div>} />} />
+          <Route path="/recruiter/technical-test/:applicationId" element={<RecruiterRoute element={<TechnicalTestForm />} />} />
+          <Route path="/recruiter/technical-test-preview/:applicationId" element={<RecruiterRoute element={<TechnicalTestPreview />} />} />
           <Route path="/recruiter/service-form" element={<RecruiterRoute element={<div>Outsourcing Service Form</div>} />} />
           <Route path="/recruiter/scheduling" element={<RecruiterRoute element={<SchedulingPage />} />} />
           
