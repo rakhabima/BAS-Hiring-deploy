@@ -269,22 +269,23 @@ export const markTechnicalTestCompletedController = async (req, res) => {
       });
     }
     
-    // Prepare submission data
+    // Prepare submission data with proper field names
     const submissionData = {
       candidateHasCompleted: true,
-      notes: req.body.notes || ''
+      submissionNotes: req.body.notes || null,  // Use submissionNotes instead of notes
+      submissionDate: new Date()  // Add a submission date
     };
     
     // Create status history entry
     const statusData = {
       fileUrl: null, // No file
-      notes: 'Kandidat telah mengerjakan technical test'
+      notes: req.body.notes || 'Kandidat telah mengerjakan technical test'
     };
     
-    // Submit test result
+    // Submit test result to update status history
     await submitTechnicalTestResult(applicationId, statusData);
     
-    // Update technical test
+    // Update technical test with the correct fields
     const updatedTest = await updateTechnicalTest(technicalTest.uuid, submissionData);
     
     // Return success response
