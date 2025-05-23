@@ -1662,7 +1662,7 @@ const getMockDeleteUser = (uuid) => {
 export const notificationService = {
   getNotifications: async (userId, params = {}) => {
     try {
-      const endpoint = '/api/notifications';
+      const endpoint = '/notifications';
       console.log(`Fetching notifications for user ${userId} with params:`, params);
       console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
       
@@ -1687,7 +1687,7 @@ export const notificationService = {
   
   getUnreadNotifications: async (userId) => {
     try {
-      const endpoint = '/api/notifications/unread';
+      const endpoint = '/notifications/unread';
       console.log(`Fetching unread notifications for user ${userId}`);
       console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
       
@@ -1709,7 +1709,7 @@ export const notificationService = {
   
   markAsRead: async (notificationId) => {
     try {
-      const endpoint = `/api/notifications/${notificationId}/read`;
+      const endpoint = `/notifications/${notificationId}/read`;
       console.log(`Marking notification ${notificationId} as read`);
       console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
       
@@ -1730,7 +1730,7 @@ export const notificationService = {
   
   markAsUnread: async (notificationId) => {
     try {
-      const endpoint = `/api/notifications/${notificationId}/unread`;
+      const endpoint = `/notifications/${notificationId}/unread`;
       console.log(`Marking notification ${notificationId} as unread`);
       console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
       
@@ -1751,7 +1751,7 @@ export const notificationService = {
   
   markAllAsRead: async (userId) => {
     try {
-      const endpoint = '/api/notifications/mark-all-read';
+      const endpoint = '/notifications/mark-all-read';
       console.log(`Marking all notifications as read for user ${userId}`);
       console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
       
