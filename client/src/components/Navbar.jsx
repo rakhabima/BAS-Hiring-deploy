@@ -500,21 +500,39 @@ const Navbar = () => {
                   {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
                 </IconButton>
 
-                {/* Notification Bell */}
+                {/* GM Notification Bell */}
                 {userRole === 'GENERAL_MANAGER' && (
                   <IconButton
                     size="large"
                     edge="end"
                     aria-label="notification"
                     color="inherit"
-                    sx={{ 
+                    sx={{
                       ml: 1,
-                      color: scrolled 
-                        ? theme.palette.text.primary 
+                      color: scrolled
+                        ? theme.palette.text.primary
                         : (mode === 'dark' ? '#fff' : '#000')
                     }}
                   >
-                    <NotificationBell />
+                    <NotificationBell type="OUTSOURCING_REQUEST" /> {/* Pass a prop if needed */}
+                  </IconButton>
+                )}
+
+                {/* Candidate Notification Bell */}
+                {userRole === 'CANDIDATE' && (
+                  <IconButton
+                    size="large"
+                    edge="end"
+                    aria-label="notification"
+                    color="inherit"
+                    sx={{
+                      ml: 1,
+                      color: scrolled
+                        ? theme.palette.text.primary
+                        : (mode === 'dark' ? '#fff' : '#000')
+                    }}
+                  >
+                    <NotificationBell type="APPLICATION_STATUS" /> {/* Pass a prop if needed */}
                   </IconButton>
                 )}
 

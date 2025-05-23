@@ -1,6 +1,8 @@
 import JobApplication from "../models/jobApplicationModel.js";
 import { getAllApplications, getApplicationById, getApplicationStageStats, getApplicationStatusDistribution, getApplicationTrends, getCandidateApplications, hardDeleteApplication, submitApplication, updateApplication } from "../services/jobApplicationService.js";
 import { checkUserRole } from "../utils/roleValidator.js";
+import Notification from "../models/notificationModel.js";
+import { sendNotification } from "../utils/notificationService.js";
 
 
 // Controller for submitting a job application
@@ -191,6 +193,51 @@ export const updateApplicationStatusController = async (req, res) => {
       notes,
       updatedBy: req.user.uuid
     });
+
+    // Define messages based on application status
+    let statusMessage = '';
+    let recruiterMessage = notes || '';
+
+    switch (status) {
+      case 'REVISION':
+        statusMessage = 'Lamaran Anda memerlukan revisi.';
+        break;
+      case 'INTERVIEW_SCHEDULED':
+        statusMessage = 'Waktu wawancara lamaran Anda sudah dijadwalkan, mohon lakukan konfirmasi kehadiran.';
+        break;
+      case 'TECHNICAL_TEST':
+        statusMessage = 'Tes sudah diberikan.';
+        break;
+      case 'ACCEPTED':
+        statusMessage = 'Selamat! Anda diterima.';
+        break;
+      case 'REJECTED':
+        statusMessage = 'Maaf! Anda belum diterima di pekerjaan yang Anda lamar.';
+        break;
+      case 'ON_JOB':
+        statusMessage = 'Selamat, Anda sudah mulai bekerja.';
+        break;
+      case 'PENDING':
+      case 'REVIEWING':
+        statusMessage = 'Lamaran Anda sedang dalam proses review.';
+        break;
+      default:
+        statusMessage = 'Status lamaran Anda diperbarui.';
+    }
+
+    // Only append recruiter message if it's not empty
+    const fullMessage = recruiterMessage ? `${statusMessage} Pesan recruiter: ${recruiterMessage}` : statusMessage;
+
+    // Send notification after the status is updated
+    await sendNotification(
+      updatedApplication.candidateId,  // Send notification to the candidate
+      fullMessage,  // Notification message
+      "APPLICATION_STATUS",  // Notification type
+      {
+        relatedId: updatedApplication.uuid,
+        relatedModel: "JobApplication"
+      }
+    );
     
     res.status(200).json({
       message: "Status aplikasi berhasil diperbarui",
