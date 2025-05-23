@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { notificationService } from '../services/api';
 
-const NotificationBell = () => {
+const NotificationBell = ({ type }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -17,31 +17,38 @@ const NotificationBell = () => {
   // Check if user is GM
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isGeneralManager = user?.role === 'GENERAL_MANAGER';
+  const isCandidate = user?.role === 'CANDIDATE';
   
   // Fetch notifications function (memoized with useCallback)
   const fetchNotifications = useCallback(async () => {
-    if (!isGeneralManager || !user?.uuid) return;
-    
+    if (!user?.uuid) return;
+
     try {
-      console.log('Fetching unread notifications for user:', user.uuid);
-      const result = await notificationService.getUnreadNotifications(user.uuid);
-      
-      if (result.success) {
-        // Filter for only OUTSOURCING_REQUEST type notifications
-        const outsourcingNotifications = result.notifications.filter(
-          notif => notif.type === 'OUTSOURCING_REQUEST'
-        );
-        
-        console.log('Fetched notifications:', outsourcingNotifications.length);
-        setNotifications(outsourcingNotifications);
-        setUnreadCount(outsourcingNotifications.length);
-      } else {
-        console.error('Failed to fetch notifications:', result);
+      let result;
+      // Fetch notifications based on the type (OUTSOURCING_REQUEST or APPLICATION_STATUS)
+      if (isGeneralManager && type === 'OUTSOURCING_REQUEST') {
+        result = await notificationService.getUnreadNotifications(user.uuid);
+        if (result.success) {
+          const outsourcingNotifications = result.notifications.filter(
+            notif => notif.type === 'OUTSOURCING_REQUEST'
+          );
+          setNotifications(outsourcingNotifications);
+          setUnreadCount(outsourcingNotifications.length);
+        }
+      } else if (isCandidate && type === 'APPLICATION_STATUS') {
+        result = await notificationService.getUnreadNotifications(user.uuid);
+        if (result.success) {
+          const applicationStatusNotifications = result.notifications.filter(
+            notif => notif.type === 'APPLICATION_STATUS'
+          );
+          setNotifications(applicationStatusNotifications);
+          setUnreadCount(applicationStatusNotifications.length);
+        }
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  }, [user?.uuid, isGeneralManager]);
+  }, [user?.uuid, isGeneralManager, isCandidate, type]);
   
   // Force refresh of notifications
   const refreshNotifications = () => {
@@ -136,13 +143,20 @@ const NotificationBell = () => {
   const formatNotificationDate = (date) => {
     return format(new Date(date), 'dd MMM yyyy HH:mm', { locale: id });
   };
+
+  const getNotificationsLink = () => {
+    if (type === 'OUTSOURCING_REQUEST') {
+      return '/gm/notifications'; // GM notifications route
+    }
+    return '/candidate/notifications'; // Candidate notifications route
+  };
   
-  // Only show for General Manager
-  if (!isGeneralManager) return null;
+  // // Only show for General Manager
+  // if (!isGeneralManager) return null;
   
   return (
     <Box sx={{ display: 'inline-block' }}>
-      <Tooltip title="Notifikasi Permintaan Outsourcing">
+      <Tooltip title="Notifikasi">
         <IconButton
           onClick={handleClick}
           size="large"
@@ -150,14 +164,13 @@ const NotificationBell = () => {
           aria-haspopup="true"
           aria-expanded={open ? 'true' : undefined}
           color="inherit"
-          data-testid="notification-bell"
         >
           <Badge badgeContent={unreadCount} color="error">
             {unreadCount > 0 ? <NotificationsActiveIcon /> : <NotificationsIcon />}
           </Badge>
         </IconButton>
       </Tooltip>
-      
+
       <Menu
         id="notification-menu"
         anchorEl={anchorEl}
@@ -175,28 +188,27 @@ const NotificationBell = () => {
       >
         <Box sx={{ p: 2, pt: 1, pb: 1 }}>
           <Typography variant="subtitle1" fontWeight="bold">
-            Permintaan Outsourcing
+            {type === 'OUTSOURCING_REQUEST' ? 'Permintaan Outsourcing' : 'Status Lamaran'}
           </Typography>
         </Box>
         <Divider />
-        
+
         {notifications.length === 0 ? (
           <MenuItem disabled>
             <Typography variant="body2" color="text.secondary">
-              Tidak ada permintaan baru
+              Tidak ada notifikasi baru
             </Typography>
           </MenuItem>
         ) : (
           notifications.map((notification) => (
-            <MenuItem 
-              key={notification.uuid} 
+            <MenuItem
+              key={notification.uuid}
               onClick={() => handleNotificationClick(notification)}
-              sx={{ 
+              sx={{
                 whiteSpace: 'normal',
                 py: 1.5,
                 borderBottom: '1px solid rgba(0,0,0,0.05)'
               }}
-              data-testid={`notification-item-${notification.uuid}`}
             >
               <Box>
                 <Typography variant="body2" component="div">
@@ -209,12 +221,12 @@ const NotificationBell = () => {
             </MenuItem>
           ))
         )}
-        
+
         <Divider />
-        <MenuItem 
-          component={Link} 
-          to="/gm/notifications"
-          onClick={handleClose} 
+        <MenuItem
+          component={Link}
+          to={getNotificationsLink()}
+          onClick={handleClose}
           sx={{ justifyContent: 'center' }}
         >
           <Typography variant="body2" color="primary">

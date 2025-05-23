@@ -47,6 +47,7 @@ import SchedulingPage from './pages/recruiter/SchedulingPage';
 import TechnicalTestForm from './pages/recruiter/TechnicalTestForm';
 import TechnicalTestPreview from './pages/recruiter/TechnicalTestPreview';
 import RegisterPage from './pages/RegisterPage';
+import NotificationPageCandidate from './pages/public/NotificationPageCandidate';
 
 // ScrollToTop component that handles URL hash fragments for scrolling to sections
 function ScrollToTop() {
@@ -226,6 +227,7 @@ const AppContent = () => {
           <Route path="/gm/service-publications/detail/:id" element={<GMRoute element={<ServiceDetailPage />} />} />
           <Route path="/gm/notifications" element={<GMRoute element={<NotificationPage />} />} />
           
+          
           <Route path="/candidate/dashboard" element={<ProtectedRoute element={<div>Candidate Dashboard</div>} />} />
           <Route path="/korlap/dashboard" element={<KorlapRoute element={<div>Koordinator Lapangan Dashboard</div>} />} />
           
@@ -259,6 +261,7 @@ const AppContent = () => {
           <Route path="/candidate/portal-informasi/detail-technical-test/:uuid" element={<ProtectedRoute element={<DetailTechnicalTest />} />} />
           <Route path="/candidate/portal-informasi/detail-on-job/:uuid" element={<ProtectedRoute element={<DetailOnJob />} />} />
           <Route path="/candidate/portal-informasi/edit-formulir/:uuid" element={<ProtectedRoute element={<JobApplicationEditForm />} />} />
+          <Route path="/candidate/notifications" element={<ProtectedRoute element={<NotificationPageCandidate />} />} />
           
           {/* Koordinator Lapangan Routes */}
           <Route path="/korlap/employees" element={<KorlapRoute element={<KorlapEmployeesPage />} />} />
