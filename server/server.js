@@ -10,6 +10,7 @@ import guestRoute from "./routes/guest.js";
 import interviewRoute from "./routes/interview.js";
 import jobApplicationRoute from "./routes/jobApplication.js";
 import jobVacancyRoute from "./routes/jobVacancy.js";
+import notificationRoute from "./routes/notification.js";
 import outsourceRoute from "./routes/outsourcing.js";
 import technicalTestRoute from "./routes/technicalTest.js";
 import userRoute from "./routes/user.js";
@@ -57,6 +58,7 @@ app.use("/user", userRoute);
 app.use("/jobApplication", jobApplicationRoute);
 app.use("/interviews", interviewRoute);
 app.use("/technicalTest", technicalTestRoute);
+app.use("/api/notifications", notificationRoute);
 
 // Middleware penanganan error
 app.use((err, req, res, next) => {

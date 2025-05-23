@@ -1,5 +1,7 @@
 import OutsourcingRequest from "../models/outsourcingRequestModel.js";
+import User from "../models/userModel.js";
 import { createOutsourcingService, deleteOutsourcingRequest as deleteOutsourcingRequestService, getAllOutsourcingRequests as fetchAllOutsourcingRequests, getAllOutsourcingServices, getOutsourcingServiceById, softDeleteOutsourcingService, updateOutsourcingRequestData, updateOutsourcingRequestStatus, updateOutsourcingService } from "../services/outsourcingService.js";
+import { sendNotification } from "../utils/notificationService.js";
 
 export const createOutsourcing = async (req, res) => {
     try {
@@ -204,6 +206,36 @@ export const createOutsourcingRequest = async (req, res) => {
     });
 
     await outsourcingRequest.save();
+
+    // Send notification to all General Managers
+    try {
+      // Find all users with role GENERAL_MANAGER
+      const generalManagers = await User.find({ role: "GENERAL_MANAGER" });
+      
+      if (generalManagers && generalManagers.length > 0) {
+        // Create notification message with the required details
+        const notificationMessage = `Permintaan Outsourcing baru dari ${vendorName} (${email}) untuk layanan ${serviceType}: ${message}`;
+        
+        // Send notification to each General Manager
+        for (const gm of generalManagers) {
+          await sendNotification(
+            gm.uuid,
+            notificationMessage,
+            "OUTSOURCING_REQUEST",
+            {
+              relatedId: outsourcingRequest.uuid,
+              relatedModel: "OutsourcingRequest"
+            }
+          );
+        }
+        console.log(`Notifications sent to ${generalManagers.length} General Managers`);
+      } else {
+        console.log("No General Managers found to notify");
+      }
+    } catch (notifError) {
+      // Log notification error but don't fail the request
+      console.error("Error sending notifications:", notifError);
+    }
 
     return res.status(201).json({
       success: true,

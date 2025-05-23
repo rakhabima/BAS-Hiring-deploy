@@ -1659,4 +1659,115 @@ const getMockDeleteUser = (uuid) => {
   };
 };
 
+export const notificationService = {
+  getNotifications: async (userId, params = {}) => {
+    try {
+      const endpoint = '/api/notifications';
+      console.log(`Fetching notifications for user ${userId} with params:`, params);
+      console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
+      
+      const response = await api.get(endpoint, { 
+        params: { 
+          userId,
+          ...params 
+        } 
+      });
+      
+      console.log('Notifications response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      if (error.response) {
+        console.error('Response error data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      return { success: false, error: error.message, notifications: [] };
+    }
+  },
+  
+  getUnreadNotifications: async (userId) => {
+    try {
+      const endpoint = '/api/notifications/unread';
+      console.log(`Fetching unread notifications for user ${userId}`);
+      console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
+      
+      const response = await api.get(endpoint, { 
+        params: { userId } 
+      });
+      
+      console.log('Unread notifications response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching unread notifications:', error);
+      if (error.response) {
+        console.error('Response error data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      return { success: false, error: error.message, notifications: [] };
+    }
+  },
+  
+  markAsRead: async (notificationId) => {
+    try {
+      const endpoint = `/api/notifications/${notificationId}/read`;
+      console.log(`Marking notification ${notificationId} as read`);
+      console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
+      
+      // Try PUT instead of PATCH for better compatibility
+      const response = await api.put(endpoint);
+      
+      console.log('Mark as read response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      if (error.response) {
+        console.error('Response error data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      return { success: false, error: error.message };
+    }
+  },
+  
+  markAsUnread: async (notificationId) => {
+    try {
+      const endpoint = `/api/notifications/${notificationId}/unread`;
+      console.log(`Marking notification ${notificationId} as unread`);
+      console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
+      
+      // Try PUT instead of PATCH for better compatibility
+      const response = await api.put(endpoint);
+      
+      console.log('Mark as unread response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error marking notification as unread:', error);
+      if (error.response) {
+        console.error('Response error data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      return { success: false, error: error.message };
+    }
+  },
+  
+  markAllAsRead: async (userId) => {
+    try {
+      const endpoint = '/api/notifications/mark-all-read';
+      console.log(`Marking all notifications as read for user ${userId}`);
+      console.log(`Full API URL: ${API_BASE_URL}${endpoint}`);
+      
+      const response = await api.patch(endpoint, { userId });
+      
+      console.log('Mark all as read response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      if (error.response) {
+        console.error('Response error data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      return { success: false, error: error.message };
+    }
+  }
+};
+
 export default api;

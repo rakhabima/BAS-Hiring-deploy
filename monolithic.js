@@ -14,6 +14,7 @@ import guestRoute from './server/routes/guest.js';
 import interviewRoute from './server/routes/interview.js';
 import jobApplicationRoute from './server/routes/jobApplication.js';
 import jobVacancyRoute from './server/routes/jobVacancy.js';
+import notificationRoute from './server/routes/notification.js';
 import outsourceRoute from './server/routes/outsourcing.js';
 import technicalTestRoute from './server/routes/technicalTest.js';
 import userRoute from './server/routes/user.js';
@@ -45,6 +46,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoute);
 app.use('/api/guest', guestRoute);
 app.use('/api/jobVacancy', jobVacancyRoute);
+app.use('/api/notifications', notificationRoute);
 app.use('/api/outsource', outsourceRoute);
 app.use('/api/user', userRoute);
 app.use('/api/jobApplication', jobApplicationRoute);

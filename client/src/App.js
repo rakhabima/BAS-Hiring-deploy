@@ -14,6 +14,7 @@ import ServicePublicationsPage from './pages/admin/ServicePublicationsPage';
 import UserDetailPage from './pages/admin/UserDetailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/gm/DashboardPage';
+import NotificationPage from './pages/gm/NotificationPage';
 import KorlapEmployeeDetailPage from './pages/korlap/KorlapEmployeeDetailPage';
 import KorlapEmployeesPage from './pages/korlap/KorlapEmployeesPage';
 import LandingPage from './pages/LandingPage';
@@ -223,6 +224,7 @@ const AppContent = () => {
           <Route path="/gm/service-publications/create" element={<GMRoute element={<CreateServicePage />} />} />
           <Route path="/gm/service-publications/edit/:id" element={<GMRoute element={<EditServicePage />} />} />
           <Route path="/gm/service-publications/detail/:id" element={<GMRoute element={<ServiceDetailPage />} />} />
+          <Route path="/gm/notifications" element={<GMRoute element={<NotificationPage />} />} />
           
           <Route path="/candidate/dashboard" element={<ProtectedRoute element={<div>Candidate Dashboard</div>} />} />
           <Route path="/korlap/dashboard" element={<KorlapRoute element={<div>Koordinator Lapangan Dashboard</div>} />} />
