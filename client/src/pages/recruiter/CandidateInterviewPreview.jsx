@@ -16,7 +16,8 @@ import {
     Step,
     StepLabel,
     Stepper,
-    Typography
+    Typography,
+    useTheme
 } from '@mui/material';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
@@ -33,6 +34,7 @@ const CandidateInterviewPreview = () => {
   const [error, setError] = useState(null);
   const [application, setApplication] = useState(null);
   const [interview, setInterview] = useState(null);
+  const theme = useTheme(); 
 
   // Set to Wawancara stage (index 1)
   const activeStep = 1;
@@ -286,14 +288,36 @@ const CandidateInterviewPreview = () => {
                 </Grid>
                 
                 <Grid item xs={12} md={4}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <LocationOnIcon sx={{ mr: 1, color: 'primary.main' }} />
-                    <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <LocationOnIcon sx={{ mr: 1, color: 'primary.main', mt: 0.5, flexShrink: 0 }} />
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
                       <Typography variant="body2" fontWeight="bold">
                         {interview.isOnline ? 'Link Meeting' : 'Lokasi'}
                       </Typography>
-                      <Typography variant="body2">
-                        {interview.isOnline ? interview.meetingLink : interview.location || '-'}
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          wordBreak: 'break-all',
+                          overflowWrap: 'break-word',
+                          lineHeight: 1.4
+                        }}
+                      >
+                        {interview.isOnline ? (
+                          <a
+                            href={interview.meetingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              textDecoration: 'underline',
+                              wordBreak: 'break-all',
+                              color: theme.palette.primary.main,
+                            }}
+                          >
+                            {interview.meetingLink}
+                          </a>
+                        ) : (
+                          interview.location || '-'
+                        )}
                       </Typography>
                     </Box>
                   </Box>

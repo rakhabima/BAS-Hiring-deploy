@@ -369,17 +369,28 @@ const TechnicalTestPreview = () => {
               </Grid>
               
               <Grid item xs={12} md={6}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <LinkIcon sx={{ mr: 1, color: 'primary.main' }} />
-                  <Box>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                  <LinkIcon sx={{ mr: 1, color: 'primary.main', mt: 0.5, flexShrink: 0 }} />
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Typography variant="body2" fontWeight="bold">Link Test</Typography>
-                    <Typography variant="body2">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        wordBreak: 'break-all',
+                        overflowWrap: 'break-word',
+                        lineHeight: 1.4
+                      }}
+                    >
                       {technicalTest.testLink ? (
-                        <a 
-                          href={technicalTest.testLink} 
-                          target="_blank" 
+                        <a
+                          href={technicalTest.testLink}
+                          target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: theme.palette.primary.main }}
+                          style={{
+                            color: theme.palette.primary.main,
+                            textDecoration: 'underline',
+                            wordBreak: 'break-all'
+                          }}
                         >
                           {technicalTest.testLink}
                         </a>

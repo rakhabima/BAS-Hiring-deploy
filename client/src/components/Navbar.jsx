@@ -250,7 +250,7 @@ const Navbar = () => {
       case 'CANDIDATE':
         return '/candidate/portal-informasi';
       case 'KOORDINATOR_LAPANGAN':
-        return '/korlap/dashboard';
+        return '/korlap/employees';
       case 'KARYAWAN':
         return '/karyawan/dashboard';
       case 'VENDOR':

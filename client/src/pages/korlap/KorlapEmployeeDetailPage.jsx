@@ -1152,13 +1152,13 @@ const KorlapEmployeeDetailPage = () => {
                 fullWidth
                 size="small"
                 name="lokasi_penempatan"
-                value={formData.lokasi_penempatan || employee?.jobPostingId?.location || employee?.kota || ''}
+                value={formData.lokasi_penempatan || employee?.jobPostingId?.location || ''}
                 onChange={handleChange}
                 error={!!formErrors.lokasi_penempatan}
                 helperText={formErrors.lokasi_penempatan}
               />
             ) : (
-            <Typography variant="body2">{employee?.jobPostingId?.location || employee?.kota || '-'}</Typography>
+            <Typography variant="body2">{employee?.jobPostingId?.location || '-'}</Typography>
             )}
           </Grid>
           <Grid item xs={1} sm={1} md={1} sx={{ textAlign: 'right' }}>

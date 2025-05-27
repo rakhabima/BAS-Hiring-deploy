@@ -259,7 +259,18 @@ const DetailWawancara = () => {
               mt: 1
             }}
           >
-            Link Meeting: {interview.meetingLink}
+            Link Meeting: <br />
+            <a
+              href={interview.meetingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: theme.palette.primary.main,
+                textDecoration: 'underline'
+              }}
+            >
+              {interview.meetingLink}
+            </a>
           </Typography>
         )}
         
