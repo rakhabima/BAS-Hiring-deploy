@@ -154,7 +154,7 @@ const NotificationPage = () => {
         ) : (
           <TableContainer component={Paper} elevation={0} variant="outlined">
             <Table>
-              <TableHead sx={{ bgcolor: theme.palette.grey[100] }}>
+              <TableHead sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] }}>
                 <TableRow>
                   <TableCell width="20%">Perusahaan</TableCell>
                   <TableCell width="20%">Email</TableCell>
