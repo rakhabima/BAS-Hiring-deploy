@@ -1,6 +1,6 @@
 import OutsourcingRequest from "../models/outsourcingRequestModel.js";
 import User from "../models/userModel.js";
-import { createOutsourcingService, deleteOutsourcingRequest as deleteOutsourcingRequestService, getAllOutsourcingRequests as fetchAllOutsourcingRequests, getAllOutsourcingServices, getOutsourcingServiceById, softDeleteOutsourcingService, updateOutsourcingRequestData, updateOutsourcingRequestStatus, updateOutsourcingService } from "../services/outsourcingService.js";
+import { createOutsourcingService, deleteOutsourcingRequest as deleteOutsourcingRequestService, getAllOutsourcingRequests as fetchAllOutsourcingRequests, getAllOutsourcingServices, getOutsourcingServiceById, softDeleteOutsourcingService, updateOutsourcingRequestData, updateOutsourcingRequestStatus, updateOutsourcingService, getOutsourcingRequestByIdService } from "../services/outsourcingService.js";
 import { sendNotification } from "../utils/notificationService.js";
 
 export const createOutsourcing = async (req, res) => {
@@ -150,6 +150,33 @@ export const getOutsourcingById = async (req, res) => {
             error: error.message
         });
     }
+};
+
+export const getOutsourcingRequestById = async (req, res) => {
+  try {
+    const { uuid } = req.params;
+
+    // Call service to get the outsourcing service by ID
+    const service = await getOutsourcingRequestByIdService(uuid);
+
+    // If service not found or deleted
+    if (!service) {
+      return res.status(404).json({ message: "Permintaan outsourcing tidak ditemukan" });
+    }
+
+    // Return success response
+    res.status(200).json({
+      message: "Berhasil mengambil data permintaan outsourcing",
+      service
+    });
+  } catch (error) {
+    console.error("Error getting outsourcing service:", error);
+    // Handle errors
+    res.status(500).json({
+      message: "Terjadi kesalahan saat mengambil data permintaan outsourcing",
+      error: error.message
+    });
+  }
 };
 
 export const deleteOutsourcing = async (req, res) => {

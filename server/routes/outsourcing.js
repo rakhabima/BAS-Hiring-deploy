@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { createOutsourcing, createOutsourcingRequest, deleteOutsourcing, getAllOutsourcing, getAllOutsourcingRequests, getOutsourcingById, handleDeleteOutsourcingRequest, updateOutsourcing, updateOutsourcingRequestFullData, updateRequestStatus } from "../controllers/outsourcingController.js";
+import { createOutsourcing, createOutsourcingRequest, deleteOutsourcing, getAllOutsourcing, getAllOutsourcingRequests, getOutsourcingById, handleDeleteOutsourcingRequest, updateOutsourcing, updateOutsourcingRequestFullData, updateRequestStatus, getOutsourcingRequestById } from "../controllers/outsourcingController.js";
 
 const router = express.Router();
 
@@ -34,6 +34,7 @@ router.delete("/request/:uuid", handleDeleteOutsourcingRequest);
 
 // Rute dinamis harus berada di bawah
 router.get("/:uuid", getOutsourcingById);
+router.get("/request/:uuid", getOutsourcingRequestById);
 router.delete("/delete/:uuid", deleteOutsourcing);
 
 export default router;
