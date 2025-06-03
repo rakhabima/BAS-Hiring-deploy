@@ -22,9 +22,12 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import React, { useEffect, useState } from 'react';
 import { notificationService } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+
 
 const NotificationPage = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
@@ -114,18 +117,17 @@ const NotificationPage = () => {
       // Example message format: "Permintaan Outsourcing baru dari Company XYZ (xyz@email.com) untuk layanan IT Services: Pesan permintaan detail..."
       const companyMatch = message.match(/dari (.*?) \(/);
       const emailMatch = message.match(/\((.*?)\)/);
-      const categoryMatch = message.match(/untuk layanan (.*?):/);
-      const messageMatch = message.match(/: (.*)/);
+      const categoryMatch = message.match(/untuk layanan\s+(.*)$/);
       
       return {
         company: companyMatch?.[1] || 'N/A',
         email: emailMatch?.[1] || 'N/A',
         category: categoryMatch?.[1] || 'N/A',
-        message: messageMatch?.[1] || message
+        message: ""
       };
     } catch (error) {
       console.error('Error parsing notification:', error);
-      return { company: 'N/A', email: 'N/A', category: 'N/A', message };
+      return { company: 'N/A', email: 'N/A', category: 'N/A', message: "" };
     }
   };
   
@@ -159,7 +161,6 @@ const NotificationPage = () => {
                   <TableCell width="20%">Perusahaan</TableCell>
                   <TableCell width="20%">Email</TableCell>
                   <TableCell width="15%">Kategori Layanan</TableCell>
-                  <TableCell width="25%">Pesan</TableCell>
                   <TableCell width="15%">Tanggal</TableCell>
                   <TableCell width="5%" align="center">Aksi</TableCell>
                 </TableRow>
@@ -168,22 +169,33 @@ const NotificationPage = () => {
                 {notifications.map((notification) => {
                   const content = parseNotificationContent(notification.message);
                   return (
-                    <TableRow 
+                    <TableRow
                       key={notification.uuid}
-                      sx={{ 
+                      hover
+                      sx={{
+                        cursor: 'pointer',
                         '&:hover': { bgcolor: theme.palette.action.hover },
-                        bgcolor: notification.readStatus ? 'inherit' : alpha(theme.palette.primary.light, 0.05)
+                        bgcolor: notification.readStatus
+                          ? 'inherit'
+                          : alpha(theme.palette.primary.light, 0.05)
+                      }}
+                      onClick={() => {
+                        // Saat baris diklik, langsung navigasi ke detail page
+                        navigate(`/gm/outsourcing-detail/${notification.relatedId}`);
                       }}
                     >
                       <TableCell>{content.company}</TableCell>
                       <TableCell>{content.email}</TableCell>
                       <TableCell>{content.category}</TableCell>
-                      <TableCell>{content.message}</TableCell>
                       <TableCell>{formatNotificationDate(notification.dateCreated)}</TableCell>
                       <TableCell align="center">
-                        <IconButton 
+                        <IconButton
                           size="small"
-                          onClick={() => handleToggleReadStatus(notification)}
+                          onClick={(e) => {
+                            // Supaya klik icon tidak memicu row onClick
+                            e.stopPropagation(); 
+                            handleToggleReadStatus(notification);
+                          }}
                           color={notification.readStatus ? 'default' : 'primary'}
                         >
                           {notification.readStatus 

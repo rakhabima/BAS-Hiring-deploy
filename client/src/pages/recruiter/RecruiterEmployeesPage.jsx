@@ -134,7 +134,7 @@ const RecruiterEmployeesPage = () => {
         }
         
         console.log(`Location data for ${employeeId}:`, {
-          jobPostingLocation,
+          lokasi_penempatan: response.data.lokasi_penempatan,
           kota: response.data.kota,
           divisi: response.data.divisi,
           tanggal_bergabung: response.data.tanggal_bergabung,
@@ -190,7 +190,7 @@ const RecruiterEmployeesPage = () => {
                 tanggal_bergabung: detailedData.tanggal_bergabung || null,
                 tanggal_berakhir_kontrak: detailedData.tanggal_berakhir_kontrak || null,
                 status_kerja: detailedData.status_kerja !== undefined ? detailedData.status_kerja : (detailedData.status === 'ON_JOB'),
-                jobPostingLocation: detailedData.jobPostingLocation || null
+                lokasi_penempatan: detailedData.lokasi_penempatan || null
               };
             }
             return app;
@@ -228,7 +228,7 @@ const RecruiterEmployeesPage = () => {
             position: app.posisi_dilamar,
             divisi: app.divisi,
             kota: app.kota,
-            jobPostingLocation: app.jobPostingLocation,
+            lokasi_penempatan: app.lokasi_penempatan,
             tanggal_bergabung: app.tanggal_bergabung,
             tanggal_berakhir_kontrak: app.tanggal_berakhir_kontrak,
             status_kerja: app.status_kerja
@@ -249,7 +249,7 @@ const RecruiterEmployeesPage = () => {
             name: app.nama_ktp || 'N/A',
             position: app.posisi_dilamar || 'N/A',
             divisi: app.divisi || 'N/A',
-            location: locationDisplay,
+            lokasi_penempatan: app.lokasi_penempatan,
             tanggal_bergabung: app.tanggal_bergabung || null,
             tanggal_berakhir_kontrak: app.tanggal_berakhir_kontrak || null,
             status_kerja: app.status_kerja !== undefined ? app.status_kerja : (app.status === 'ON_JOB'),
@@ -849,7 +849,7 @@ const RecruiterEmployeesPage = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {employee.location || 'N/A'}
+                            {employee.lokasi_penempatan || 'N/A'}
                           </Typography>
                         </TableCell>
                         <TableCell>

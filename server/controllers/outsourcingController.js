@@ -241,7 +241,7 @@ export const createOutsourcingRequest = async (req, res) => {
       
       if (generalManagers && generalManagers.length > 0) {
         // Create notification message with the required details
-        const notificationMessage = `Permintaan Outsourcing baru dari ${vendorName} (${email}) untuk layanan ${serviceType}: ${message}`;
+        const notificationMessage = `Permintaan Outsourcing baru dari ${vendorName} (${email}) untuk layanan ${serviceType}`;
         
         // Send notification to each General Manager
         for (const gm of generalManagers) {
