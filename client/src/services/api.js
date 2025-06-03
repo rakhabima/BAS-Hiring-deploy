@@ -627,6 +627,36 @@ export const outsourcingService = {
       throw error;
     }
   },
+
+  // Get outsourcing request by ID
+  getOutsourcingRequestById: async (uuid) => {
+    try {
+      console.log(`Fetching outsourcing request details for ID: ${uuid}`);
+      const response = await api.get(logEndpoint(`/outsource/request/${uuid}`));
+      
+      // Log the response for debugging
+      console.log('Outsourcing request fetch response:', response.data);
+      
+      // Validate response data - handle both potential response formats
+      if (!response.data) {
+        console.warn('Empty response from outsourcing request API');
+        return { data: null };
+      }
+      
+      // Some APIs might return data directly, others might nest it in a data property
+      if (response.data.data) {
+        return response.data;
+      } else if (response.data) {
+        // If the data is directly in response.data, wrap it
+        return { data: response.data };
+      }
+      
+      return { data: null };
+    } catch (error) {
+      console.error('Error fetching outsourcing request:', error);
+      showNotification('Gagal mengambil detail permintaan outsourcing: ' + (error.response?.data?.message || error.message), 'error');
+    }
+  },
   
   // Update outsourcing request full data
   updateOutsourcingRequestData: async (uuid, requestData) => {

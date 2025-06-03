@@ -58,7 +58,7 @@ app.use("/user", userRoute);
 app.use("/jobApplication", jobApplicationRoute);
 app.use("/interviews", interviewRoute);
 app.use("/technicalTest", technicalTestRoute);
-app.use("/api/notifications", notificationRoute);
+app.use("/notifications", notificationRoute);
 
 // Middleware penanganan error
 app.use((err, req, res, next) => {

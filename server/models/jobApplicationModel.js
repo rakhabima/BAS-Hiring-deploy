@@ -179,6 +179,10 @@ const jobApplicationSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    lokasi_penempatan: {
+        type: String,
+        default: null,
+    },
     
     // Field untuk soft delete dari list karyawan
     hidden_from_employee_list: {

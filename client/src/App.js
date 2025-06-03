@@ -15,6 +15,7 @@ import UserDetailPage from './pages/admin/UserDetailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/gm/DashboardPage';
 import NotificationPage from './pages/gm/NotificationPage';
+import OutsourcingDetailPage from './pages/gm/OutsourcingDetailPage';
 import KorlapEmployeeDetailPage from './pages/korlap/KorlapEmployeeDetailPage';
 import KorlapEmployeesPage from './pages/korlap/KorlapEmployeesPage';
 import LandingPage from './pages/LandingPage';
@@ -219,6 +220,7 @@ const AppContent = () => {
           <Route path="/admin/dashboard" element={<AdminRoute element={<AdminDashboardPage />} />} />
           <Route path="/recruiter/dashboard" element={<RecruiterRoute element={<CandidatesPage />} />} />
           <Route path="/gm/dashboard" element={<GMRoute element={<DashboardPage />} />} />
+          <Route path="/gm/outsourcing-detail/:id" element={<GMRoute element={<OutsourcingDetailPage />} />} />
           
           {/* GM Routes - Service Publications */}
           <Route path="/gm/service-publications" element={<GMRoute element={<ServicePublicationsPage />} />} />

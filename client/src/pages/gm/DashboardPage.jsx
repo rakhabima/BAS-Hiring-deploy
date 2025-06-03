@@ -65,6 +65,7 @@ import {
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { outsourcingService } from '../../services/api';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 // Service categories (copy from OutsourcingRequestPage)
 const SERVICE_CATEGORIES = [
@@ -234,6 +235,7 @@ const DashboardPage = () => {
   const [statusCounts, setStatusCounts] = useState({ PENDING: 0, APPROVED: 0, REJECTED: 0, COMPLETED: 0 });
   const [chartData, setChartData] = useState(null);
   const [doughnutChartData, setDoughnutChartData] = useState(null);
+  const navigate = useNavigate();
   
   // Dialogs state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -628,6 +630,10 @@ const DashboardPage = () => {
     setVendorListDialogTitle('');
   };
 
+  const handleViewDetail = (id) => {
+    navigate(`/gm/outsourcing-detail/${id}`);
+  };
+
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 8 }}>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -975,7 +981,7 @@ const DashboardPage = () => {
                         </TableCell>
                         <TableCell align="center">
                           <Tooltip title="Lihat Detail">
-                            <IconButton onClick={() => openDetailDialog(request)} color="info" size="small">
+                            <IconButton onClick={() => handleViewDetail(request.uuid)} color="info" size="small">
                               <Visibility fontSize="inherit" />
                             </IconButton>
                           </Tooltip>

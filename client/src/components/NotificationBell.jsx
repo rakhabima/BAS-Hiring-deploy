@@ -4,7 +4,7 @@ import { Badge, Box, Divider, IconButton, Menu, MenuItem, Tooltip, Typography } 
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { notificationService } from '../services/api';
 
 const NotificationBell = ({ type }) => {
@@ -13,6 +13,7 @@ const NotificationBell = ({ type }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const [refreshKey, setRefreshKey] = useState(0); // Used to force re-fetch
+  const navigate = useNavigate();
   
   // Check if user is GM
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -137,6 +138,15 @@ const NotificationBell = ({ type }) => {
     
     // Close the menu regardless of the outcome
     handleClose();
+    if (type === 'OUTSOURCING_REQUEST') {
+      navigate(`/gm/outsourcing-detail/${notification.relatedId}`); // GM notifications route
+      console.log(type)
+      console.log(notification.relatedId)
+    } else if (type === 'APPLICATION_STATUS') {
+      // For candidates, navigate to the information portal
+      navigate('/candidate/portal-informasi'); // Candidate notifications route
+      console.log(type)
+    }
   };
   
   // Format the notification date

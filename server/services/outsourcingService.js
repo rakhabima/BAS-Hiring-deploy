@@ -30,6 +30,11 @@ export const getOutsourcingServiceById = async (uuid) => {
     return service;
 };
 
+export const getOutsourcingRequestByIdService = async (uuid) => {
+    const outsourcingRequest = OutsourcingRequest.findOne({ uuid });
+    return outsourcingRequest;
+}
+
 export const softDeleteOutsourcingService = async (uuid) => {
     // Perform soft delete by setting isDeleted to true and recording deletion time
     const updatedService = await OutsourcingServiceModel.findOneAndUpdate(
