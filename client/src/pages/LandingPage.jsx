@@ -91,7 +91,7 @@ const LandingPage = ({ section }) => {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            BAS Hiring Solutions
+            BAS Hiring
           </Typography>
           <Typography
             variant="h5"
@@ -177,7 +177,7 @@ const LandingPage = ({ section }) => {
                 Tentang Kami
               </Typography>
               <Typography variant="body1" paragraph sx={{ mb: 3 }}>
-                BAS Hiring adalah perusahaan rekrutmen yang berfokus pada penyediaan
+                PT Barokah Amanah Sentosa adalah perusahaan rekrutmen yang berfokus pada penyediaan
                 talenta berkualitas untuk berbagai industri. Kami memahami bahwa
                 setiap perusahaan memiliki kebutuhan yang unik, dan kami berkomitmen
                 untuk memberikan solusi rekrutmen yang tepat.
@@ -338,17 +338,18 @@ const LandingPage = ({ section }) => {
                   Kantor Kami
                 </Typography>
                 <Typography variant="body1" paragraph>
-                  Gedung Menara BAS, Lantai 12
-                  Jl. Jendral Sudirman 
+                  Graha Pratama Building
                   <br />
-                  Kav. 45-46,
-                  Jakarta Selatan, 12190
-                  Indonesia
+                  Jl. Letjen M.T. Haryono No.KAV15,
+                  <br />
+                  Kec. Tebet, Kota Jakarta Selatan
+                  <br />
+                  DKI Jakarta 12810
                 </Typography>
                 
                 <Box 
                   component="iframe"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.2904357243586!2d106.8230581!3d-6.2295736!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f3f193a942ab%3A0x6e7ef2c4a0d8a30!2sJl.%20Jend.%20Sudirman%2C%20Kota%20Jakarta%20Selatan%2C%20Daerah%20Khusus%20Ibukota%20Jakarta!5e0!3m2!1sen!2sid!4v1645432615267!5m2!1sen!2sid"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.1604785987483!2d106.8511059!3d-6.242570599999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f3da6e129b09%3A0x12de56643b067409!2sGRAHA%20PRATAMA%20BUILDING!5e0!3m2!1sen!2sid!4v1749289990375!5m2!1sen!2sid"
                   width="100%"
                   height="300"
                   style={{ border: 0, borderRadius: '8px', marginTop: '16px' }}
@@ -389,17 +390,17 @@ const LandingPage = ({ section }) => {
                 </Link>
               </Box>
               <Typography variant="body2" sx={{ mb: 2, opacity: 0.7 }}>
-                BAS Hiring adalah perusahaan rekrutmen terpercaya yang berfokus pada penyediaan
+                PT Barokah Amanah Sentosa adalah perusahaan rekrutmen terpercaya yang berfokus pada penyediaan
                 SDM berkualitas untuk berbagai industri di Indonesia.
               </Typography>
               <Box sx={{ mt: 2 }}>
-                <IconButton color="inherit" aria-label="Instagram">
+                <IconButton color="inherit" aria-label="Instagram" component="a" href="https://www.instagram.com/bas.indonesia?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer">
                   <InstagramIcon />
                 </IconButton>
-                <IconButton color="inherit" aria-label="LinkedIn">
+                <IconButton color="inherit" aria-label="LinkedIn" component="a" href="https://www.linkedin.com/company/barokah-amanah-sentosa/" target="_blank" rel="noopener noreferrer">
                   <LinkedInIcon />
                 </IconButton>
-                <IconButton color="inherit" aria-label="Email">
+                <IconButton color="inherit" aria-label="Email" href="https://mail.google.com/mail/?view=cm&fs=1&to=admin@bas-Indonesia.id" target="_blank" rel="noopener noreferrer">
                   <EmailRoundedIcon />
                 </IconButton>
               </Box>
