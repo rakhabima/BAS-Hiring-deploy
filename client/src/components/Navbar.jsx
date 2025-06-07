@@ -62,9 +62,9 @@ const getSidebarItems = (role) => {
   switch(role) {
     case 'ADMIN':
       return [
-        { label: 'Karyawan', icon: <PeopleIcon />, path: '/admin/employees' },
+        // { label: 'Karyawan', icon: <PeopleIcon />, path: '/admin/employees' },
         { label: 'Staf Internal', icon: <PeopleIcon />, path: '/admin/internal-staff' },
-        { label: 'Publikasi Lowongan', icon: <WorkIcon />, path: '/admin/job-publications' }
+        // { label: 'Publikasi Lowongan', icon: <WorkIcon />, path: '/admin/job-publications' }
       ];
     case 'RECRUITER':
       return [
@@ -75,10 +75,10 @@ const getSidebarItems = (role) => {
       ];
     case 'GENERAL_MANAGER':
       return [
-        { label: 'Staf Internal', icon: <PeopleIcon />, path: '/gm/internal-staff' },
-        { label: 'Vendor', icon: <BusinessIcon />, path: '/gm/vendors' },
-        { label: 'Publikasi Layanan', icon: <BusinessIcon />, path: '/gm/service-publications' },
-        { label: 'Publikasi Lowongan', icon: <WorkIcon />, path: '/gm/job-publications' }
+        // { label: 'Staf Internal', icon: <PeopleIcon />, path: '/gm/internal-staff' },
+        // { label: 'Vendor', icon: <BusinessIcon />, path: '/gm/vendors' },
+        { label: 'Publikasi Layanan', icon: <BusinessIcon />, path: '/gm/service-publications' }
+        // { label: 'Publikasi Lowongan', icon: <WorkIcon />, path: '/gm/job-publications' }
       ];
     case 'CANDIDATE':
       return [
