@@ -25,14 +25,19 @@ const req = async (path, opts = {}) => {
     return { status: r.status, body, cookie: r.headers.get("set-cookie") };
 };
 
+// Setiap baris yang dibuat dicatat di sini. Versi sebelumnya membersihkan
+// dengan deleteMany({}) tanpa filter — itu ikut menghapus akun dan data
+// sungguhan milik siapa pun yang kebetulan menjalankan check ini.
+const created = { users: [], jobPostings: [], applications: [], notifications: [], outsourcingRequests: [] };
+
 const PASSWORD = "rahasia123";
 const makeUser = async (role) => {
     const email = `check-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`;
-    const created = await req("/api/auth/signup", {
+    const createdUser = await req("/api/auth/signup", {
         method: "POST",
         body: JSON.stringify({ name: role, email, password: PASSWORD, role })
     });
-    assert.equal(created.status, 201, `signup ${role} gagal: ${JSON.stringify(created.body)}`);
+    assert.equal(createdUser.status, 201, `signup ${role} gagal: ${JSON.stringify(createdUser.body)}`);
 
     const session = await req("/api/auth/login", {
         method: "POST",
@@ -40,7 +45,8 @@ const makeUser = async (role) => {
     });
     assert.equal(session.status, 200, `login ${role} gagal: ${JSON.stringify(session.body)}`);
 
-    return { uuid: created.body.uuid, cookie: session.cookie.split(";")[0] };
+    created.users.push(createdUser.body.uuid);
+    return { uuid: createdUser.body.uuid, cookie: session.cookie.split(";")[0] };
 };
 
 const as = (user) => ({ headers: { Cookie: user.cookie } });
@@ -52,16 +58,20 @@ const expect = (name, actual, wanted) => {
     console.error(`  GAGAL ${name}: dapat ${actual}, harusnya ${wanted}`);
 };
 
+// Hanya menghapus baris yang dibuat oleh check ini. JANGAN diganti dengan
+// deleteMany({}) tanpa filter: skrip ini berjalan terhadap database sungguhan.
 const cleanup = async () => {
-    await prisma.technicalTest.deleteMany({});
-    await prisma.interview.deleteMany({});
-    await prisma.applicationStatusHistory.deleteMany({});
-    await prisma.jobApplication.deleteMany({});
-    await prisma.jobPosting.deleteMany({});
-    await prisma.outsourcingRequest.deleteMany({});
-    await prisma.notification.deleteMany({});
-    await prisma.logEntry.deleteMany({});
-    await prisma.user.deleteMany({});
+    const { users, jobPostings, applications, notifications, outsourcingRequests } = created;
+
+    await prisma.technicalTest.deleteMany({ where: { applicationId: { in: applications } } });
+    await prisma.interview.deleteMany({ where: { applicationId: { in: applications } } });
+    await prisma.applicationStatusHistory.deleteMany({ where: { applicationId: { in: applications } } });
+    await prisma.jobApplication.deleteMany({ where: { uuid: { in: applications } } });
+    await prisma.jobPosting.deleteMany({ where: { uuid: { in: jobPostings } } });
+    await prisma.outsourcingRequest.deleteMany({ where: { uuid: { in: outsourcingRequests } } });
+    await prisma.notification.deleteMany({ where: { uuid: { in: notifications } } });
+    await prisma.logEntry.deleteMany({ where: { userId: { in: users } } });
+    await prisma.user.deleteMany({ where: { uuid: { in: users } } });
 };
 
 try {
@@ -92,8 +102,8 @@ try {
     expect("status sendiri TIDAK bisa diubah", edited.status, true);
 
     // --- routes/notification.js: dulu terbuka, userId dari query ---
-    await prisma.notification.create({ data: { userId: candidateB.uuid, message: "rahasia", type: "SYSTEM" } });
-    const notifB = await prisma.notification.findFirst({ where: { userId: candidateB.uuid } });
+    const notifB = await prisma.notification.create({ data: { userId: candidateB.uuid, message: "rahasia", type: "SYSTEM" } });
+    created.notifications.push(notifB.uuid);
 
     expect("GET /notifications anonim", (await req("/api/notifications")).status, 401);
     const spoofed = await req(`/api/notifications?userId=${candidateB.uuid}`, as(candidateA));
@@ -108,12 +118,14 @@ try {
     expect("buat lowongan sebagai kandidat", (await req("/api/jobVacancy/create", { method: "POST", ...as(candidateA), body: draftJob })).status, 403);
     expect("GET /jobVacancy/all tetap publik", (await req("/api/jobVacancy/all")).status, 200);
     expect("GET /outsource/all tetap publik", (await req("/api/outsource/all")).status, 200);
-    expect("POST /outsource/request tetap publik (form tamu)",
-        (await req("/api/outsource/request", { method: "POST", body: JSON.stringify({ vendorName: "PT X", contactInfo: "08", email: "v@x.com", location: "Depok", serviceType: "Cleaning", message: "halo" }) })).status, 201);
+    const guestRequest = await req("/api/outsource/request", { method: "POST", body: JSON.stringify({ vendorName: "PT X", contactInfo: "08", email: "v@x.com", location: "Depok", serviceType: "Cleaning", message: "halo" }) });
+    if (guestRequest.body?.data?.uuid) created.outsourcingRequests.push(guestRequest.body.data.uuid);
+    expect("POST /outsource/request tetap publik (form tamu)", guestRequest.status, 201);
     expect("daftar permintaan outsourcing sebagai kandidat", (await req("/api/outsource/requests", as(candidateA))).status, 403);
 
     // --- kepemilikan interview & technical test ---
     const job = await prisma.jobPosting.create({ data: { title: "K", description: "d", location: "Depok", jobType: "FULL_TIME", jobPosition: "Kurir", deadline: new Date("2026-12-31"), createdBy: recruiter.uuid } });
+    created.jobPostings.push(job.uuid);
     const applicationB = await prisma.jobApplication.create({ data: {
         candidateId: candidateB.uuid, jobPostingId: job.uuid, nama_ktp: "B", jenis_kelamin: "Perempuan",
         nik: "1", tanggal_lahir: new Date("1995-01-01"), agama: "Islam", pendidikan_terakhir: "SMA/SMK",
@@ -122,6 +134,7 @@ try {
         alamat: "Jl", no_rekening: "1", nama_pemilik_rekening: "B", nama_bank: "BCA",
         posisi_dilamar: "Kurir", foto_diri: "u", foto_ktp: "u", foto_ijazah: "u"
     } });
+    created.applications.push(applicationB.uuid);
     const interviewB = await prisma.interview.create({ data: { applicationId: applicationB.uuid, interviewDate: new Date(Date.now() + 86400000), location: "Zoom" } });
     const testB = await prisma.technicalTest.create({ data: { applicationId: applicationB.uuid, recruiterId: recruiter.uuid, candidateId: candidateB.uuid, description: "t", dateScheduled: new Date() } });
 
