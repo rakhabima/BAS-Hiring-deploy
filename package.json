@@ -9,7 +9,9 @@
     "build": "npx prisma generate && echo 'Installing client dependencies' && cd client && npm install --legacy-peer-deps && echo 'Building client' && CI=false npm run build && cd .. && echo 'Build completed'",
     "dev": "nodemon monolithic.js",
     "postinstall": "prisma generate",
-    "check": "node server/db/prisma.check.js"
+    "check": "node server/db/prisma.check.js",
+    "check:security": "node server/db/security.check.js",
+    "check:all": "npm run check && npm run check:security"
   },
   "engines": {
     "node": ">=18.x"

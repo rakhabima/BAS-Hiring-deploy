@@ -1,16 +1,13 @@
 import express from 'express';
 import { getUnread, getUserNotifications, markAllAsRead, markNotificationAsRead, markNotificationAsUnread } from '../controllers/notificationController.js';
+import { protect } from '../utils/authMiddleware.js';
 
 const router = express.Router();
 
-// Test endpoint to confirm route is working
-router.get('/test', (req, res) => {
-  console.log('Test endpoint hit');
-  return res.status(200).json({
-    success: true,
-    message: 'Notification routes are working'
-  });
-});
+// Sebelumnya seluruh file ini tanpa autentikasi, dan userId diambil dari
+// req.query / req.body — siapa pun bisa membaca dan menandai notifikasi orang
+// lain hanya dengan menebak uuid. Sekarang userId selalu dari sesi.
+router.use(protect);
 
 // Get all notifications for a user
 router.get('/', getUserNotifications);
@@ -30,4 +27,4 @@ router.put('/:notificationId/unread', markNotificationAsUnread); // Add PUT as f
 router.patch('/mark-all-read', markAllAsRead);
 router.put('/mark-all-read', markAllAsRead); // Add PUT as fallback
 
-export default router; 
+export default router;

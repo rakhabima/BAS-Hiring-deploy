@@ -89,7 +89,15 @@ export const getUserByUUID = async (req, res) => {
 export const updateUser = async (req, res) => {
     try {
         const { uuid } = req.params;  // Get UUID from the route parameters
-        const updateData = req.body;  // Get update data from request body
+        const updateData = { ...req.body };  // Get update data from request body
+
+        // Route ini boleh diakses pemiliknya sendiri (ProfileUser.jsx), jadi
+        // `role` dan `status` harus dibuang untuk pemanggil non-admin — kalau
+        // tidak, kandidat bisa menaikkan role-nya sendiri jadi ADMIN.
+        if (req.user?.role !== "ADMIN") {
+            delete updateData.role;
+            delete updateData.status;
+        }
 
         // Ensure that at least one field is provided to update
         if (!updateData.name && !updateData.email && !updateData.role && !updateData.status && !updateData.password) {

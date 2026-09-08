@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { createOutsourcing, createOutsourcingRequest, deleteOutsourcing, getAllOutsourcing, getAllOutsourcingRequests, getOutsourcingById, handleDeleteOutsourcingRequest, updateOutsourcing, updateOutsourcingRequestFullData, updateRequestStatus, getOutsourcingRequestById } from "../controllers/outsourcingController.js";
+import { authorize, protect } from "../utils/authMiddleware.js";
 
 const router = express.Router();
 
@@ -20,21 +21,31 @@ const upload = multer({
     }
 });
 
-router.post("/create", upload.single('imageUrl'), createOutsourcing);
-router.put("/update/:uuid", upload.single('imageUrl'), updateOutsourcing);
+// Pengelolaan layanan & persetujuan permintaan. Sebelumnya seluruh file ini
+// tanpa autentikasi: siapa pun bisa membuat layanan, menyetujui permintaan,
+// atau menghapusnya.
+const gmOnly = [protect, authorize("GENERAL_MANAGER", "ADMIN")];
+
+router.post("/create", ...gmOnly, upload.single('imageUrl'), createOutsourcing);
+router.put("/update/:uuid", ...gmOnly, upload.single('imageUrl'), updateOutsourcing);
+
+// Publik: katalog layanan di PublicServiceListPage / PublicServiceDetailPage.
 router.get("/all", getAllOutsourcing);
 
 // Pindahkan rute outsourcing requests di atas rute dinamis /:uuid
-router.get("/requests", getAllOutsourcingRequests);
+router.get("/requests", ...gmOnly, getAllOutsourcingRequests);
+
+// Publik: form permintaan dari calon klien tanpa login (OutsourcingRequestPage).
 router.post("/request", createOutsourcingRequest);
+
 // Letakkan rute yang lebih spesifik dahulu
-router.put("/request/update/:uuid", updateOutsourcingRequestFullData);
-router.put("/request/:uuid", updateRequestStatus);
-router.delete("/request/:uuid", handleDeleteOutsourcingRequest);
+router.put("/request/update/:uuid", ...gmOnly, updateOutsourcingRequestFullData);
+router.put("/request/:uuid", ...gmOnly, updateRequestStatus);
+router.delete("/request/:uuid", ...gmOnly, handleDeleteOutsourcingRequest);
 
 // Rute dinamis harus berada di bawah
 router.get("/:uuid", getOutsourcingById);
-router.get("/request/:uuid", getOutsourcingRequestById);
-router.delete("/delete/:uuid", deleteOutsourcing);
+router.get("/request/:uuid", ...gmOnly, getOutsourcingRequestById);
+router.delete("/delete/:uuid", ...gmOnly, deleteOutsourcing);
 
 export default router;

@@ -5,7 +5,10 @@ import { sendNotification } from "../utils/notificationService.js";
 export const createOutsourcing = async (req, res) => {
     try {
         // Get data from request body
-        const { serviceName, serviceType, description, createdBy, location, capacity, price, availabilityStatus } = req.body;
+        const { serviceName, serviceType, description, location, capacity, price, availabilityStatus } = req.body;
+
+        // Pembuat diambil dari sesi, bukan dari body.
+        const createdBy = req.user.uuid;
         
         // Handle file upload if present
         let imageUrl = null;

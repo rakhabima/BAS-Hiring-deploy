@@ -5,15 +5,11 @@ import { getUnreadNotifications, markNotificationAsRead as markAsRead, markNotif
 // Get all notifications for a user with pagination and filtering
 export const getUserNotifications = async (req, res) => {
   try {
-    const { userId } = req.query;
-    
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-    
+    // userId SELALU dari sesi. Client masih mengirim ?userId=... (api.js:1701),
+    // tapi nilai itu sengaja diabaikan supaya tidak bisa dipakai membaca
+    // notifikasi orang lain.
+    const userId = req.user.uuid;
+
     // Get optional parameters
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -73,16 +69,7 @@ export const getUserNotifications = async (req, res) => {
 // Get unread notifications for a user
 export const getUnread = async (req, res) => {
   try {
-    const { userId } = req.query;
-    
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-    
-    const result = await getUnreadNotifications(userId);
+    const result = await getUnreadNotifications(req.user.uuid);
     
     return res.status(200).json({
       success: true,
@@ -109,6 +96,21 @@ const setReadStatus = (markFn, label) => async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Notification ID is required'
+      });
+    }
+
+    // Cek kepemilikan: sebelumnya notifikasi mana pun bisa ditandai oleh siapa
+    // pun yang tahu uuid-nya. 404 (bukan 403) supaya tidak membocorkan
+    // keberadaan notifikasi milik orang lain.
+    const owned = await prisma.notification.findFirst({
+      where: { uuid: notificationId, userId: req.user.uuid },
+      select: { uuid: true }
+    });
+
+    if (!owned) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found'
       });
     }
 
@@ -142,15 +144,9 @@ export const markNotificationAsUnread = setReadStatus(markAsUnread, 'unread');
 // Mark all notifications as read for a user
 export const markAllAsRead = async (req, res) => {
   try {
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-    
+    // Diabaikan kalau client mengirim body.userId — selalu pakai sesi.
+    const userId = req.user.uuid;
+
     // Update all unread notifications for the user
     const result = await prisma.notification.updateMany({
       where: { userId, readStatus: false },

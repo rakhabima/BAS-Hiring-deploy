@@ -3,6 +3,10 @@ import { createJobVacancy, getAllJobVacancies, getJobVacancyById, softDeleteJobV
 export const createJobVacancyController = async (req, res) => {
   try {
     const jobData = { ...req.body };
+
+    // Pembuat diambil dari sesi, bukan dari body — kalau dari body, staff bisa
+    // mengatribusikan lowongan ke akun orang lain.
+    jobData.createdBy = req.user.uuid;
     
     // Handle file upload if present
     if (req.file) {

@@ -5,7 +5,7 @@ import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 // Import API routes
 import authRoute from './server/routes/auth.js';
@@ -120,9 +120,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Di Vercel, api/index.js yang membungkus app ini jadi serverless function —
-// tidak ada port untuk didengarkan. listen() hanya untuk dev lokal & Railway.
-if (!process.env.VERCEL) {
+// listen() hanya kalau file ini dijalankan langsung (`node monolithic.js`).
+// Saat diimpor — oleh api/index.js di Vercel, atau oleh security.check.js yang
+// menyalakan servernya sendiri di port acak — app cukup diekspor, karena
+// listener kedua akan menahan proses tetap hidup selamanya.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Health check available at http://localhost:${PORT}/health`);

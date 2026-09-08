@@ -43,6 +43,14 @@ api.interceptors.response.use(
   error => {
     if (error.response) {
       console.error(`${error.config.method.toUpperCase()} ${error.config.url} - Status: ${error.response.status}`);
+
+      // Guard di App.js hanya membaca localStorage dan tidak pernah memvalidasi
+      // sesi ke server, jadi sesi kedaluwarsa dulu tampil sebagai halaman rusak
+      // diam-diam. Sekarang sesi dibuang dan user dikembalikan ke login.
+      if (error.response.status === 401 && !window.location.pathname.startsWith('/login')) {
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     } else {
       console.error(`Request failed for ${error.config?.url || 'unknown endpoint'}:`, error.message);
     }
@@ -364,12 +372,12 @@ export const userService = {
         }
       }
       
-      // If we couldn't find a valid response format, fall back to mock data
-      console.log('Using mock data as fallback');
-      return getMockUserData();
+      // Format tak dikenal: kembalikan daftar kosong, jangan data palsu.
+      console.warn('Unexpected /user/all response format:', response.data);
+      return { success: true, data: [] };
     } catch (error) {
       console.error('Error fetching users:', error);
-      return getMockUserData();
+      throw error;
     }
   },
 
@@ -393,11 +401,11 @@ export const userService = {
         return { success: true, data: response.data };
       }
       
-      // If no valid format is found, use mock data
-      return getMockUserDetailData(uuid);
+      console.warn('Unexpected /user/:uuid response format:', response.data);
+      throw new Error('Format respons user tidak dikenali');
     } catch (error) {
       console.error(`Error fetching user with UUID ${uuid}:`, error);
-      return getMockUserDetailData(uuid);
+      throw error;
     }
   },
 
@@ -457,11 +465,11 @@ export const userService = {
         return response.data;
       }
       
-      // If the response format is unexpected, use mock data
-      return getMockDeleteUser(uuid);
+      console.warn('Unexpected delete response format:', response.data);
+      throw new Error('Format respons hapus user tidak dikenali');
     } catch (error) {
       console.error(`Error deleting user ${uuid}:`, error);
-      return getMockDeleteUser(uuid);
+      throw error;
     }
   },
 };
@@ -1546,77 +1554,6 @@ const generateMockEmployeeData = () => {
   });
 };
 
-// Helper functions for mock data
-const getMockUserData = () => {
-  // Get any existing mock data from localStorage
-  const existingMockData = localStorage.getItem('mockStaffList');
-  
-  if (existingMockData) {
-    return JSON.parse(existingMockData);
-  }
-  
-  // Create mock data if none exists
-  const mockStaffList = [
-    {
-      uuid: 'staff-001',
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      role: 'GENERAL_MANAGER',
-      status: true
-    },
-    {
-      uuid: 'staff-002',
-      name: 'Jane Smith',
-      email: 'jane.smith@example.com',
-      role: 'RECRUITER',
-      status: true
-    },
-    {
-      uuid: 'staff-003',
-      name: 'Bob Johnson',
-      email: 'bob.johnson@example.com',
-      role: 'KOORDINATOR_LAPANGAN',
-      status: false
-    }
-  ];
-  
-  // Save to localStorage for persistence
-  localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
-  
-  return { success: true, data: mockStaffList };
-};
-
-const getMockUserDetailData = (uuid) => {
-  // If API fails, use mock data
-  const mockStaffList = localStorage.getItem('mockStaffList');
-  
-  if (mockStaffList) {
-    try {
-      const staffList = JSON.parse(mockStaffList);
-      const user = staffList.find(staff => staff.uuid === uuid);
-      
-      if (user) {
-        console.log('Found matching mock user:', user);
-        return { success: true, data: user };
-      }
-    } catch (parseError) {
-      console.error('Error parsing mock staff list:', parseError);
-    }
-  }
-  
-  // If no matching user found, create a mock one for this UUID
-  const mockUser = {
-    uuid: uuid,
-    name: `User ${uuid.split('-').pop()}`,
-    email: `user-${uuid.split('-').pop()}@example.com`,
-    role: 'GENERAL_MANAGER',
-    status: true
-  };
-  
-  console.log('Created mock user:', mockUser);
-  return { success: true, data: mockUser };
-};
-
 const getMockUpdateUser = (uuid, userData) => {
   // If API fails, update mock data
   const mockStaffList = localStorage.getItem('mockStaffList');
@@ -1650,42 +1587,6 @@ const getMockUpdateUser = (uuid, userData) => {
     success: true, 
     data: { uuid: uuid, ...userData },
     message: 'User updated successfully (mock)'
-  };
-};
-
-const getMockDeleteUser = (uuid) => {
-  // If API fails, update mock data
-  const mockStaffList = localStorage.getItem('mockStaffList');
-  
-  if (mockStaffList) {
-    try {
-      const staffList = JSON.parse(mockStaffList);
-      
-      // Find user before removing
-      const userToDelete = staffList.find(staff => staff.uuid === uuid);
-      
-      // Filter out the user with the specified ID
-      const updatedList = staffList.filter(staff => staff.uuid !== uuid);
-      
-      // Save updated list back to localStorage
-      localStorage.setItem('mockStaffList', JSON.stringify(updatedList));
-      
-      console.log('Mock user deleted:', userToDelete);
-      
-      return { 
-        success: true, 
-        message: 'User deleted successfully (mock)',
-        data: userToDelete
-      };
-    } catch (parseError) {
-      console.error('Error parsing mock staff list:', parseError);
-    }
-  }
-  
-  // If no mock data exists, just return success
-  return { 
-    success: true, 
-    message: 'User deleted successfully (mock)'
   };
 };
 

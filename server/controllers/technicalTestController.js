@@ -20,7 +20,7 @@ export const createTechnicalTestController = async (req, res) => {
     const user = req.user;
     
     // Validate user role - only recruiters and managers can create technical tests
-    if (!user || (user.role !== 'RECRUITER' && user.role !== 'MANAGER')) {
+    if (!user || (!['RECRUITER', 'GENERAL_MANAGER', 'ADMIN'].includes(user.role))) {
       return res.status(403).json({
         message: 'Forbidden: Only recruiters and managers can create technical tests'
       });
@@ -150,7 +150,7 @@ export const updateTechnicalTestController = async (req, res) => {
     const user = req.user;
     
     // Validate user role - only recruiters and managers can update technical tests
-    if (!user || (user.role !== 'RECRUITER' && user.role !== 'MANAGER')) {
+    if (!user || (!['RECRUITER', 'GENERAL_MANAGER', 'ADMIN'].includes(user.role))) {
       return res.status(403).json({
         message: 'Forbidden: Only recruiters and managers can update technical tests'
       });
@@ -320,7 +320,7 @@ export const getAllTechnicalTestsController = async (req, res) => {
     const user = req.user;
     
     // Validate user role - only recruiters and managers can get all technical tests
-    if (!user || (user.role !== 'RECRUITER' && user.role !== 'MANAGER')) {
+    if (!user || (!['RECRUITER', 'GENERAL_MANAGER', 'ADMIN'].includes(user.role))) {
       return res.status(403).json({
         message: 'Forbidden: Only recruiters and managers can get all technical tests'
       });
@@ -356,7 +356,7 @@ export const deleteTechnicalTestController = async (req, res) => {
     const user = req.user;
     
     // Validate user role - only recruiters and managers can delete technical tests
-    if (!user || (user.role !== 'RECRUITER' && user.role !== 'MANAGER')) {
+    if (!user || (!['RECRUITER', 'GENERAL_MANAGER', 'ADMIN'].includes(user.role))) {
       return res.status(403).json({
         message: 'Forbidden: Only recruiters and managers can delete technical tests'
       });
