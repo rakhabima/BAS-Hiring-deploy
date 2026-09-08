@@ -59,6 +59,80 @@ api.interceptors.response.use(
   }
 );
 
+
+// --- Unggah berkas langsung ke Cloudinary -----------------------------------
+// Berkas TIDAK lagi melewati API kita: serverless function Vercel membatasi
+// body request 4.5 MB, sementara form lamaran mengirim 6 berkas sekaligus.
+// Alurnya: minta tanda tangan ke server -> unggah ke Cloudinary -> kirim URL.
+
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB, sama dengan batas lama di EmployeeDetailPage
+const ALLOWED_UPLOAD_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+
+export const validateUploadFile = (file) => {
+  if (!(file instanceof File)) return null;
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return `Ukuran berkas "${file.name}" melebihi 5 MB.`;
+  }
+  if (!ALLOWED_UPLOAD_TYPES.includes(file.type)) {
+    return `Tipe berkas "${file.name}" tidak didukung (gunakan JPG, PNG, WEBP, atau PDF).`;
+  }
+  return null;
+};
+
+export const uploadToCloudinary = async (file, folder = 'job-applications') => {
+  const problem = validateUploadFile(file);
+  if (problem) throw new Error(problem);
+
+  const { data: sign } = await api.post(logEndpoint('/upload/signature'), { folder });
+
+  const form = new FormData();
+  form.append('file', file);
+  form.append('api_key', sign.apiKey);
+  form.append('timestamp', sign.timestamp);
+  form.append('folder', sign.folder);
+  form.append('signature', sign.signature);
+
+  // Sengaja pakai fetch, bukan instance `api`: tujuannya Cloudinary, sehingga
+  // baseURL, cookie sesi, dan interceptor 401 kita tidak boleh ikut terbawa.
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${sign.cloudName}/auto/upload`, {
+    method: 'POST',
+    body: form
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Gagal mengunggah "${file.name}" ke Cloudinary: ${detail.slice(0, 200)}`);
+  }
+
+  const result = await response.json();
+  return result.secure_url;
+};
+
+// Beberapa pemanggil sudah terlanjur merakit FormData sendiri. Dikonversi di
+// sini supaya halamannya tidak perlu diubah.
+export const formDataToObject = (formData) => {
+  if (!(formData instanceof FormData)) return { ...formData };
+  const out = {};
+  for (const [key, value] of formData.entries()) {
+    out[key] = value;
+  }
+  return out;
+};
+
+// Mengganti setiap File di dalam objek dengan URL Cloudinary-nya. Field yang
+// bukan File dibiarkan apa adanya, jadi aman dipanggil atas seluruh state form.
+export const uploadFilesIn = async (values, folder = 'job-applications') => {
+  const out = { ...values };
+  const fields = Object.keys(out).filter((key) => out[key] instanceof File);
+
+  // Berurutan, bukan paralel: unggahan bersamaan dari koneksi seluler yang
+  // lemah lebih sering gagal daripada satu per satu.
+  for (const field of fields) {
+    out[field] = await uploadToCloudinary(out[field], folder);
+  }
+  return out;
+};
+
 // Auth services
 export const authService = {
   // Register a new user
@@ -480,30 +554,10 @@ export const outsourcingService = {
   // Create a new outsourcing service publication
   createOutsourcingService: async (serviceData) => {
     try {
-      const formData = new FormData();
-      
-      // Append text fields
-      for (const key in serviceData) {
-        if (key !== 'imageUrl' && serviceData[key] !== undefined) {
-          // Convert boolean values to strings for FormData
-          if (typeof serviceData[key] === 'boolean') {
-            formData.append(key, serviceData[key].toString());
-          } else {
-            formData.append(key, serviceData[key]);
-          }
-        }
-      }
-      
-      // Append file if it exists
-      if (serviceData.imageUrl instanceof File) {
-        formData.append('imageUrl', serviceData.imageUrl);
-      }
-      
-      const response = await api.post(logEndpoint('/outsource/create'), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // Gambar diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(serviceData, 'outsourcing-services');
+
+      const response = await api.post(logEndpoint('/outsource/create'), payload);
       showNotification('Layanan outsourcing berhasil dibuat', 'success');
       return response.data;
     } catch (error) {
@@ -527,44 +581,12 @@ export const outsourcingService = {
   // Update an existing outsourcing service
   updateOutsourcingService: async (uuid, serviceData) => {
     try {
-      const formData = new FormData();
-      
-      // Log the incoming data for debugging
       console.log('Updating service with data:', JSON.stringify(serviceData));
-      
-      // Append text fields
-      for (const key in serviceData) {
-        if (key !== 'imageUrl' && serviceData[key] !== undefined) {
-          // Explicitly handle availabilityStatus to ensure it's properly converted
-          if (key === 'availabilityStatus') {
-            const boolValue = serviceData[key] === true || serviceData[key] === 'true';
-            formData.append(key, boolValue.toString());
-            console.log(`Setting availabilityStatus in form: ${boolValue} (${typeof boolValue})`);
-          }
-          // Handle other boolean values
-          else if (typeof serviceData[key] === 'boolean') {
-            formData.append(key, serviceData[key].toString());
-          } else {
-            formData.append(key, serviceData[key]);
-          }
-        }
-      }
-      
-      // Append file if it exists
-      if (serviceData.imageUrl instanceof File) {
-        formData.append('imageUrl', serviceData.imageUrl);
-      }
-      
-      // Log form data entries for debugging
-      for (let pair of formData.entries()) {
-        console.log(`Form data: ${pair[0]}: ${pair[1]}`);
-      }
-      
-      const response = await api.put(logEndpoint(`/outsource/update/${uuid}`), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+
+      // Gambar diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(serviceData, 'outsourcing-services');
+
+      const response = await api.put(logEndpoint(`/outsource/update/${uuid}`), payload);
       showNotification('Layanan outsourcing berhasil diperbarui', 'success');
       return response.data;
     } catch (error) {
@@ -698,25 +720,10 @@ export const jobVacancyService = {
   // Create a new job vacancy
   createJobVacancy: async (jobData) => {
     try {
-      const formData = new FormData();
-      
-      // Append text fields
-      for (const key in jobData) {
-        if (key !== 'imageUrl' && jobData[key] !== undefined) {
-          formData.append(key, jobData[key]);
-        }
-      }
-      
-      // Append file if it exists
-      if (jobData.imageUrl instanceof File) {
-        formData.append('imageUrl', jobData.imageUrl);
-      }
-      
-      const response = await api.post(logEndpoint('/jobVacancy/create'), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // Gambar diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(jobData, 'job-vacancies');
+
+      const response = await api.post(logEndpoint('/jobVacancy/create'), payload);
       showNotification('Lowongan pekerjaan berhasil dibuat', 'success');
       return response.data;
     } catch (error) {
@@ -728,36 +735,16 @@ export const jobVacancyService = {
   // Update an existing job vacancy
   updateJobVacancy: async (uuid, jobData) => {
     try {
-      const formData = new FormData();
-      
-      // Append text fields
-      for (const key in jobData) {
-        // Skip imageUrl and undefined values
-        if (key !== 'imageUrl' && jobData[key] !== undefined) {
-          // Skip problematic fields
-          if (key === 'deletedAt' && (jobData[key] === null || jobData[key] === 'null' || jobData[key] === '')) {
-            continue;
-          }
-          
-          // Handle dates to ensure proper format
-          if (key === 'deadline' && jobData[key] instanceof Date) {
-            formData.append(key, jobData[key].toISOString());
-          } else {
-            formData.append(key, jobData[key]);
-          }
-        }
-      }
-      
-      // Append file if it exists
-      if (jobData.imageUrl instanceof File) {
-        formData.append('imageUrl', jobData.imageUrl);
-      }
-      
-      const response = await api.put(logEndpoint(`/jobVacancy/update/${uuid}`), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // deletedAt kosong tidak ikut dikirim, seperti perilaku sebelumnya.
+      const { deletedAt, ...rest } = jobData;
+      const cleaned = (deletedAt === null || deletedAt === 'null' || deletedAt === '' || deletedAt === undefined)
+        ? rest
+        : { ...rest, deletedAt };
+
+      // Gambar diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(cleaned, 'job-vacancies');
+
+      const response = await api.put(logEndpoint(`/jobVacancy/update/${uuid}`), payload);
       showNotification('Lowongan pekerjaan berhasil diperbarui', 'success');
       return response.data;
     } catch (error) {
@@ -841,12 +828,11 @@ export const jobApplicationService = {
   // Submit job application
   submitApplication: async (formData) => {
     try {
-      const response = await api.post(logEndpoint('/jobApplication/submit'), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        withCredentials: true
-      });
+      // Enam berkas diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      // Lewat multer, request ini menembus limit body 4.5 MB milik Vercel.
+      const payload = await uploadFilesIn(formDataToObject(formData), 'job-applications');
+
+      const response = await api.post(logEndpoint('/jobApplication/submit'), payload);
 
       showNotification('Lamaran berhasil dikirim', 'success');
       return response.data;
@@ -903,44 +889,21 @@ export const jobApplicationService = {
   // Update job application (for revision)
   updateApplication: async (uuid, applicationData) => {
     try {
-      const formData = new FormData();
-      
-      // Handle text fields
-      for (const key in applicationData) {
-        if (!key.startsWith('foto_')) {
-          // For empty SIM type, use the default "Tidak Punya"
-          if (key === 'tipe_sim' && (!applicationData[key] || applicationData[key] === '')) {
-            formData.append(key, 'Tidak Punya');
-          }
-          // For date fields that might be null
-          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan') 
-              && applicationData[key] === null) {
-            formData.append(key, 'null');
-          } 
-          // For regular fields 
-          else if (applicationData[key] !== undefined) {
-            formData.append(key, applicationData[key]);
-          }
-        }
-      }
-      
-      // Handle file uploads
-      const fileFields = [
-        'foto_diri', 'foto_ktp', 'foto_sim', 
-        'foto_stnk_hal_1', 'foto_stnk_hal_2', 'foto_ijazah'
-      ];
-      
-      fileFields.forEach(field => {
-        if (applicationData[field] instanceof File) {
-          formData.append(field, applicationData[field]);
-        }
+      // Normalisasi yang dulu dikerjakan saat merakit FormData.
+      const NULLABLE_DATES = ['masa_berlaku_sim', 'masa_berlaku_stnk', 'masa_berlaku_pajak_kendaraan'];
+      const normalized = { ...applicationData };
+      if (!normalized.tipe_sim) normalized.tipe_sim = 'Tidak Punya';
+      NULLABLE_DATES.forEach((key) => {
+        if (normalized[key] === null) normalized[key] = 'null';
       });
-      
-      const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update`), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      Object.keys(normalized).forEach((key) => {
+        if (normalized[key] === undefined) delete normalized[key];
       });
+
+      // Berkas diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(normalized, 'job-applications');
+
+      const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update`), payload);
       
       showNotification('Lamaran berhasil diperbarui', 'success');
       return response.data;
@@ -954,16 +917,13 @@ export const jobApplicationService = {
   updateEmployeeByStaff: async (uuid, employeeData) => {
     try {
       console.log('Starting employee update for:', uuid);
-      
-      // Use the API endpoint to update employee data
+
+      // Berkas diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(formDataToObject(employeeData), 'job-applications');
+
       const response = await api.put(
-        logEndpoint(`/jobApplication/${uuid}/update-employee`), 
-        employeeData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        logEndpoint(`/jobApplication/${uuid}/update-employee`),
+        payload
       );
       
       showNotification('Data karyawan berhasil diperbarui', 'success');
@@ -1286,15 +1246,13 @@ export const technicalTestService = {
   // Submit technical test result from candidate
   submitTechnicalTestResult: async (applicationId, formData) => {
     try {
-      // Use form data for file upload
+      // Berkas jawaban diunggah langsung ke Cloudinary; server hanya
+      // menerima URL-nya lewat field submissionFile.
+      const payload = await uploadFilesIn(formDataToObject(formData), 'technical-tests');
+
       const response = await api.post(
         logEndpoint(`/technicalTest/${applicationId}/submit`),
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        payload
       );
       showNotification('Jawaban technical test berhasil dikirim', 'success');
       return response.data;

@@ -18,7 +18,6 @@ export const submitApplicationController = async (req, res) => {
     console.log("INI MASUK KE CONTROLLER SUBMIT APPLICATION 2");
 
     console.log("req.body:", req.body);
-    console.log("req.files:", req.files);
 
     const existingApplication = await prisma.jobApplication.findFirst({
       where: {
@@ -33,12 +32,8 @@ export const submitApplicationController = async (req, res) => {
       });
     }
 
-    if (req.files) {
-      for (const fieldName in req.files) {
-        const file = req.files[fieldName][0];
-        applicationData[fieldName] = file.path;
-      }
-    }
+    // Field foto_* kini berisi URL Cloudinary yang dikirim client sebagai
+    // JSON biasa; berkasnya tidak lagi melewati server ini.
 
     console.log("🧾 Final applicationData:", applicationData);
 
@@ -143,13 +138,8 @@ export const updateApplicationController = async (req, res) => {
 
     const updateData = { ...req.body };
 
-    // ✅ Ambil URL file hasil upload dari Cloudinary (via multer)
-    if (req.files) {
-      for (const fieldName in req.files) {
-        const file = req.files[fieldName][0];
-        updateData[fieldName] = file.path; // URL langsung dari Cloudinary
-      }
-    }
+    // Field foto_* kini berisi URL Cloudinary yang dikirim client sebagai
+    // JSON biasa; berkasnya tidak lagi melewati server ini.
 
     const updatedApplication = await updateApplication(uuid, updateData);
 
@@ -399,14 +389,9 @@ export const updateEmployeeByStaffController = async (req, res) => {
     const { uuid } = req.params;
     const updateData = { ...req.body };
     
-    // Add file paths if files were uploaded
-    if (req.files) {
-      for (const fieldName in req.files) {
-        const file = req.files[fieldName][0];
-        updateData[fieldName] = file.path;
-      }
-    }
-    
+    // Field foto_* kini berisi URL Cloudinary yang dikirim client sebagai
+    // JSON biasa; berkasnya tidak lagi melewati server ini.
+
     // Add updatedBy information
     updateData.updatedBy = req.user.uuid;
     

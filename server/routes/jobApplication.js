@@ -15,27 +15,23 @@ import {
   updateEmployeeByStaffController
 } from "../controllers/jobApplicationController.js";
 import { authenticateUser } from "../utils/authMiddleware.js";
-import { upload } from "../utils/multer-storage-cloudinary.js";
 
 const router = express.Router();
 
-const uploadFields = upload.fields([
-  { name: 'foto_diri' },
-  { name: 'foto_ktp' },
-  { name: 'foto_sim' },
-  { name: 'foto_stnk_hal_1' },
-  { name: 'foto_stnk_hal_2' },
-  { name: 'foto_ijazah' }
-]);
+// Berkas tidak lagi melewati server ini: browser mengunggah langsung ke
+// Cloudinary (lihat routes/upload.js) dan mengirimkan URL-nya sebagai JSON.
+// Selain melewati limit body 4.5 MB milik Vercel, ini juga menghapus urutan
+// middleware lama yang menjalankan multer SEBELUM authenticateUser — request
+// tanpa login tetap mengunggah berkas dulu, baru ditolak.
 
-router.post('/submit', uploadFields, authenticateUser, submitApplicationController);
+router.post('/submit', authenticateUser, submitApplicationController);
 
 router.get("/candidate", authenticateUser, getCandidateApplicationsController);
 router.get("/all", authenticateUser, getAllApplicationsController);
 router.get("/:uuid", authenticateUser, getApplicationByIdController);
-router.put('/:uuid/update', uploadFields, authenticateUser, updateApplicationController);
+router.put('/:uuid/update', authenticateUser, updateApplicationController);
 router.put("/:uuid/update-status", authenticateUser, updateApplicationStatusController);
-router.put("/:uuid/update-employee", uploadFields, authenticateUser, updateEmployeeByStaffController);
+router.put("/:uuid/update-employee", authenticateUser, updateEmployeeByStaffController);
 router.delete("/:uuid/delete", authenticateUser, hardDeleteApplicationController);
 router.delete("/:uuid/delete-employee", authenticateUser, deleteEmployeeFromListController);
 router.get("/stats/stages", authenticateUser, getApplicationStageStatsController);

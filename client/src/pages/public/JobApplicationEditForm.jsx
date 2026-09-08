@@ -27,7 +27,7 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import api, { jobApplicationService } from '../../services/api';
+import { jobApplicationService } from '../../services/api';
 
 // Styled components for file upload
 const VisuallyHiddenInput = styled('input')({
@@ -173,72 +173,39 @@ const JobApplicationEditForm = () => {
       console.log('Files to upload:', uploadedFiles);
       
       // Prepare data in the same format that the API service expects
-      // Create a new FormData object directly here instead of relying on the API service
-      const formDataToSend = new FormData();
-      
-      // Add text fields
-      formDataToSend.append('nama_ktp', formData.nama_ktp || '');
-      formDataToSend.append('nik', formData.nik || '');
-      formDataToSend.append('jenis_kelamin', formData.jenis_kelamin || '');
-      formDataToSend.append('tanggal_lahir', formData.tanggal_lahir ? formData.tanggal_lahir.toISOString() : '');
-      formDataToSend.append('agama', formData.agama || '');
-      
-      // Vehicle info fields
-      formDataToSend.append('tipe_sim', formData.tipe_sim || 'Tidak Punya');
-      formDataToSend.append('no_sim', formData.no_sim || '');
-      formDataToSend.append('masa_berlaku_sim', formData.masa_berlaku_sim ? formData.masa_berlaku_sim.toISOString() : 'null');
-      formDataToSend.append('merk_kendaraan', formData.merk_kendaraan || '');
-      formDataToSend.append('tahun_produksi_kendaraan', formData.tahun_produksi_kendaraan || '');
-      formDataToSend.append('no_pol_kendaraan', formData.no_pol_kendaraan || '');
-      formDataToSend.append('no_stnk', formData.no_stnk || '');
-      formDataToSend.append('masa_berlaku_stnk', formData.masa_berlaku_stnk ? formData.masa_berlaku_stnk.toISOString() : 'null');
-      formDataToSend.append('masa_berlaku_pajak_kendaraan', formData.masa_berlaku_pajak_kendaraan ? formData.masa_berlaku_pajak_kendaraan.toISOString() : 'null');
-      
-      // Critical: Set status back to REVIEWING to indicate revision is complete
-      formDataToSend.append('status', 'REVIEWING');
-      
-      // Add file uploads
-      if (formData.foto_diri instanceof File) {
-        formDataToSend.append('foto_diri', formData.foto_diri);
-        console.log('Adding foto_diri file to upload');
-      }
-      
-      if (formData.foto_ktp instanceof File) {
-        formDataToSend.append('foto_ktp', formData.foto_ktp);
-        console.log('Adding foto_ktp file to upload');
-      }
-      
-      if (formData.foto_sim instanceof File) {
-        formDataToSend.append('foto_sim', formData.foto_sim);
-        console.log('Adding foto_sim file to upload');
-      }
-      
-      if (formData.foto_stnk_hal_1 instanceof File) {
-        formDataToSend.append('foto_stnk_hal_1', formData.foto_stnk_hal_1);
-        console.log('Adding foto_stnk_hal_1 file to upload');
-      }
-      
-      if (formData.foto_stnk_hal_2 instanceof File) {
-        formDataToSend.append('foto_stnk_hal_2', formData.foto_stnk_hal_2);
-        console.log('Adding foto_stnk_hal_2 file to upload');
-      }
-      
-      if (formData.foto_ijazah instanceof File) {
-        formDataToSend.append('foto_ijazah', formData.foto_ijazah);
-        console.log('Adding foto_ijazah file to upload');
-      }
-      
-      // Pakai instance bersama dari services/api.js. Sebelumnya file ini
-      // membuat instance sendiri dengan baseURL: process.env.REACT_APP_API_URL,
-      // sehingga melewati fallback '/api' dan interceptor 401.
-      console.log(`Sending update to /jobApplication/${uuid}/update`);
-      
-      const response = await api.put(`/jobApplication/${uuid}/update`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      
+      // Dulu blok ini merakit FormData sendiri dan mengirim multipart langsung,
+      // menduplikasi jobApplicationService.updateApplication. Service itu kini
+      // yang mengunggah berkas ke Cloudinary lalu mengirim URL-nya sebagai JSON.
+      const payload = {
+        nama_ktp: formData.nama_ktp || '',
+        nik: formData.nik || '',
+        jenis_kelamin: formData.jenis_kelamin || '',
+        tanggal_lahir: formData.tanggal_lahir || null,
+        agama: formData.agama || '',
+
+        // Vehicle info fields
+        tipe_sim: formData.tipe_sim || 'Tidak Punya',
+        no_sim: formData.no_sim || '',
+        masa_berlaku_sim: formData.masa_berlaku_sim || null,
+        merk_kendaraan: formData.merk_kendaraan || '',
+        tahun_produksi_kendaraan: formData.tahun_produksi_kendaraan || '',
+        no_pol_kendaraan: formData.no_pol_kendaraan || '',
+        no_stnk: formData.no_stnk || '',
+        masa_berlaku_stnk: formData.masa_berlaku_stnk || null,
+        masa_berlaku_pajak_kendaraan: formData.masa_berlaku_pajak_kendaraan || null,
+
+        // Critical: Set status back to REVIEWING to indicate revision is complete
+        status: 'REVIEWING'
+      };
+
+      // Hanya berkas yang benar-benar diganti yang ikut dikirim.
+      ['foto_diri', 'foto_ktp', 'foto_sim', 'foto_stnk_hal_1', 'foto_stnk_hal_2', 'foto_ijazah']
+        .forEach((field) => {
+          if (formData[field] instanceof File) payload[field] = formData[field];
+        });
+
+      const response = { data: await jobApplicationService.updateApplication(uuid, payload) };
+
       console.log('Update response:', response.data);
       
       // After successful update, redirect the user

@@ -10,12 +10,9 @@ export const createOutsourcing = async (req, res) => {
         // Pembuat diambil dari sesi, bukan dari body.
         const createdBy = req.user.uuid;
         
-        // Handle file upload if present
-        let imageUrl = null;
-        if (req.file) {
-            // If using multer, the file is available in req.file
-            imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        }
+        // imageUrl kini berupa URL Cloudinary dari client. Sebelumnya berkas
+        // dijadikan data URI base64 dan disimpan utuh di kolom database.
+        const imageUrl = req.body.imageUrl || null;
 
         // Convert string boolean to actual boolean
         const parsedAvailabilityStatus = availabilityStatus === 'true' || availabilityStatus === true;
@@ -59,11 +56,8 @@ export const updateOutsourcing = async (req, res) => {
         
         console.log('Update request received with data:', updateData);
         
-        // Handle file upload if present
-        if (req.file) {
-            updateData.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        }
-        
+        // imageUrl sudah berupa URL Cloudinary di dalam req.body.
+
         // Convert availabilityStatus string to boolean no matter what
         if ('availabilityStatus' in updateData) {
             // Ensure proper conversion to boolean - handle various string representations

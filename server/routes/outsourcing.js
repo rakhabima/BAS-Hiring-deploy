@@ -1,33 +1,19 @@
 import express from "express";
-import multer from "multer";
 import { createOutsourcing, createOutsourcingRequest, deleteOutsourcing, getAllOutsourcing, getAllOutsourcingRequests, getOutsourcingById, handleDeleteOutsourcingRequest, updateOutsourcing, updateOutsourcingRequestFullData, updateRequestStatus, getOutsourcingRequestById } from "../controllers/outsourcingController.js";
 import { authorize, protect } from "../utils/authMiddleware.js";
 
 const router = express.Router();
 
-// Configure multer to store files in memory
-const upload = multer({ 
-    storage: multer.memoryStorage(),
-    fileFilter: (req, file, cb) => {
-        // Accept only images
-        if (file.mimetype.startsWith('image/')) {
-            cb(null, true);
-        } else {
-            cb(new Error('Only images are allowed!'), false);
-        }
-    },
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
-    }
-});
+// Gambar diunggah langsung dari browser ke Cloudinary; route ini hanya
+// menerima URL-nya di body (lihat routes/upload.js).
 
 // Pengelolaan layanan & persetujuan permintaan. Sebelumnya seluruh file ini
 // tanpa autentikasi: siapa pun bisa membuat layanan, menyetujui permintaan,
 // atau menghapusnya.
 const gmOnly = [protect, authorize("GENERAL_MANAGER", "ADMIN")];
 
-router.post("/create", ...gmOnly, upload.single('imageUrl'), createOutsourcing);
-router.put("/update/:uuid", ...gmOnly, upload.single('imageUrl'), updateOutsourcing);
+router.post("/create", ...gmOnly, createOutsourcing);
+router.put("/update/:uuid", ...gmOnly, updateOutsourcing);
 
 // Publik: katalog layanan di PublicServiceListPage / PublicServiceDetailPage.
 router.get("/all", getAllOutsourcing);

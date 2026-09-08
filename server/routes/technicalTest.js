@@ -11,12 +11,11 @@ import {
 } from '../controllers/technicalTestController.js';
 import prisma from '../db/prisma.js';
 import { authenticateUser, ownsApplication } from '../utils/authMiddleware.js';
-import { upload } from '../utils/multer-storage-cloudinary.js';
 
 const router = express.Router();
 
-// Single file upload middleware for test submissions
-const uploadSubmission = upload.single('submissionFile');
+// Berkas jawaban diunggah langsung dari browser ke Cloudinary; route ini hanya
+// menerima URL-nya di body (lihat routes/upload.js).
 
 // TechnicalTest menyimpan applicationId; untuk route yang hanya tahu uuid test,
 // kepemilikan ditelusuri lewat aplikasi yang menaunginya.
@@ -42,7 +41,7 @@ router.get('/:uuid', authenticateUser, ownsApplication(applicationIdFromTest), g
 router.put('/:uuid', authenticateUser, updateTechnicalTestController);
 
 // Submit technical test result (with file upload)
-router.post('/:applicationId/submit', authenticateUser, ownsApplication(applicationIdFromParams), uploadSubmission, submitTechnicalTestResultController);
+router.post('/:applicationId/submit', authenticateUser, ownsApplication(applicationIdFromParams), submitTechnicalTestResultController);
 
 // Mark technical test as completed
 router.post('/:applicationId/complete', authenticateUser, ownsApplication(applicationIdFromParams), markTechnicalTestCompletedController);

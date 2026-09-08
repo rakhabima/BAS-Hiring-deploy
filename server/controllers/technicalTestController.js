@@ -213,7 +213,8 @@ export const submitTechnicalTestResultController = async (req, res) => {
     // Prepare submission data
     const submissionData = {
       notes: req.body.notes || '',
-      fileUrl: req.file ? req.file.path : null
+      // Client mengunggah langsung ke Cloudinary dan mengirim URL-nya.
+      fileUrl: req.body.submissionFile || null
     };
     
     // Submit test result
