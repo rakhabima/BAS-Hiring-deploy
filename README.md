@@ -43,11 +43,28 @@ JWT_SECRET="<string acak panjang>"
 CLOUDINARY_CLOUD_NAME="..."
 CLOUDINARY_API_KEY="..."
 CLOUDINARY_API_SECRET="..."
+
+# Akun admin yang dibuat otomatis setiap build (opsional).
+# Tanpa keduanya, seeding dilewati dan build tetap sukses.
+ADMIN_EMAIL="admin@gmail.com"
+ADMIN_PASSWORD="admin123"
 ```
 
-`client/.env` tidak diperlukan. Frontend dan API dilayani dari origin yang sama,
-sehingga base URL API otomatis memakai `/api`. Isi `REACT_APP_API_URL` hanya
-kalau menjalankan CRA di port 3000 terpisah dari backend.
+Akun admin pertama tidak bisa dibuat lewat UI — `POST /api/user` hanya untuk
+ADMIN, sedangkan registrasi publik selalu menghasilkan `CANDIDATE`. Karena itu
+`npm run build` menjalankan `server/db/ensure-admin.js`, yang membuat akun
+`ADMIN` dari kedua variabel di atas. Sifatnya idempoten: kalau akunnya sudah
+ada, tidak diapa-apakan — password yang Anda ganti sendiri tidak akan direset
+oleh build berikutnya. Untuk membuatnya tanpa build penuh:
+
+```sh
+npm run ensure:admin
+```
+
+`client/.env` tidak diperlukan. Base URL API selalu `/api`: di produksi karena
+frontend dan API satu origin, dan saat dev karena `client/package.json`
+menyetel `proxy` ke `http://localhost:5555` sehingga dev server CRA
+meneruskannya ke backend.
 
 ### 3. Siapkan skema database
 
@@ -58,9 +75,12 @@ npx prisma migrate deploy    # membuat 11 tabel, 13 enum, 3 CHECK constraint
 ### 4. Jalankan
 
 ```sh
-npm run dev          # backend di http://localhost:5555 (nodemon)
-cd client && npm start   # frontend di http://localhost:3000
+npm run dev              # terminal 1 — backend di http://localhost:5555
+cd client && npm start   # terminal 2 — frontend di http://localhost:3000
 ```
+
+Buka `http://localhost:3000`. **Backend harus jalan lebih dulu**, kalau tidak
+semua request `/api/*` akan 404 karena tidak ada yang menerima proxy-nya.
 
 Untuk menjalankan seperti di produksi (satu proses melayani API + build React):
 
@@ -121,7 +141,10 @@ berkas tetap lolos dari batas body 4.5 MB milik serverless function Vercel.
 
 ## Deploy ke Vercel
 
-Set kelima environment variable di atas pada dashboard Vercel (`DATABASE_URL`
-memakai connection string ber-`-pooler`), lalu deploy. `vercel.json` sudah
+Set environment variable pada dashboard Vercel — `DATABASE_URL` (wajib yang
+ber-`-pooler`), `JWT_SECRET`, ketiga `CLOUDINARY_*`, dan bila ingin akun admin
+dibuat otomatis, `ADMIN_EMAIL` serta `ADMIN_PASSWORD`. Untuk produksi, pakai
+password yang tidak mudah ditebak: siapa pun bisa mencoba login ke deployment
+Anda. Lalu deploy. `vercel.json` sudah
 mengatur build dan fallback SPA; migration dijalankan sekali dari lokal dengan
 `npx prisma migrate deploy`.
