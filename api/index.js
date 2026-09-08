@@ -1,6 +1,7 @@
-// Entrypoint serverless Vercel: membungkus app Express yang sama yang dipakai
-// dev lokal dan Railway, jadi tidak ada dua definisi route yang harus disamakan.
-import serverless from 'serverless-http';
-import app from '../monolithic.js';
-
-export default serverless(app);
+// Entrypoint serverless Vercel.
+//
+// Runtime Node Vercel memanggil default export sebagai (req, res) — persis
+// bentuk sebuah app Express. Jangan bungkus dengan serverless-http: itu
+// menghasilkan handler (event, context) untuk AWS Lambda, dan Vercel tidak akan
+// pernah memanggilnya dengan bentuk itu.
+export { default } from '../monolithic.js';

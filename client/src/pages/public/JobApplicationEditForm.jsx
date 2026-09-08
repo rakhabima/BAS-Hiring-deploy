@@ -25,10 +25,9 @@ import {
 import { styled } from '@mui/material/styles';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { jobApplicationService } from '../../services/api';
+import api, { jobApplicationService } from '../../services/api';
 
 // Styled components for file upload
 const VisuallyHiddenInput = styled('input')({
@@ -229,12 +228,9 @@ const JobApplicationEditForm = () => {
         console.log('Adding foto_ijazah file to upload');
       }
       
-      // Directly use the API endpoint
-      const api = axios.create({
-        baseURL: process.env.REACT_APP_API_URL,
-        withCredentials: true,
-      });
-      
+      // Pakai instance bersama dari services/api.js. Sebelumnya file ini
+      // membuat instance sendiri dengan baseURL: process.env.REACT_APP_API_URL,
+      // sehingga melewati fallback '/api' dan interceptor 401.
       console.log(`Sending update to /jobApplication/${uuid}/update`);
       
       const response = await api.put(`/jobApplication/${uuid}/update`, formDataToSend, {

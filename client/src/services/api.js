@@ -11,11 +11,12 @@ export const showNotification = (message, severity) => {
   window.dispatchEvent(event);
 };
 
-// Determine base URL - use relative path if monolithic deployment, or environment variable
-const isMonolithicDeployment = window.location.hostname.includes('railway.app');
-const API_BASE_URL = isMonolithicDeployment 
-  ? '/api' 
-  : process.env.REACT_APP_API_URL || 'http://localhost:5555';
+// Frontend dan API dilayani dari origin yang sama (Vercel maupun Railway),
+// jadi path relatif adalah default yang benar. Sebelumnya ini menebak lewat
+// hostname.includes('railway.app'); di *.vercel.app tebakan itu meleset dan
+// base URL jatuh ke http://localhost:5555 — frontend produksi memanggil
+// localhost. REACT_APP_API_URL hanya untuk dev terpisah (CRA di :3000).
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 console.log('API URL configured as:', API_BASE_URL);
 

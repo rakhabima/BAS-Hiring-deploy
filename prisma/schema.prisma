@@ -3,7 +3,9 @@
 // interviewScheduleModel, sessionModel, employeeDataModel (nol import di seluruh server/).
 
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
+  // "native" untuk mesin dev; rhel-openssl-3.0.x adalah runtime Linux Vercel.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
