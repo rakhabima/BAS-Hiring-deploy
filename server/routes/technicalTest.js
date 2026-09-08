@@ -9,7 +9,7 @@ import {
   submitTechnicalTestResultController,
   updateTechnicalTestController
 } from '../controllers/technicalTestController.js';
-import { authenticateUser } from '../middleware/authMiddleware.js';
+import { authenticateUser } from '../utils/authMiddleware.js';
 import { upload } from '../utils/multer-storage-cloudinary.js';
 
 const router = express.Router();

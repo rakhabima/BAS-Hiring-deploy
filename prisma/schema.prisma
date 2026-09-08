@@ -1,0 +1,406 @@
+// BAS-Hiring — Postgres (Neon) schema
+// Diport dari 13 model Mongoose; 3 di antaranya dead code dan sengaja tidak diport:
+// interviewScheduleModel, sessionModel, employeeDataModel (nol import di seluruh server/).
+
+generator client {
+  provider        = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+// Nilai enum ditulis persis seperti string di Mongo supaya payload API dan
+// seluruh kode React tidak perlu berubah. @map TIDAK dipakai: Prisma
+// mengembalikan nama member ke client, bukan nilai yang di-map, jadi @map akan
+// diam-diam mengubah payload. Tiga enum yang nilainya tidak bisa jadi
+// identifier ("Laki - Laki", "SMA/SMK", "Tidak Punya") disimpan sebagai String
+// dengan CHECK constraint di migration 0_init.
+
+enum Role {
+  ADMIN
+  RECRUITER
+  GENERAL_MANAGER
+  CANDIDATE
+  KOORDINATOR_LAPANGAN
+  KARYAWAN
+  GUEST
+}
+
+enum EmploymentStatus {
+  NONE
+  ON_JOB
+}
+
+enum JobStatus {
+  ACTIVE
+  CLOSED
+  DRAFT
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  INTERVIEW_SCHEDULED
+  TECHNICAL_TEST
+  REJECTED
+  ACCEPTED
+  ON_JOB
+  REVISION
+}
+
+enum Religion {
+  Islam
+  Kristen
+  Katolik
+  Hindu
+  Buddha
+  Konghucu
+  Lainnya
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum Attendance {
+  hadir
+  tidak_hadir
+}
+
+enum TestResult {
+  PENDING
+  PASSED
+  FAILED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum NotificationType {
+  APPLICATION_STATUS
+  INTERVIEW
+  TECHNICAL_TEST
+  OUTSOURCING_REQUEST
+  SYSTEM
+}
+
+enum RelatedModel {
+  JobApplication
+  InterviewSchedule
+  TechnicalTest
+  OutsourcingRequest
+}
+
+enum LogLevel {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+// ---------- Models ----------
+
+model User {
+  uuid             String           @id @default(uuid())
+  name             String
+  email            String           @unique
+  password         String
+  role             Role             @default(GUEST)
+  status           Boolean          @default(true)
+  employmentStatus EmploymentStatus @default(NONE)
+  isDeleted        Boolean          @default(false)
+  lastLogin        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  applications          JobApplication[] @relation("ApplicationCandidate")
+  removedFromEmployees  JobApplication[] @relation("RemovedFromEmployeeListBy")
+  jobPostings           JobPosting[]
+  services              OutsourcingService[]
+  requestsAsVendor      OutsourcingRequest[] @relation("RequestVendor")
+  requestsApproved      OutsourcingRequest[] @relation("RequestApprover")
+  testsAsRecruiter      TechnicalTest[]      @relation("TestRecruiter")
+  testsAsCandidate      TechnicalTest[]      @relation("TestCandidate")
+  statusUpdates         ApplicationStatusHistory[]
+  notifications         Notification[]
+  logs                  LogEntry[]
+}
+
+model JobPosting {
+  uuid        String    @id @default(uuid())
+  title       String
+  description String
+  datePosted  DateTime  @default(now())
+  status      JobStatus @default(DRAFT)
+  location    String
+  jobType     JobType
+  jobPosition String
+  deadline    DateTime
+  createdBy   String
+  imageUrl    String?
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  creator      User             @relation(fields: [createdBy], references: [uuid])
+  applications JobApplication[]
+
+  @@index([status, isDeleted])
+}
+
+model JobApplication {
+  uuid           String            @id @default(uuid())
+  candidateId    String
+  jobPostingId   String
+  submissionDate DateTime          @default(now())
+  status         ApplicationStatus @default(PENDING)
+
+  // Informasi pribadi
+  nama_ktp            String
+  jenis_kelamin       String // CHECK: lihat migration 0_init
+  nik                 String
+  tanggal_lahir       DateTime
+  agama               Religion
+  pendidikan_terakhir String // CHECK: lihat migration 0_init
+
+  // Kontak
+  email                              String
+  no_hp                              String
+  no_hp_darurat                      String
+  pemilik_no_hp_darurat              String
+  hubungan_dgn_pemilik_no_hp_darurat String
+
+  // Alamat
+  kota      String
+  kecamatan String
+  kelurahan String
+  alamat    String
+
+  // Kendaraan (opsional, hanya untuk posisi kurir)
+  no_sim                       String?
+  tipe_sim                     String    @default("Tidak Punya") // CHECK: lihat migration 0_init
+  masa_berlaku_sim             DateTime?
+  merk_kendaraan               String?
+  tahun_produksi_kendaraan     String?
+  no_pol_kendaraan             String?
+  no_stnk                      String?
+  masa_berlaku_stnk            DateTime?
+  masa_berlaku_pajak_kendaraan DateTime?
+
+  // Bank
+  no_rekening           String
+  nama_pemilik_rekening String
+  nama_bank             String
+
+  // Pekerjaan
+  posisi_dilamar          String
+  lama_pengalaman_kerja   String?
+  ekspektasi_lama_bekerja String?
+
+  // Data karyawan (terisi setelah status ON_JOB)
+  divisi                        String?
+  tanggal_bergabung             DateTime?
+  tanggal_berakhir_kontrak      DateTime?
+  status_kerja                  Boolean   @default(true)
+  lokasi_penempatan             String?
+  hidden_from_employee_list     Boolean   @default(false)
+  deleted_from_employee_list_by String?
+  deleted_from_employee_list_at DateTime?
+
+  // Dokumen (URL Cloudinary)
+  foto_diri        String
+  foto_ktp         String
+  foto_sim         String?
+  foto_stnk_hal_1  String?
+  foto_stnk_hal_2  String?
+  foto_ijazah      String
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidate     User                       @relation("ApplicationCandidate", fields: [candidateId], references: [uuid])
+  jobPosting    JobPosting                 @relation(fields: [jobPostingId], references: [uuid])
+  removedBy     User?                      @relation("RemovedFromEmployeeListBy", fields: [deleted_from_employee_list_by], references: [uuid])
+  statusHistory ApplicationStatusHistory[]
+  interviews    Interview[]
+  technicalTests TechnicalTest[]
+
+  @@index([submissionDate(sort: Desc)])
+  @@index([status])
+}
+
+// Dulu subdocument array `statusHistory` di dalam JobApplication.
+// Pengisian otomatisnya dulu ada di hook pre('save') — sekarang harus dipanggil
+// eksplisit dari jobApplicationService saat create & saat status berubah.
+model ApplicationStatusHistory {
+  id            String            @id @default(uuid())
+  applicationId String
+  status        ApplicationStatus
+  timestamp     DateTime          @default(now())
+  notes         String?
+  updatedBy     String?
+
+  application JobApplication @relation(fields: [applicationId], references: [uuid], onDelete: Cascade)
+  updater     User?          @relation(fields: [updatedBy], references: [uuid])
+
+  @@index([applicationId, timestamp])
+}
+
+model Interview {
+  id                  String          @id @default(uuid())
+  applicationId       String
+  interviewDate       DateTime
+  location            String
+  isOnline            Boolean         @default(false)
+  meetingLink         String?
+  status              InterviewStatus @default(SCHEDULED)
+  notes               String?
+  // Dulu enum ["hadir","tidak_hadir",""] dengan default "". String kosong
+  // diganti NULL — cek `== null`, bukan `=== ""`, di interviewService.
+  candidateAttendance Attendance?
+  candidateResponse   Boolean         @default(false)
+  rescheduleRequest   String?
+  created_at          DateTime        @default(now())
+  updated_at          DateTime        @updatedAt
+
+  application JobApplication @relation(fields: [applicationId], references: [uuid])
+
+  @@index([applicationId])
+}
+
+model TechnicalTest {
+  uuid                  String     @id @default(uuid())
+  applicationId         String
+  recruiterId           String
+  candidateId           String
+  description           String
+  dateScheduled         DateTime
+  result                TestResult @default(PENDING)
+  testLink              String?
+  instructions          String?
+  score                 Int?
+  feedback              String?
+  submissionDate        DateTime?
+  submissionFile        String?
+  submissionNotes       String?
+  candidateHasCompleted Boolean    @default(false)
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  application JobApplication @relation(fields: [applicationId], references: [uuid])
+  recruiter   User           @relation("TestRecruiter", fields: [recruiterId], references: [uuid])
+  candidate   User           @relation("TestCandidate", fields: [candidateId], references: [uuid])
+
+  @@index([applicationId])
+  @@index([candidateId])
+}
+
+model OutsourcingService {
+  uuid               String    @id @default(uuid())
+  serviceName        String
+  serviceType        String
+  description        String
+  availabilityStatus Boolean   @default(true)
+  createdBy          String
+  location           String
+  imageUrl           String?
+  capacity           Int?
+  price              Int?
+  isDeleted          Boolean   @default(false)
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  creator  User                 @relation(fields: [createdBy], references: [uuid])
+  requests OutsourcingRequest[]
+}
+
+model OutsourcingRequest {
+  uuid        String        @id @default(uuid())
+  vendorName  String
+  contactInfo String
+  quantity    Int
+  location    String
+  submission  DateTime      @default(now())
+  message     String?
+  status      RequestStatus @default(PENDING)
+  serviceType String
+  serviceId   String?
+  vendorId    String?
+  approvedBy  String?
+  email       String
+  phone       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  service  OutsourcingService? @relation(fields: [serviceId], references: [uuid])
+  vendor   User?               @relation("RequestVendor", fields: [vendorId], references: [uuid])
+  approver User?               @relation("RequestApprover", fields: [approvedBy], references: [uuid])
+
+  @@index([status])
+}
+
+model Notification {
+  uuid         String           @id @default(uuid())
+  userId       String
+  message      String
+  dateCreated  DateTime         @default(now())
+  readStatus   Boolean          @default(false)
+  type         NotificationType
+  // Polimorfik: dipasangkan dengan relatedModel, jadi sengaja tanpa foreign key.
+  relatedId    String?
+  relatedModel RelatedModel?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [uuid], onDelete: Cascade)
+
+  @@index([userId, readStatus])
+}
+
+model LogEntry {
+  uuid      String   @id @default(uuid())
+  timestamp DateTime @default(now())
+  activity  String
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  details   Json?
+  level     LogLevel @default(INFO)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [uuid])
+
+  @@index([timestamp(sort: Desc)])
+}
+
+model Guest {
+  uuid      String   @id @default(uuid())
+  sessionId String   @unique
+  createdAt DateTime @default(now())
+
+  // ponytail: Mongo menghapus baris ini otomatis lewat TTL index 24 jam.
+  // Postgres tidak punya TTL. Sapu baris kedaluwarsa di guestController saat
+  // guest dibuat (deleteMany where createdAt < now-24h) — cukup untuk volume
+  // saat ini; pindah ke pg_cron kalau tabelnya mulai besar.
+  @@index([createdAt])
+}

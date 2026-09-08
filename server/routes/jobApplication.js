@@ -14,7 +14,7 @@ import {
   updateApplicationStatusController,
   updateEmployeeByStaffController
 } from "../controllers/jobApplicationController.js";
-import { authenticateUser } from "../middleware/authMiddleware.js";
+import { authenticateUser } from "../utils/authMiddleware.js";
 import { upload } from "../utils/multer-storage-cloudinary.js";
 
 const router = express.Router();

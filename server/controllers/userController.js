@@ -28,7 +28,7 @@ export const createUser = async (req, res) => {
         });
     } catch (error) {
         // Handle duplicate email
-        if (error.code === 11000) {
+        if (error.code === "P2002") {
             return res.status(400).json({
                 success: false,
                 message: "Email sudah terdaftar"
@@ -110,7 +110,7 @@ export const updateUser = async (req, res) => {
         console.error("Error updating user:", error);
 
         // Handle duplicate email
-        if (error.code === 11000) {
+        if (error.code === "P2002") {
             return res.status(400).json({
                 success: false,
                 message: "Email sudah digunakan"

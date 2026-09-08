@@ -1,5 +1,4 @@
-import OutsourcingRequest from "../models/outsourcingRequestModel.js";
-import User from "../models/userModel.js";
+import prisma from "../db/prisma.js";
 import { createOutsourcingService, deleteOutsourcingRequest as deleteOutsourcingRequestService, getAllOutsourcingRequests as fetchAllOutsourcingRequests, getAllOutsourcingServices, getOutsourcingServiceById, softDeleteOutsourcingService, updateOutsourcingRequestData, updateOutsourcingRequestStatus, updateOutsourcingService, getOutsourcingRequestByIdService } from "../services/outsourcingService.js";
 import { sendNotification } from "../utils/notificationService.js";
 
@@ -220,24 +219,24 @@ export const createOutsourcingRequest = async (req, res) => {
     }
 
     // Create outsourcing request in database
-    const outsourcingRequest = new OutsourcingRequest({
-      vendorName,
-      contactInfo,
-      email,
-      location,
-      message,
-      serviceType,
-      quantity: parseInt(quantity) || 1,
-      submission: new Date(), // Use current date as submission date
-      status: "PENDING"
+    const outsourcingRequest = await prisma.outsourcingRequest.create({
+      data: {
+        vendorName,
+        contactInfo,
+        email,
+        location,
+        message,
+        serviceType,
+        quantity: parseInt(quantity) || 1,
+        submission: new Date(), // Use current date as submission date
+        status: "PENDING"
+      }
     });
-
-    await outsourcingRequest.save();
 
     // Send notification to all General Managers
     try {
       // Find all users with role GENERAL_MANAGER
-      const generalManagers = await User.find({ role: "GENERAL_MANAGER" });
+      const generalManagers = await prisma.user.findMany({ where: { role: "GENERAL_MANAGER", isDeleted: false } });
       
       if (generalManagers && generalManagers.length > 0) {
         // Create notification message with the required details

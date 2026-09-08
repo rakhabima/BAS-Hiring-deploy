@@ -95,3 +95,6 @@ firebase-debug.log
 node_modules/.cache/
 .npm/
 .yarn/
+# Prisma
+/node_modules/.prisma
+.npm-cache/

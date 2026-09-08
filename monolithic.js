@@ -8,7 +8,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Import API routes
-import connectDB from './server/db/connectDb.js';
 import authRoute from './server/routes/auth.js';
 import guestRoute from './server/routes/guest.js';
 import interviewRoute from './server/routes/interview.js';
@@ -61,14 +60,6 @@ app.get('/api', (req, res) => {
     time: new Date().toISOString()
   });
 });
-
-// Connect to MongoDB
-try {
-  connectDB();
-  console.log('MongoDB connected');
-} catch (error) {
-  console.error('MongoDB connection error:', error);
-}
 
 // Check if frontend build exists
 const frontendBuildPath = path.join(__dirname, 'client/build');
@@ -129,11 +120,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Health check available at http://localhost:${PORT}/health`);
-  console.log(`API available at http://localhost:${PORT}/api`);
-});
+// Di Vercel, api/index.js yang membungkus app ini jadi serverless function —
+// tidak ada port untuk didengarkan. listen() hanya untuk dev lokal & Railway.
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Health check available at http://localhost:${PORT}/health`);
+    console.log(`API available at http://localhost:${PORT}/api`);
+  });
+}
+
 
 export default app; 
