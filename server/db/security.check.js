@@ -7,6 +7,7 @@
 // technicalTest tidak pernah mengecek kepemilikan.
 import "dotenv/config";
 import assert from "node:assert/strict";
+import bcrypt from "bcryptjs";
 
 process.env.JWT_SECRET ||= "secret-khusus-check";
 const { default: prisma } = await import("./prisma.js");
@@ -31,13 +32,16 @@ const req = async (path, opts = {}) => {
 const created = { users: [], jobPostings: [], applications: [], notifications: [], outsourcingRequests: [] };
 
 const PASSWORD = "rahasia123";
+
+// User dibuat langsung lewat Prisma, bukan lewat /auth/signup: endpoint itu
+// sengaja selalu menghasilkan CANDIDATE dan tidak menerima `role`, sehingga
+// tidak bisa dipakai menyiapkan akun staff untuk pengujian.
 const makeUser = async (role) => {
     const email = `check-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`;
-    const createdUser = await req("/api/auth/signup", {
-        method: "POST",
-        body: JSON.stringify({ name: role, email, password: PASSWORD, role })
+    const user = await prisma.user.create({
+        data: { name: role, email, password: await bcrypt.hash(PASSWORD, 10), role }
     });
-    assert.equal(createdUser.status, 201, `signup ${role} gagal: ${JSON.stringify(createdUser.body)}`);
+    created.users.push(user.uuid);
 
     const session = await req("/api/auth/login", {
         method: "POST",
@@ -45,8 +49,7 @@ const makeUser = async (role) => {
     });
     assert.equal(session.status, 200, `login ${role} gagal: ${JSON.stringify(session.body)}`);
 
-    created.users.push(createdUser.body.uuid);
-    return { uuid: createdUser.body.uuid, cookie: session.cookie.split(";")[0] };
+    return { uuid: user.uuid, cookie: session.cookie.split(";")[0] };
 };
 
 const as = (user) => ({ headers: { Cookie: user.cookie } });
@@ -63,15 +66,21 @@ const expect = (name, actual, wanted) => {
 const cleanup = async () => {
     const { users, jobPostings, applications, notifications, outsourcingRequests } = created;
 
-    await prisma.technicalTest.deleteMany({ where: { applicationId: { in: applications } } });
-    await prisma.interview.deleteMany({ where: { applicationId: { in: applications } } });
-    await prisma.applicationStatusHistory.deleteMany({ where: { applicationId: { in: applications } } });
-    await prisma.jobApplication.deleteMany({ where: { uuid: { in: applications } } });
-    await prisma.jobPosting.deleteMany({ where: { uuid: { in: jobPostings } } });
-    await prisma.outsourcingRequest.deleteMany({ where: { uuid: { in: outsourcingRequests } } });
-    await prisma.notification.deleteMany({ where: { uuid: { in: notifications } } });
-    await prisma.logEntry.deleteMany({ where: { userId: { in: users } } });
-    await prisma.user.deleteMany({ where: { uuid: { in: users } } });
+    // Dibungkus supaya satu kegagalan tidak menghentikan sisa pembersihan dan
+    // meninggalkan akun uji menumpuk di database.
+    const safe = async (label, fn) => {
+        try { await fn(); } catch (error) { console.warn(`[cleanup] ${label} gagal: ${error.message}`); }
+    };
+
+    await safe("technicalTest", () => prisma.technicalTest.deleteMany({ where: { applicationId: { in: applications } } }));
+    await safe("interview", () => prisma.interview.deleteMany({ where: { applicationId: { in: applications } } }));
+    await safe("applicationStatusHistory", () => prisma.applicationStatusHistory.deleteMany({ where: { applicationId: { in: applications } } }));
+    await safe("jobApplication", () => prisma.jobApplication.deleteMany({ where: { uuid: { in: applications } } }));
+    await safe("jobPosting", () => prisma.jobPosting.deleteMany({ where: { uuid: { in: jobPostings } } }));
+    await safe("outsourcingRequest", () => prisma.outsourcingRequest.deleteMany({ where: { uuid: { in: outsourcingRequests } } }));
+    await safe("notification", () => prisma.notification.deleteMany({ where: { uuid: { in: notifications } } }));
+    await safe("logEntry", () => prisma.logEntry.deleteMany({ where: { userId: { in: users } } }));
+    await safe("user", () => prisma.user.deleteMany({ where: { uuid: { in: users } } }));
 };
 
 try {
@@ -100,6 +109,28 @@ try {
     expect("nama sendiri tersimpan", edited.name, "Nama Baru");
     expect("role sendiri TIDAK bisa dinaikkan", edited.role, "CANDIDATE");
     expect("status sendiri TIDAK bisa diubah", edited.status, true);
+
+    // --- Regresi: membuat akun tidak boleh membajak sesi pembuatnya ---
+    // Dulu halaman admin membuat staff lewat POST /auth/signup, yang
+    // menerbitkan cookie JWT untuk akun BARU dan menimpa cookie admin. Admin
+    // diam-diam berubah jadi akun yang baru dibuat, lalu semua request
+    // berikutnya ditolak 403 sementara localStorage masih mengira dirinya admin.
+    const escalation = await req("/api/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({ name: "Eskalasi", email: `check-esc-${Date.now()}@example.com`, password: PASSWORD, role: "ADMIN", isPublicRegistration: false })
+    });
+    created.users.push(escalation.body.uuid);
+    expect("signup mengabaikan role yang diminta", escalation.body.role, "CANDIDATE");
+
+    const staffCreate = await req("/api/user", {
+        method: "POST", ...as(admin),
+        body: JSON.stringify({ name: "Staf", email: `check-staf-${Date.now()}@example.com`, password: PASSWORD, role: "RECRUITER" })
+    });
+    created.users.push(staffCreate.body?.data?.uuid);
+    expect("admin membuat akun staff", staffCreate.status, 201);
+    expect("membuat akun TIDAK menerbitkan cookie", staffCreate.cookie, null);
+    expect("sesi admin tetap admin sesudahnya", (await req("/api/user/all", as(admin))).status, 200);
+    expect("non-admin tidak boleh membuat akun", (await req("/api/user", { method: "POST", ...as(candidateA), body: JSON.stringify({ name: "x", email: `check-x-${Date.now()}@example.com`, password: PASSWORD, role: "ADMIN" }) })).status, 403);
 
     // --- routes/notification.js: dulu terbuka, userId dari query ---
     const notifB = await prisma.notification.create({ data: { userId: candidateB.uuid, message: "rahasia", type: "SYSTEM" } });

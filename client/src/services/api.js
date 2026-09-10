@@ -270,141 +270,28 @@ export const authService = {
   // Create internal staff account (Admin only)
   createAccount: async (userData) => {
     try {
-      console.log('Creating staff account with data:', userData);
+      // Memakai POST /user (khusus ADMIN), BUKAN /auth/signup.
+      //
+      // /auth/signup menerbitkan cookie JWT untuk akun yang baru dibuat. Saat
+      // admin memakainya untuk membuat akun staff, cookie admin tertimpa token
+      // akun baru itu — sesi admin diam-diam berubah jadi akun tersebut, dan
+      // request berikutnya ditolak 403 sementara localStorage masih mengira
+      // dirinya admin.
+      const response = await api.post(logEndpoint('/user'), {
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        role: userData.role
+      });
 
-      // PRIORITY 1: Use the same endpoint as registration since we know it works
-      // But with isPublicRegistration: false to indicate admin-created account
-      try {
-        console.log('Trying primary signup endpoint with staff flags');
-        const response = await api.post(logEndpoint('/auth/signup'), {
-          name: userData.name,
-          email: userData.email,
-          password: userData.password,
-          role: userData.role,
-          isPublicRegistration: false,
-          isInternalStaff: true,
-          createdBy: userData.createdBy || 'admin'
-        });
-
-        console.log('Staff account creation successful:', response.data);
-        
-        // After successful creation, add to mock staff list for development purposes
-        try {
-          // Generate a UUID for the mock user
-          const mockUuid = 'staff-' + Date.now().toString().slice(-6);
-          
-          // Create a mock staff object
-          const mockStaff = {
-            uuid: mockUuid,
-            name: userData.name,
-            email: userData.email,
-            role: userData.role,
-            status: true,
-            createdBy: userData.createdBy || 'admin'
-          };
-          
-          // Get existing mock staff list
-          const existingMockData = localStorage.getItem('mockStaffList');
-          let mockStaffList = [];
-          
-          if (existingMockData) {
-            mockStaffList = JSON.parse(existingMockData);
-          }
-          
-          // Add new staff to the list
-          mockStaffList.push(mockStaff);
-          
-          // Save updated list
-          localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
-          console.log('Added new staff to mock staff list:', mockStaff);
-        } catch (mockError) {
-          console.error('Error updating mock staff list:', mockError);
-        }
-        
-        return response.data;
-      } catch (primaryError) {
-        console.error('Primary endpoint failed:', primaryError.response?.data || primaryError.message);
-        console.log('Trying fallback endpoints or mock data...');
-
-        // If the primary approach fails, first try fallback endpoints
-        const possibleEndpoints = [
-          '/auth/create-staff',
-          '/admin/create-account',
-          '/auth/admin/create-account',
-          '/auth/signup/staff',
-          '/auth/register-staff'
-        ];
-
-        let successResponse = null;
-        let errorDetails = [];
-
-        // Try each endpoint
-        for (const endpoint of possibleEndpoints) {
-          try {
-            console.log(`Trying endpoint: ${endpoint}`);
-            const response = await api.post(logEndpoint(endpoint), userData);
-            console.log(`Success with endpoint ${endpoint}:`, response.data);
-            successResponse = response;
-            break; // Exit the loop if successful
-          } catch (endpointError) {
-            const errorInfo = {
-              endpoint,
-              status: endpointError.response?.status,
-              message: endpointError.message,
-              data: endpointError.response?.data
-            };
-            errorDetails.push(errorInfo);
-            console.log(`Failed with endpoint ${endpoint}:`, errorInfo);
-            // Continue to the next endpoint
-          }
-        }
-
-        if (successResponse) {
-          return successResponse.data;
-        }
-
-        // If all backend endpoints failed, use mock data
-        console.log('All endpoints failed. Using mock data instead.');
-        
-        // Generate a UUID for the mock user
-        const mockUuid = 'staff-' + Date.now().toString().slice(-6);
-        
-        // Create a mock staff object
-        const mockStaff = {
-          uuid: mockUuid,
-          name: userData.name,
-          email: userData.email,
-          role: userData.role,
-          status: true,
-          createdBy: userData.createdBy || 'admin'
-        };
-        
-        // Get existing mock staff list
-        const existingMockData = localStorage.getItem('mockStaffList');
-        let mockStaffList = [];
-        
-        if (existingMockData) {
-          mockStaffList = JSON.parse(existingMockData);
-        }
-        
-        // Add new staff to the list
-        mockStaffList.push(mockStaff);
-        
-        // Save updated list
-        localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
-        console.log('Created mock staff account:', mockStaff);
-        
-        return { 
-          success: true, 
-          data: mockStaff,
-          message: 'Account created successfully (mock)' 
-        };
-      }
+      showNotification('Akun berhasil dibuat', 'success');
+      return response.data;
     } catch (error) {
-      console.error('Error creating account:', error);
+      const message = error.response?.data?.message || 'Gagal membuat akun';
+      showNotification(message, 'error');
       throw error;
     }
-  }
+  },
 };
 
 // User services (connecting to the backend user routes)

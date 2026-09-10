@@ -5,7 +5,7 @@ import { logActivity } from "../utils/loggingService.js";
 
 export const signup = async (req, res) => {
     try {
-        const { name, email, password, role, isPublicRegistration } = req.body;
+        const { name, email, password } = req.body;
 
         // Validasi format email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,15 +28,11 @@ export const signup = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Determine role based on registration source
-        let assignedRole;
-        if (isPublicRegistration) {
-            // Public registration always gets CANDIDATE role
-            assignedRole = "CANDIDATE";
-        } else {
-            // Admin-created accounts can have specified roles
-            assignedRole = role || "GUEST";
-        }
+        // Endpoint ini HANYA untuk registrasi mandiri, jadi rolenya selalu
+        // CANDIDATE. Sebelumnya `role` dari body dipakai apa adanya, sehingga
+        // siapa pun bisa mendaftarkan dirinya sebagai ADMIN lewat API.
+        // Pembuatan akun staff oleh admin memakai POST /api/user yang digate.
+        const assignedRole = "CANDIDATE";
 
         // Buat user baru dan simpan
         const newUser = await prisma.user.create({
@@ -53,12 +49,15 @@ export const signup = async (req, res) => {
         await logActivity(
             "User Registration", 
             newUser.uuid, 
-            { email: newUser.email, role: newUser.role, isPublicRegistration },
+            { email: newUser.email, role: newUser.role },
             "INFO",
             req
         );
 
-        // Hasilkan token JWT dan set cookie
+        // Registrasi mandiri langsung membuat sesi untuk pendaftarnya. Ini aman
+        // sekarang karena endpoint ini tidak lagi dipakai admin untuk membuat
+        // akun orang lain — dulu hal itu menimpa cookie admin dengan token akun
+        // baru, sehingga admin diam-diam berubah jadi akun yang baru dibuat.
         generateTokenAndSetCookie(newUser.uuid, newUser.role, res);
 
         res.status(201).json({
