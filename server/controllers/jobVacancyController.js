@@ -3,12 +3,15 @@ import { createJobVacancy, getAllJobVacancies, getJobVacancyById, softDeleteJobV
 export const createJobVacancyController = async (req, res) => {
   try {
     const jobData = { ...req.body };
+
+    // Pembuat diambil dari sesi, bukan dari body — kalau dari body, staff bisa
+    // mengatribusikan lowongan ke akun orang lain.
+    jobData.createdBy = req.user.uuid;
     
-    // Handle file upload if present
-    if (req.file) {
-      jobData.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    }
-    
+    // imageUrl kini berupa URL Cloudinary dari client. Sebelumnya berkas
+    // dijadikan data URI base64 dan disimpan utuh di kolom database —
+    // membengkak ~33% dan ikut terbaca di setiap query yang mengambil baris itu.
+
     const createdJob = await createJobVacancy(jobData);
     res.status(201).json({
       message: "Lowongan pekerjaan berhasil dibuat",
@@ -24,11 +27,6 @@ export const updateJobVacancyController = async (req, res) => {
   try {
     const { uuid } = req.params;
     const updateData = { ...req.body };
-    
-    // Handle file upload if present
-    if (req.file) {
-      updateData.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    }
     
     // Auto-update status based on deadline
     if (updateData.deadline) {

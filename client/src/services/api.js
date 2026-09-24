@@ -11,11 +11,12 @@ export const showNotification = (message, severity) => {
   window.dispatchEvent(event);
 };
 
-// Determine base URL - use relative path if monolithic deployment, or environment variable
-const isMonolithicDeployment = window.location.hostname.includes('railway.app');
-const API_BASE_URL = isMonolithicDeployment 
-  ? '/api' 
-  : process.env.REACT_APP_API_URL || 'http://localhost:5555';
+// Frontend dan API dilayani dari origin yang sama (Vercel maupun Railway),
+// jadi path relatif adalah default yang benar. Sebelumnya ini menebak lewat
+// hostname.includes('railway.app'); di *.vercel.app tebakan itu meleset dan
+// base URL jatuh ke http://localhost:5555 — frontend produksi memanggil
+// localhost. REACT_APP_API_URL hanya untuk dev terpisah (CRA di :3000).
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 console.log('API URL configured as:', API_BASE_URL);
 
@@ -43,12 +44,94 @@ api.interceptors.response.use(
   error => {
     if (error.response) {
       console.error(`${error.config.method.toUpperCase()} ${error.config.url} - Status: ${error.response.status}`);
+
+      // Guard di App.js hanya membaca localStorage dan tidak pernah memvalidasi
+      // sesi ke server, jadi sesi kedaluwarsa dulu tampil sebagai halaman rusak
+      // diam-diam. Sekarang sesi dibuang dan user dikembalikan ke login.
+      if (error.response.status === 401 && !window.location.pathname.startsWith('/login')) {
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     } else {
       console.error(`Request failed for ${error.config?.url || 'unknown endpoint'}:`, error.message);
     }
     return Promise.reject(error);
   }
 );
+
+
+// --- Unggah berkas langsung ke Cloudinary -----------------------------------
+// Berkas TIDAK lagi melewati API kita: serverless function Vercel membatasi
+// body request 4.5 MB, sementara form lamaran mengirim 6 berkas sekaligus.
+// Alurnya: minta tanda tangan ke server -> unggah ke Cloudinary -> kirim URL.
+
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB, sama dengan batas lama di EmployeeDetailPage
+const ALLOWED_UPLOAD_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+
+export const validateUploadFile = (file) => {
+  if (!(file instanceof File)) return null;
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return `Ukuran berkas "${file.name}" melebihi 5 MB.`;
+  }
+  if (!ALLOWED_UPLOAD_TYPES.includes(file.type)) {
+    return `Tipe berkas "${file.name}" tidak didukung (gunakan JPG, PNG, WEBP, atau PDF).`;
+  }
+  return null;
+};
+
+export const uploadToCloudinary = async (file, folder = 'job-applications') => {
+  const problem = validateUploadFile(file);
+  if (problem) throw new Error(problem);
+
+  const { data: sign } = await api.post(logEndpoint('/upload/signature'), { folder });
+
+  const form = new FormData();
+  form.append('file', file);
+  form.append('api_key', sign.apiKey);
+  form.append('timestamp', sign.timestamp);
+  form.append('folder', sign.folder);
+  form.append('signature', sign.signature);
+
+  // Sengaja pakai fetch, bukan instance `api`: tujuannya Cloudinary, sehingga
+  // baseURL, cookie sesi, dan interceptor 401 kita tidak boleh ikut terbawa.
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${sign.cloudName}/auto/upload`, {
+    method: 'POST',
+    body: form
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Gagal mengunggah "${file.name}" ke Cloudinary: ${detail.slice(0, 200)}`);
+  }
+
+  const result = await response.json();
+  return result.secure_url;
+};
+
+// Beberapa pemanggil sudah terlanjur merakit FormData sendiri. Dikonversi di
+// sini supaya halamannya tidak perlu diubah.
+export const formDataToObject = (formData) => {
+  if (!(formData instanceof FormData)) return { ...formData };
+  const out = {};
+  for (const [key, value] of formData.entries()) {
+    out[key] = value;
+  }
+  return out;
+};
+
+// Mengganti setiap File di dalam objek dengan URL Cloudinary-nya. Field yang
+// bukan File dibiarkan apa adanya, jadi aman dipanggil atas seluruh state form.
+export const uploadFilesIn = async (values, folder = 'job-applications') => {
+  const out = { ...values };
+  const fields = Object.keys(out).filter((key) => out[key] instanceof File);
+
+  // Berurutan, bukan paralel: unggahan bersamaan dari koneksi seluler yang
+  // lemah lebih sering gagal daripada satu per satu.
+  for (const field of fields) {
+    out[field] = await uploadToCloudinary(out[field], folder);
+  }
+  return out;
+};
 
 // Auth services
 export const authService = {
@@ -187,141 +270,28 @@ export const authService = {
   // Create internal staff account (Admin only)
   createAccount: async (userData) => {
     try {
-      console.log('Creating staff account with data:', userData);
+      // Memakai POST /user (khusus ADMIN), BUKAN /auth/signup.
+      //
+      // /auth/signup menerbitkan cookie JWT untuk akun yang baru dibuat. Saat
+      // admin memakainya untuk membuat akun staff, cookie admin tertimpa token
+      // akun baru itu — sesi admin diam-diam berubah jadi akun tersebut, dan
+      // request berikutnya ditolak 403 sementara localStorage masih mengira
+      // dirinya admin.
+      const response = await api.post(logEndpoint('/user'), {
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        role: userData.role
+      });
 
-      // PRIORITY 1: Use the same endpoint as registration since we know it works
-      // But with isPublicRegistration: false to indicate admin-created account
-      try {
-        console.log('Trying primary signup endpoint with staff flags');
-        const response = await api.post(logEndpoint('/auth/signup'), {
-          name: userData.name,
-          email: userData.email,
-          password: userData.password,
-          role: userData.role,
-          isPublicRegistration: false,
-          isInternalStaff: true,
-          createdBy: userData.createdBy || 'admin'
-        });
-
-        console.log('Staff account creation successful:', response.data);
-        
-        // After successful creation, add to mock staff list for development purposes
-        try {
-          // Generate a UUID for the mock user
-          const mockUuid = 'staff-' + Date.now().toString().slice(-6);
-          
-          // Create a mock staff object
-          const mockStaff = {
-            uuid: mockUuid,
-            name: userData.name,
-            email: userData.email,
-            role: userData.role,
-            status: true,
-            createdBy: userData.createdBy || 'admin'
-          };
-          
-          // Get existing mock staff list
-          const existingMockData = localStorage.getItem('mockStaffList');
-          let mockStaffList = [];
-          
-          if (existingMockData) {
-            mockStaffList = JSON.parse(existingMockData);
-          }
-          
-          // Add new staff to the list
-          mockStaffList.push(mockStaff);
-          
-          // Save updated list
-          localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
-          console.log('Added new staff to mock staff list:', mockStaff);
-        } catch (mockError) {
-          console.error('Error updating mock staff list:', mockError);
-        }
-        
-        return response.data;
-      } catch (primaryError) {
-        console.error('Primary endpoint failed:', primaryError.response?.data || primaryError.message);
-        console.log('Trying fallback endpoints or mock data...');
-
-        // If the primary approach fails, first try fallback endpoints
-        const possibleEndpoints = [
-          '/auth/create-staff',
-          '/admin/create-account',
-          '/auth/admin/create-account',
-          '/auth/signup/staff',
-          '/auth/register-staff'
-        ];
-
-        let successResponse = null;
-        let errorDetails = [];
-
-        // Try each endpoint
-        for (const endpoint of possibleEndpoints) {
-          try {
-            console.log(`Trying endpoint: ${endpoint}`);
-            const response = await api.post(logEndpoint(endpoint), userData);
-            console.log(`Success with endpoint ${endpoint}:`, response.data);
-            successResponse = response;
-            break; // Exit the loop if successful
-          } catch (endpointError) {
-            const errorInfo = {
-              endpoint,
-              status: endpointError.response?.status,
-              message: endpointError.message,
-              data: endpointError.response?.data
-            };
-            errorDetails.push(errorInfo);
-            console.log(`Failed with endpoint ${endpoint}:`, errorInfo);
-            // Continue to the next endpoint
-          }
-        }
-
-        if (successResponse) {
-          return successResponse.data;
-        }
-
-        // If all backend endpoints failed, use mock data
-        console.log('All endpoints failed. Using mock data instead.');
-        
-        // Generate a UUID for the mock user
-        const mockUuid = 'staff-' + Date.now().toString().slice(-6);
-        
-        // Create a mock staff object
-        const mockStaff = {
-          uuid: mockUuid,
-          name: userData.name,
-          email: userData.email,
-          role: userData.role,
-          status: true,
-          createdBy: userData.createdBy || 'admin'
-        };
-        
-        // Get existing mock staff list
-        const existingMockData = localStorage.getItem('mockStaffList');
-        let mockStaffList = [];
-        
-        if (existingMockData) {
-          mockStaffList = JSON.parse(existingMockData);
-        }
-        
-        // Add new staff to the list
-        mockStaffList.push(mockStaff);
-        
-        // Save updated list
-        localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
-        console.log('Created mock staff account:', mockStaff);
-        
-        return { 
-          success: true, 
-          data: mockStaff,
-          message: 'Account created successfully (mock)' 
-        };
-      }
+      showNotification('Akun berhasil dibuat', 'success');
+      return response.data;
     } catch (error) {
-      console.error('Error creating account:', error);
+      const message = error.response?.data?.message || 'Gagal membuat akun';
+      showNotification(message, 'error');
       throw error;
     }
-  }
+  },
 };
 
 // User services (connecting to the backend user routes)
@@ -364,12 +334,12 @@ export const userService = {
         }
       }
       
-      // If we couldn't find a valid response format, fall back to mock data
-      console.log('Using mock data as fallback');
-      return getMockUserData();
+      // Format tak dikenal: kembalikan daftar kosong, jangan data palsu.
+      console.warn('Unexpected /user/all response format:', response.data);
+      return { success: true, data: [] };
     } catch (error) {
       console.error('Error fetching users:', error);
-      return getMockUserData();
+      throw error;
     }
   },
 
@@ -393,11 +363,11 @@ export const userService = {
         return { success: true, data: response.data };
       }
       
-      // If no valid format is found, use mock data
-      return getMockUserDetailData(uuid);
+      console.warn('Unexpected /user/:uuid response format:', response.data);
+      throw new Error('Format respons user tidak dikenali');
     } catch (error) {
       console.error(`Error fetching user with UUID ${uuid}:`, error);
-      return getMockUserDetailData(uuid);
+      throw error;
     }
   },
 
@@ -457,11 +427,11 @@ export const userService = {
         return response.data;
       }
       
-      // If the response format is unexpected, use mock data
-      return getMockDeleteUser(uuid);
+      console.warn('Unexpected delete response format:', response.data);
+      throw new Error('Format respons hapus user tidak dikenali');
     } catch (error) {
       console.error(`Error deleting user ${uuid}:`, error);
-      return getMockDeleteUser(uuid);
+      throw error;
     }
   },
 };
@@ -471,30 +441,10 @@ export const outsourcingService = {
   // Create a new outsourcing service publication
   createOutsourcingService: async (serviceData) => {
     try {
-      const formData = new FormData();
-      
-      // Append text fields
-      for (const key in serviceData) {
-        if (key !== 'imageUrl' && serviceData[key] !== undefined) {
-          // Convert boolean values to strings for FormData
-          if (typeof serviceData[key] === 'boolean') {
-            formData.append(key, serviceData[key].toString());
-          } else {
-            formData.append(key, serviceData[key]);
-          }
-        }
-      }
-      
-      // Append file if it exists
-      if (serviceData.imageUrl instanceof File) {
-        formData.append('imageUrl', serviceData.imageUrl);
-      }
-      
-      const response = await api.post(logEndpoint('/outsource/create'), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // Gambar diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(serviceData, 'outsourcing-services');
+
+      const response = await api.post(logEndpoint('/outsource/create'), payload);
       showNotification('Layanan outsourcing berhasil dibuat', 'success');
       return response.data;
     } catch (error) {
@@ -518,44 +468,12 @@ export const outsourcingService = {
   // Update an existing outsourcing service
   updateOutsourcingService: async (uuid, serviceData) => {
     try {
-      const formData = new FormData();
-      
-      // Log the incoming data for debugging
       console.log('Updating service with data:', JSON.stringify(serviceData));
-      
-      // Append text fields
-      for (const key in serviceData) {
-        if (key !== 'imageUrl' && serviceData[key] !== undefined) {
-          // Explicitly handle availabilityStatus to ensure it's properly converted
-          if (key === 'availabilityStatus') {
-            const boolValue = serviceData[key] === true || serviceData[key] === 'true';
-            formData.append(key, boolValue.toString());
-            console.log(`Setting availabilityStatus in form: ${boolValue} (${typeof boolValue})`);
-          }
-          // Handle other boolean values
-          else if (typeof serviceData[key] === 'boolean') {
-            formData.append(key, serviceData[key].toString());
-          } else {
-            formData.append(key, serviceData[key]);
-          }
-        }
-      }
-      
-      // Append file if it exists
-      if (serviceData.imageUrl instanceof File) {
-        formData.append('imageUrl', serviceData.imageUrl);
-      }
-      
-      // Log form data entries for debugging
-      for (let pair of formData.entries()) {
-        console.log(`Form data: ${pair[0]}: ${pair[1]}`);
-      }
-      
-      const response = await api.put(logEndpoint(`/outsource/update/${uuid}`), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+
+      // Gambar diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(serviceData, 'outsourcing-services');
+
+      const response = await api.put(logEndpoint(`/outsource/update/${uuid}`), payload);
       showNotification('Layanan outsourcing berhasil diperbarui', 'success');
       return response.data;
     } catch (error) {
@@ -689,25 +607,10 @@ export const jobVacancyService = {
   // Create a new job vacancy
   createJobVacancy: async (jobData) => {
     try {
-      const formData = new FormData();
-      
-      // Append text fields
-      for (const key in jobData) {
-        if (key !== 'imageUrl' && jobData[key] !== undefined) {
-          formData.append(key, jobData[key]);
-        }
-      }
-      
-      // Append file if it exists
-      if (jobData.imageUrl instanceof File) {
-        formData.append('imageUrl', jobData.imageUrl);
-      }
-      
-      const response = await api.post(logEndpoint('/jobVacancy/create'), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // Gambar diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(jobData, 'job-vacancies');
+
+      const response = await api.post(logEndpoint('/jobVacancy/create'), payload);
       showNotification('Lowongan pekerjaan berhasil dibuat', 'success');
       return response.data;
     } catch (error) {
@@ -719,36 +622,16 @@ export const jobVacancyService = {
   // Update an existing job vacancy
   updateJobVacancy: async (uuid, jobData) => {
     try {
-      const formData = new FormData();
-      
-      // Append text fields
-      for (const key in jobData) {
-        // Skip imageUrl and undefined values
-        if (key !== 'imageUrl' && jobData[key] !== undefined) {
-          // Skip problematic fields
-          if (key === 'deletedAt' && (jobData[key] === null || jobData[key] === 'null' || jobData[key] === '')) {
-            continue;
-          }
-          
-          // Handle dates to ensure proper format
-          if (key === 'deadline' && jobData[key] instanceof Date) {
-            formData.append(key, jobData[key].toISOString());
-          } else {
-            formData.append(key, jobData[key]);
-          }
-        }
-      }
-      
-      // Append file if it exists
-      if (jobData.imageUrl instanceof File) {
-        formData.append('imageUrl', jobData.imageUrl);
-      }
-      
-      const response = await api.put(logEndpoint(`/jobVacancy/update/${uuid}`), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // deletedAt kosong tidak ikut dikirim, seperti perilaku sebelumnya.
+      const { deletedAt, ...rest } = jobData;
+      const cleaned = (deletedAt === null || deletedAt === 'null' || deletedAt === '' || deletedAt === undefined)
+        ? rest
+        : { ...rest, deletedAt };
+
+      // Gambar diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(cleaned, 'job-vacancies');
+
+      const response = await api.put(logEndpoint(`/jobVacancy/update/${uuid}`), payload);
       showNotification('Lowongan pekerjaan berhasil diperbarui', 'success');
       return response.data;
     } catch (error) {
@@ -832,12 +715,11 @@ export const jobApplicationService = {
   // Submit job application
   submitApplication: async (formData) => {
     try {
-      const response = await api.post(logEndpoint('/jobApplication/submit'), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        withCredentials: true
-      });
+      // Enam berkas diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      // Lewat multer, request ini menembus limit body 4.5 MB milik Vercel.
+      const payload = await uploadFilesIn(formDataToObject(formData), 'job-applications');
+
+      const response = await api.post(logEndpoint('/jobApplication/submit'), payload);
 
       showNotification('Lamaran berhasil dikirim', 'success');
       return response.data;
@@ -894,44 +776,21 @@ export const jobApplicationService = {
   // Update job application (for revision)
   updateApplication: async (uuid, applicationData) => {
     try {
-      const formData = new FormData();
-      
-      // Handle text fields
-      for (const key in applicationData) {
-        if (!key.startsWith('foto_')) {
-          // For empty SIM type, use the default "Tidak Punya"
-          if (key === 'tipe_sim' && (!applicationData[key] || applicationData[key] === '')) {
-            formData.append(key, 'Tidak Punya');
-          }
-          // For date fields that might be null
-          else if ((key === 'masa_berlaku_sim' || key === 'masa_berlaku_stnk' || key === 'masa_berlaku_pajak_kendaraan') 
-              && applicationData[key] === null) {
-            formData.append(key, 'null');
-          } 
-          // For regular fields 
-          else if (applicationData[key] !== undefined) {
-            formData.append(key, applicationData[key]);
-          }
-        }
-      }
-      
-      // Handle file uploads
-      const fileFields = [
-        'foto_diri', 'foto_ktp', 'foto_sim', 
-        'foto_stnk_hal_1', 'foto_stnk_hal_2', 'foto_ijazah'
-      ];
-      
-      fileFields.forEach(field => {
-        if (applicationData[field] instanceof File) {
-          formData.append(field, applicationData[field]);
-        }
+      // Normalisasi yang dulu dikerjakan saat merakit FormData.
+      const NULLABLE_DATES = ['masa_berlaku_sim', 'masa_berlaku_stnk', 'masa_berlaku_pajak_kendaraan'];
+      const normalized = { ...applicationData };
+      if (!normalized.tipe_sim) normalized.tipe_sim = 'Tidak Punya';
+      NULLABLE_DATES.forEach((key) => {
+        if (normalized[key] === null) normalized[key] = 'null';
       });
-      
-      const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update`), formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      Object.keys(normalized).forEach((key) => {
+        if (normalized[key] === undefined) delete normalized[key];
       });
+
+      // Berkas diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(normalized, 'job-applications');
+
+      const response = await api.put(logEndpoint(`/jobApplication/${uuid}/update`), payload);
       
       showNotification('Lamaran berhasil diperbarui', 'success');
       return response.data;
@@ -945,16 +804,13 @@ export const jobApplicationService = {
   updateEmployeeByStaff: async (uuid, employeeData) => {
     try {
       console.log('Starting employee update for:', uuid);
-      
-      // Use the API endpoint to update employee data
+
+      // Berkas diunggah langsung ke Cloudinary, lalu dikirim sebagai URL.
+      const payload = await uploadFilesIn(formDataToObject(employeeData), 'job-applications');
+
       const response = await api.put(
-        logEndpoint(`/jobApplication/${uuid}/update-employee`), 
-        employeeData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        logEndpoint(`/jobApplication/${uuid}/update-employee`),
+        payload
       );
       
       showNotification('Data karyawan berhasil diperbarui', 'success');
@@ -1277,15 +1133,13 @@ export const technicalTestService = {
   // Submit technical test result from candidate
   submitTechnicalTestResult: async (applicationId, formData) => {
     try {
-      // Use form data for file upload
+      // Berkas jawaban diunggah langsung ke Cloudinary; server hanya
+      // menerima URL-nya lewat field submissionFile.
+      const payload = await uploadFilesIn(formDataToObject(formData), 'technical-tests');
+
       const response = await api.post(
         logEndpoint(`/technicalTest/${applicationId}/submit`),
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        payload
       );
       showNotification('Jawaban technical test berhasil dikirim', 'success');
       return response.data;
@@ -1546,77 +1400,6 @@ const generateMockEmployeeData = () => {
   });
 };
 
-// Helper functions for mock data
-const getMockUserData = () => {
-  // Get any existing mock data from localStorage
-  const existingMockData = localStorage.getItem('mockStaffList');
-  
-  if (existingMockData) {
-    return JSON.parse(existingMockData);
-  }
-  
-  // Create mock data if none exists
-  const mockStaffList = [
-    {
-      uuid: 'staff-001',
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      role: 'GENERAL_MANAGER',
-      status: true
-    },
-    {
-      uuid: 'staff-002',
-      name: 'Jane Smith',
-      email: 'jane.smith@example.com',
-      role: 'RECRUITER',
-      status: true
-    },
-    {
-      uuid: 'staff-003',
-      name: 'Bob Johnson',
-      email: 'bob.johnson@example.com',
-      role: 'KOORDINATOR_LAPANGAN',
-      status: false
-    }
-  ];
-  
-  // Save to localStorage for persistence
-  localStorage.setItem('mockStaffList', JSON.stringify(mockStaffList));
-  
-  return { success: true, data: mockStaffList };
-};
-
-const getMockUserDetailData = (uuid) => {
-  // If API fails, use mock data
-  const mockStaffList = localStorage.getItem('mockStaffList');
-  
-  if (mockStaffList) {
-    try {
-      const staffList = JSON.parse(mockStaffList);
-      const user = staffList.find(staff => staff.uuid === uuid);
-      
-      if (user) {
-        console.log('Found matching mock user:', user);
-        return { success: true, data: user };
-      }
-    } catch (parseError) {
-      console.error('Error parsing mock staff list:', parseError);
-    }
-  }
-  
-  // If no matching user found, create a mock one for this UUID
-  const mockUser = {
-    uuid: uuid,
-    name: `User ${uuid.split('-').pop()}`,
-    email: `user-${uuid.split('-').pop()}@example.com`,
-    role: 'GENERAL_MANAGER',
-    status: true
-  };
-  
-  console.log('Created mock user:', mockUser);
-  return { success: true, data: mockUser };
-};
-
 const getMockUpdateUser = (uuid, userData) => {
   // If API fails, update mock data
   const mockStaffList = localStorage.getItem('mockStaffList');
@@ -1650,42 +1433,6 @@ const getMockUpdateUser = (uuid, userData) => {
     success: true, 
     data: { uuid: uuid, ...userData },
     message: 'User updated successfully (mock)'
-  };
-};
-
-const getMockDeleteUser = (uuid) => {
-  // If API fails, update mock data
-  const mockStaffList = localStorage.getItem('mockStaffList');
-  
-  if (mockStaffList) {
-    try {
-      const staffList = JSON.parse(mockStaffList);
-      
-      // Find user before removing
-      const userToDelete = staffList.find(staff => staff.uuid === uuid);
-      
-      // Filter out the user with the specified ID
-      const updatedList = staffList.filter(staff => staff.uuid !== uuid);
-      
-      // Save updated list back to localStorage
-      localStorage.setItem('mockStaffList', JSON.stringify(updatedList));
-      
-      console.log('Mock user deleted:', userToDelete);
-      
-      return { 
-        success: true, 
-        message: 'User deleted successfully (mock)',
-        data: userToDelete
-      };
-    } catch (parseError) {
-      console.error('Error parsing mock staff list:', parseError);
-    }
-  }
-  
-  // If no mock data exists, just return success
-  return { 
-    success: true, 
-    message: 'User deleted successfully (mock)'
   };
 };
 

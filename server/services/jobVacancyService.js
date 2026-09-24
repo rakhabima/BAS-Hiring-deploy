@@ -1,4 +1,13 @@
-import JobPosting from "../models/jobPostingModel.js";
+import prisma from "../db/prisma.js";
+
+// Mongoose dulu meng-cast string jadi Date/Number sendiri; Prisma tidak, dan
+// form React mengirim keduanya sebagai string. Konversi dipusatkan di sini.
+const toDate = (v) => (v === undefined || v === null || v === "" ? undefined : new Date(v));
+
+// Field yang boleh datang dari req.body. Dulu updateData diteruskan mentah ke
+// $set — Prisma menolak field tak dikenal, jadi whitelist ini sekaligus
+// mencegah kolom lain (isDeleted, createdBy) ditimpa dari luar.
+const UPDATABLE_FIELDS = ["title", "description", "location", "jobType", "jobPosition", "status", "imageUrl"];
 
 export const createJobVacancy = async (jobData) => {
   const { title, description, location, jobType, jobPosition, deadline, createdBy, status } = jobData;
@@ -7,24 +16,19 @@ export const createJobVacancy = async (jobData) => {
     throw new Error("Field yang diperlukan belum lengkap.");
   }
 
-  let imageUrl = null;
-  if (jobData.imageUrl) {
-    imageUrl = jobData.imageUrl;
-  }
-
-  const newJob = new JobPosting({
-    title,
-    description,
-    location,
-    jobType,
-    jobPosition,
-    deadline,
-    createdBy,
-    imageUrl,
-    status: status || "ACTIVE"
+  return prisma.jobPosting.create({
+    data: {
+      title,
+      description,
+      location,
+      jobType,
+      jobPosition,
+      deadline: toDate(deadline),
+      createdBy,
+      imageUrl: jobData.imageUrl || null,
+      status: status || "ACTIVE"
+    }
   });
-
-  return await newJob.save();
 };
 
 export const updateJobVacancy = async (uuid, updateData) => {
@@ -32,43 +36,40 @@ export const updateJobVacancy = async (uuid, updateData) => {
     throw new Error("ID job vacancy diperlukan untuk update.");
   }
 
-  const job = await JobPosting.findOne({ uuid, isDeleted: false });
+  const job = await prisma.jobPosting.findFirst({ where: { uuid, isDeleted: false } });
   if (!job) {
     throw new Error("Job vacancy tidak ditemukan.");
   }
 
-  const updatedJob = await JobPosting.findOneAndUpdate(
-    { uuid, isDeleted: false },
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
+  const data = {};
+  for (const field of UPDATABLE_FIELDS) {
+    if (updateData[field] !== undefined) {
+      data[field] = updateData[field];
+    }
+  }
+  if (updateData.deadline !== undefined) {
+    data.deadline = toDate(updateData.deadline);
+  }
 
-  return updatedJob;
+  return prisma.jobPosting.update({ where: { uuid }, data });
 };
 
 export const getAllJobVacancies = async () => {
-  const jobs = await JobPosting.find({ isDeleted: false });
-  return jobs;
+  return prisma.jobPosting.findMany({ where: { isDeleted: false } });
 };
 
 export const getJobVacancyById = async (uuid) => {
-  const job = await JobPosting.findOne({ uuid, isDeleted: false });
-  return job;
+  return prisma.jobPosting.findFirst({ where: { uuid, isDeleted: false } });
 };
 
 export const softDeleteJobVacancy = async (uuid) => {
-  const updatedJob = await JobPosting.findOneAndUpdate(
-    { uuid, isDeleted: false },
-    { 
-      isDeleted: true, 
-      deletedAt: new Date() 
-    },
-    { new: true }
-  );
-  
-  if (!updatedJob) {
+  const job = await prisma.jobPosting.findFirst({ where: { uuid, isDeleted: false } });
+  if (!job) {
     throw new Error("Job vacancy tidak ditemukan atau sudah dihapus.");
   }
-  
-  return updatedJob;
+
+  return prisma.jobPosting.update({
+    where: { uuid },
+    data: { isDeleted: true, deletedAt: new Date() }
+  });
 };

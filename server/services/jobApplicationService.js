@@ -1,226 +1,172 @@
-import Interview from "../models/interviewModel.js";
-import JobApplication from "../models/jobApplicationModel.js";
-import JobPosting from "../models/jobPostingModel.js";
-import User from "../models/userModel.js";
+import prisma from "../db/prisma.js";
+
+// --- Konversi tipe ---------------------------------------------------------
+// Mongoose meng-cast string jadi Date/Boolean sendiri; Prisma tidak, sementara
+// form React (multipart) mengirim semuanya sebagai string.
+const DATE_FIELDS = [
+  "tanggal_lahir", "masa_berlaku_sim", "masa_berlaku_stnk",
+  "masa_berlaku_pajak_kendaraan", "tanggal_bergabung",
+  "tanggal_berakhir_kontrak", "deleted_from_employee_list_at"
+];
+const BOOL_FIELDS = ["status_kerja", "hidden_from_employee_list"];
+
+// Field yang boleh datang dari req.body. Dulu applicationData/updateData
+// diteruskan mentah; Prisma menolak field tak dikenal, jadi daftar ini wajib.
+const APPLICATION_FIELDS = [
+  "candidateId", "jobPostingId", "status",
+  "nama_ktp", "jenis_kelamin", "nik", "agama", "pendidikan_terakhir",
+  "email", "no_hp", "no_hp_darurat", "pemilik_no_hp_darurat",
+  "hubungan_dgn_pemilik_no_hp_darurat",
+  "kota", "kecamatan", "kelurahan", "alamat",
+  "no_sim", "tipe_sim", "merk_kendaraan", "tahun_produksi_kendaraan",
+  "no_pol_kendaraan", "no_stnk",
+  "no_rekening", "nama_pemilik_rekening", "nama_bank",
+  "posisi_dilamar", "lama_pengalaman_kerja", "ekspektasi_lama_bekerja",
+  "divisi", "lokasi_penempatan", "deleted_from_employee_list_by",
+  "foto_diri", "foto_ktp", "foto_sim", "foto_stnk_hal_1", "foto_stnk_hal_2",
+  "foto_ijazah", "notes",
+  ...DATE_FIELDS, ...BOOL_FIELDS
+];
+
+const isBlank = (v) => v === undefined || v === null || v === "" || v === "null";
+
+const buildPayload = (source) => {
+  const data = {};
+  for (const field of APPLICATION_FIELDS) {
+    if (source[field] === undefined) continue;
+
+    if (DATE_FIELDS.includes(field)) {
+      // Form mengirim "null"/"" untuk tanggal kosong.
+      data[field] = isBlank(source[field]) ? null : new Date(source[field]);
+    } else if (BOOL_FIELDS.includes(field)) {
+      data[field] = source[field] === true || source[field] === "true";
+    } else {
+      data[field] = source[field];
+    }
+  }
+
+  // tipe_sim wajib punya nilai enum yang valid
+  if (isBlank(data.tipe_sim)) {
+    data.tipe_sim = "Tidak Punya";
+  }
+  return data;
+};
+
+// Bentuk jobPostingId yang dikirim ke client. Dulu dibuat manual lewat query
+// terpisah per aplikasi (N+1); sekarang ikut lewat relasi.
+// Catatan: field `salary` disebut di kode lama tapi tidak pernah ada di schema
+// JobPosting, jadi selalu undefined dan hilang saat JSON.stringify — tidak
+// diikutkan di sini, payload-nya tetap sama.
+const JOB_POSTING_SELECT = {
+  title: true, jobPosition: true, location: true, deadline: true
+};
+
+const shapeJobPosting = (jobPosting) => jobPosting && {
+  title: jobPosting.title,
+  companyName: jobPosting.title, // Assuming company name is in title
+  jobPosition: jobPosting.jobPosition,
+  location: jobPosting.location,
+  deadline: jobPosting.deadline
+};
+
+// Mengganti field relasi `jobPosting` jadi `jobPostingId` berbentuk objek,
+// persis seperti yang dulu dirakit manual.
+const withJobPosting = (application) => {
+  if (!application) return application;
+  const { jobPosting, ...rest } = application;
+  return jobPosting
+    ? { ...rest, jobPostingId: shapeJobPosting(jobPosting) }
+    : rest;
+};
 
 /**
  * Submit a new job application
- * @param {Object} applicationData - The application data to save
- * @returns {Promise<Object>} - The saved application object
  */
 export const submitApplication = async (applicationData) => {
-  try {
-    // Handle nullable date fields - convert string "null" to actual null
-    const dateFields = ['masa_berlaku_sim', 'masa_berlaku_stnk', 'masa_berlaku_pajak_kendaraan'];
-    dateFields.forEach(field => {
-      if (applicationData[field] === "null" || applicationData[field] === "") {
-        applicationData[field] = null;
+  const data = buildPayload(applicationData);
+
+  // Hook pre('save') Mongoose dulu membuat entri statusHistory awal secara
+  // otomatis. Hook itu tidak ada lagi, jadi dibuat eksplisit di sini.
+  return prisma.jobApplication.create({
+    data: {
+      ...data,
+      statusHistory: {
+        create: {
+          status: data.status || "PENDING",
+          notes: "Dokumen lamaran terkirim, menunggu verifikasi"
+        }
       }
-    });
-
-    // Ensure tipe_sim has a valid enum value - only set default if undefined or empty string
-    if (applicationData.tipe_sim === undefined || applicationData.tipe_sim === null || applicationData.tipe_sim === "") {
-      applicationData.tipe_sim = "Tidak Punya";
     }
-
-    // Create a new job application with all the explicit fields
-    const newApplication = new JobApplication(applicationData);
-
-    // Save the application
-    return await newApplication.save();
-  } catch (error) {
-    console.error("Error submitting application:", error);
-    throw error;
-  }
+  });
 };
 
 /**
  * Get job applications for a candidate
- * @param {String} candidateId - The ID of the candidate
- * @returns {Promise<Array>} - Array of job application objects
  */
 export const getCandidateApplications = async (candidateId) => {
-  try {
-    // Find all applications for this candidate
-    const applications = await JobApplication.find({ candidateId })
-      .sort({ submissionDate: -1 });
-    
-    // Process applications to properly populate job posting details
-    const populatedApplications = [];
-    
-    for (const application of applications) {
-      try {
-        // Find the job posting by UUID
-        const jobPosting = await JobPosting.findOne({ 
-          uuid: application.jobPostingId 
-        });
-        
-        // Create a copy of the application as a plain object
-        const appObject = application.toObject();
-        
-        // Manually assign job posting if found
-        if (jobPosting) {
-          appObject.jobPostingId = {
-            title: jobPosting.title,
-            companyName: jobPosting.title, // Assuming company name is in title
-            jobPosition: jobPosting.jobPosition,
-            location: jobPosting.location,
-            salary: jobPosting.salary,
-            deadline: jobPosting.deadline
-          };
-        }
-        
-        populatedApplications.push(appObject);
-      } catch (err) {
-        console.error(`Error populating job posting for application ${application.uuid}:`, err);
-        // Include the application even if population fails
-        populatedApplications.push(application.toObject());
-      }
-    }
-    
-    return populatedApplications;
-  } catch (error) {
-    console.error("Error getting candidate applications:", error);
-    throw error;
-  }
+  // Dulu: 1 query aplikasi + 1 query JobPosting per aplikasi (N+1).
+  const applications = await prisma.jobApplication.findMany({
+    where: { candidateId },
+    orderBy: { submissionDate: "desc" },
+    include: { jobPosting: { select: JOB_POSTING_SELECT } }
+  });
+
+  return applications.map(withJobPosting);
 };
 
 /**
  * Get a job application by ID
- * @param {String} uuid - The application UUID
- * @returns {Promise<Object>} - The job application object
  */
 export const getApplicationById = async (uuid) => {
-  try {
-    // Find application by UUID
-    const application = await JobApplication.findOne({ uuid });
-    
-    if (!application) {
-      return null;
+  const application = await prisma.jobApplication.findUnique({
+    where: { uuid },
+    include: {
+      jobPosting: { select: JOB_POSTING_SELECT },
+      statusHistory: { orderBy: { timestamp: "asc" } }
     }
-    
-    // Convert to plain object
-    const appObject = application.toObject();
-    
-    // Find and manually populate job posting
-    try {
-      const jobPosting = await JobPosting.findOne({ 
-        uuid: application.jobPostingId 
-      });
-      
-      if (jobPosting) {
-        appObject.jobPostingId = {
-          title: jobPosting.title,
-          companyName: jobPosting.title, // Assuming company name is in title
-          jobPosition: jobPosting.jobPosition,
-          location: jobPosting.location,
-          salary: jobPosting.salary,
-          deadline: jobPosting.deadline
-        };
-      }
-    } catch (err) {
-      console.error(`Error populating job posting for application ${uuid}:`, err);
-    }
-    
-    return appObject;
-  } catch (error) {
-    console.error("Error getting application by ID:", error);
-    throw error;
-  }
+  });
+
+  return withJobPosting(application);
 };
 
 /**
  * Update a job application
- * @param {String} uuid - The application UUID
- * @param {Object} updateData - The data to update
- * @returns {Promise<Object>} - The updated job application object
  */
 export const updateApplication = async (uuid, updateData) => {
-  try {
-    // Handle nullable date fields - convert string "null" to actual null
-    const dateFields = ['masa_berlaku_sim', 'masa_berlaku_stnk', 'masa_berlaku_pajak_kendaraan'];
-    dateFields.forEach(field => {
-      if (updateData[field] === "null" || updateData[field] === "") {
-        updateData[field] = null;
-      }
-    });
-    
-    // Ensure tipe_sim has a valid enum value - only set default if undefined or empty string
-    if (updateData.tipe_sim === undefined || updateData.tipe_sim === null || updateData.tipe_sim === "") {
-      updateData.tipe_sim = "Tidak Punya";
-    }
-    
-    // Get the current application to check for status changes
-    const currentApplication = await JobApplication.findOne({ uuid });
-    
-    if (!currentApplication) {
-      return null;
-    }
-
-    // Determine if status is changing
-    const isStatusChanging = updateData.status && updateData.status !== currentApplication.status;
-    
-    // If status is changing, add a new status history entry
-    if (isStatusChanging) {
-      // Create a new status history entry
-      const statusEntry = {
-        status: updateData.status,
-        timestamp: new Date(),
-        notes: updateData.notes || '',
-        updatedBy: updateData.updatedBy
-      };
-      
-      // Add the new status entry to the history
-      updateData.statusHistory = [...(currentApplication.statusHistory || []), statusEntry];
-    }
-    
-    // Find and update the application
-    const updatedApplication = await JobApplication.findOneAndUpdate(
-      { uuid },
-      { $set: updateData },
-      { new: true }
-    );
-    
-    if (!updatedApplication) {
-      return null;
-    }
-    
-    // If status is ACCEPTED or ON_JOB, update the user's employment status
-    if (updateData.status === "ACCEPTED" || updateData.status === "ON_JOB") {
-      await User.findOneAndUpdate(
-        { uuid: updatedApplication.candidateId },
-        { $set: { employmentStatus: "ON_JOB" } }
-      );
-    }
-    
-    // Convert to plain object
-    const appObject = updatedApplication.toObject();
-    
-    // Find and manually populate job posting
-    try {
-      const jobPosting = await JobPosting.findOne({ 
-        uuid: updatedApplication.jobPostingId 
-      });
-      
-      if (jobPosting) {
-        appObject.jobPostingId = {
-          title: jobPosting.title,
-          companyName: jobPosting.title, // Assuming company name is in title
-          jobPosition: jobPosting.jobPosition,
-          location: jobPosting.location,
-          salary: jobPosting.salary,
-          deadline: jobPosting.deadline
-        };
-      }
-    } catch (err) {
-      console.error(`Error populating job posting for updated application ${uuid}:`, err);
-    }
-    
-    return appObject;
-  } catch (error) {
-    console.error("Error updating application:", error);
-    throw error;
+  const currentApplication = await prisma.jobApplication.findUnique({ where: { uuid } });
+  if (!currentApplication) {
+    return null;
   }
+
+  const data = buildPayload(updateData);
+
+  // Determine if status is changing
+  const isStatusChanging = data.status && data.status !== currentApplication.status;
+  if (isStatusChanging) {
+    data.statusHistory = {
+      create: {
+        status: data.status,
+        notes: updateData.notes || "",
+        updatedBy: updateData.updatedBy
+      }
+    };
+  }
+
+  const updatedApplication = await prisma.jobApplication.update({
+    where: { uuid },
+    data,
+    include: { jobPosting: { select: JOB_POSTING_SELECT } }
+  });
+
+  // If status is ACCEPTED or ON_JOB, update the user's employment status
+  if (data.status === "ACCEPTED" || data.status === "ON_JOB") {
+    await prisma.user.update({
+      where: { uuid: updatedApplication.candidateId },
+      data: { employmentStatus: "ON_JOB" }
+    });
+  }
+
+  return withJobPosting(updatedApplication);
 };
 
 // Helper function to map UI stage filter to backend statuses
@@ -242,368 +188,215 @@ const getStatusesForStage = (stage) => {
 };
 
 /**
- * Get all job applications (for recruiters) with filtering and pagination
- * @param {object} filters - Object containing filter criteria (searchTerm, stageFilter, statusFilter, positionFilter)
- * @param {number} page - The current page number (1-indexed)
- * @param {number} limit - The number of items per page
- * @returns {Promise<{applications: Array, totalCount: number}>} - Object containing applications and total count
+ * Get all job applications (for recruiters) with filtering and pagination.
+ *
+ * Dulu ini satu pipeline $facet dengan dua $lookup + $unwind, plus cache
+ * buatan tangan di global.queryCache (LRU manual + setTimeout 30 detik). Cache
+ * itu tidak pernah di-invalidasi saat ada perubahan status, jadi recruiter bisa
+ * melihat data basi hingga 30 detik setelah mengubah kandidat. Di Postgres
+ * filter+join+count ini adalah query biasa yang memakai index, jadi cache-nya
+ * dibuang, bukan diporting.
  */
 export const getAllApplications = async (filters = {}, page = 1, limit = 10) => {
-  try {
-    const skip = (page - 1) * limit;
-    const { searchTerm, stageFilter, statusFilter, positionFilter } = filters;
+  const skip = (page - 1) * limit;
+  const { searchTerm, stageFilter, statusFilter, positionFilter } = filters;
 
-    // Create a cache key for this specific query
-    const cacheKey = `applications_${page}_${limit}_${searchTerm || ''}_${stageFilter || 'all'}_${statusFilter || 'all'}_${positionFilter || 'all'}`;
-    
-    // Check if we have a cached result
-    if (global.queryCache && global.queryCache[cacheKey]) {
-      console.log(`Using cached results for query: ${cacheKey}`);
-      return global.queryCache[cacheKey];
-    }
-
-    console.time('applicationQuery');
-
-    // ---- Build $match stages ----
-    const preLookupMatch = {};
-    const postLookupMatch = {};
-    
+  const where = {
     // Filter out soft deleted employees from employee list
-    preLookupMatch.hidden_from_employee_list = { $ne: true };
-    
-    // Status/Stage Filters -> preLookupMatch
-    if (statusFilter && statusFilter !== 'all') preLookupMatch.status = statusFilter;
-    if (stageFilter && stageFilter !== 'all') {
-      const statuses = getStatusesForStage(stageFilter);
-      if (statuses) {
-        if (preLookupMatch.status && !statuses.includes(preLookupMatch.status)) preLookupMatch._id = null;
-        else if (!preLookupMatch.status) preLookupMatch.status = { $in: statuses };
-      }
-    }
-    // Position Filter (Try on 'posisi_dilamar' first) -> preLookupMatch
-    if (positionFilter && positionFilter !== 'all') {
-      preLookupMatch.posisi_dilamar = positionFilter;
-    }
-    // Search Term Filter
-    if (searchTerm) {
-      const searchRegex = new RegExp(searchTerm, 'i');
-      // Part 1 -> preLookupMatch (Fields on JobApplication)
-      const preLookupOr = [];
-      preLookupOr.push({ 'nama_ktp': searchRegex });
-      // Add other direct fields if needed
-      if (!preLookupMatch.posisi_dilamar && positionFilter == 'all') { // Avoid adding if position already matched/filtered
-           preLookupOr.push({ 'posisi_dilamar': searchRegex }); // Also search position if not filtered
-      }
-      if(preLookupOr.length > 0) {
-        preLookupMatch.$or = (preLookupMatch.$or || []).concat(preLookupOr);
-      }
+    hidden_from_employee_list: false
+  };
 
-      // Part 2 -> postLookupMatch (Fields needing lookup)
-      postLookupMatch.$or = postLookupMatch.$or || [];
-      postLookupMatch.$or.push({ 'candidateInfo.name': searchRegex });
-      postLookupMatch.$or.push({ 'candidateInfo.email': searchRegex });
-      // Add post-lookup position search if needed
-      if (positionFilter == 'all' && !preLookupMatch.posisi_dilamar) {
-           postLookupMatch.$or.push({ 'jobInfo.jobPosition': searchRegex });
-      }
-       if(postLookupMatch.$or.length === 0) delete postLookupMatch.$or;
-    }
-     // Cleanup empty $or in preLookupMatch if only search was added but didn't find direct fields
-     if (preLookupMatch.$or && preLookupMatch.$or.length === 0) {
-        delete preLookupMatch.$or;
-     }
-    // ------------------------------------------------------
-
-    // ---- Use $facet to run both count and data queries in a single aggregation ----
-    const facetPipeline = [
-      // Apply pre-lookup filters first
-      ...(Object.keys(preLookupMatch).length > 0 ? [{ $match: preLookupMatch }] : []),
-      
-      // Perform necessary lookups ONLY if post-lookup filters exist or for final projection
-      { $lookup: { from: "users", let: { candidateId: "$candidateId" }, pipeline: [ { $match: { $expr: { $eq: ["$uuid", "$$candidateId"] } } }, { $project: { _id: 0, name: 1, email: 1 } } ], as: "candidateInfo" } },
-      { $unwind: { path: "$candidateInfo", preserveNullAndEmptyArrays: true } },
-      
-      // Optional: Add jobposting lookup here if needed for postLookupMatch or final projection
-      { $lookup: { from: "jobpostings", let: { jobId: "$jobPostingId" }, pipeline: [ { $match: { $expr: { $eq: ["$uuid", "$$jobId"] } } }, { $project: { _id: 0, title: 1, jobPosition: 1, location: 1, salary: 1, deadline: 1 } } ], as: "jobInfo" } },
-      { $unwind: { path: "$jobInfo", preserveNullAndEmptyArrays: true } },
-      
-      // Apply post-lookup filters
-      ...(Object.keys(postLookupMatch).length > 0 ? [{ $match: postLookupMatch }] : []),
-      
-      // Use $facet to get both data and count in one query
-      {
-        $facet: {
-          // Data facet - includes sorting, pagination and projection
-          data: [
-            { $sort: { submissionDate: -1 } },
-            { $skip: skip },
-            { $limit: limit },
-            { 
-              $project: {
-                _id: 0, uuid: 1, candidateId: 1, submissionDate: 1, status: 1,
-                notes: 1, statusHistory: 1, nama_ktp: 1, jenis_kelamin: 1, 
-                email: 1, no_hp: 1, posisi_dilamar: 1,
-                candidateInfo: 1, 
-                jobPostingId: {
-                  jobPosition: "$jobInfo.jobPosition",
-                  title: "$jobInfo.title"
-                }
-                // Remove fields that aren't needed for table display
-              }
-            }
-          ],
-          // Count facet - just counts documents
-          count: [
-            { $count: "total" }
-          ]
-        }
-      }
-    ];
-    
-    const results = await JobApplication.aggregate(facetPipeline).allowDiskUse(true);
-    console.timeEnd('applicationQuery');
-    
-    // Extract data and count from facet results
-    const applications = results[0].data || [];
-    const totalCount = results[0].count[0]?.total || 0;
-    
-    const response = { applications, totalCount };
-    
-    // Cache the results for 30 seconds if there's not too many results
-    // Initialize cache if it doesn't exist
-    if (!global.queryCache) {
-      global.queryCache = {};
-      global.queryCacheSize = 0;
-      global.queryCacheKeys = [];
-    }
-    
-    // Only cache if result set is not too large (less than 100 items)
-    if (applications.length <= 100) {
-      // Check if we need to clean up the cache (keep it under 50 entries)
-      if (global.queryCacheKeys.length >= 50) {
-        // Remove oldest cache entries
-        const keysToRemove = global.queryCacheKeys.slice(0, 5); // Remove 5 oldest
-        keysToRemove.forEach(key => {
-          delete global.queryCache[key];
-        });
-        global.queryCacheKeys = global.queryCacheKeys.slice(5);
-        console.log('Cleaned up 5 oldest cache entries');
-      }
-      
-      // Add new cache entry
-      global.queryCache[cacheKey] = response;
-      global.queryCacheKeys.push(cacheKey);
-      
-      // Set timeout to clear this cache entry after 30 seconds
-      setTimeout(() => {
-        if (global.queryCache && global.queryCache[cacheKey]) {
-          delete global.queryCache[cacheKey];
-          global.queryCacheKeys = global.queryCacheKeys.filter(key => key !== cacheKey);
-        }
-      }, 30000); // 30 seconds cache
-    } else {
-      console.log('Result set too large, not caching');
-    }
-    
-    console.log(`Found ${applications.length} applications for page ${page}, total count: ${totalCount}`);
-    return response;
-
-  } catch (error) {
-    console.error("Error getting all applications:", error);
-    throw error;
+  // Status/Stage filters
+  if (statusFilter && statusFilter !== 'all') {
+    where.status = statusFilter;
   }
+  if (stageFilter && stageFilter !== 'all') {
+    const statuses = getStatusesForStage(stageFilter);
+    if (statuses) {
+      if (where.status && !statuses.includes(where.status)) {
+        // Kombinasi status+stage yang mustahil -> hasil kosong.
+        where.status = { in: [] };
+      } else if (!where.status) {
+        where.status = { in: statuses };
+      }
+    }
+  }
+
+  // Position filter
+  if (positionFilter && positionFilter !== 'all') {
+    where.posisi_dilamar = positionFilter;
+  }
+
+  // Search term: dulu dipecah jadi pre-lookup dan post-lookup $match karena
+  // sebagian field ada di koleksi lain. Dengan JOIN semuanya jadi satu OR.
+  if (searchTerm) {
+    const contains = { contains: searchTerm, mode: 'insensitive' };
+    where.OR = [
+      { nama_ktp: contains },
+      { candidate: { name: contains } },
+      { candidate: { email: contains } }
+    ];
+    if (!where.posisi_dilamar) {
+      where.OR.push({ posisi_dilamar: contains });
+      where.OR.push({ jobPosting: { jobPosition: contains } });
+    }
+  }
+
+  const [rows, totalCount] = await Promise.all([
+    prisma.jobApplication.findMany({
+      where,
+      orderBy: { submissionDate: 'desc' },
+      skip,
+      take: limit,
+      select: {
+        uuid: true, candidateId: true, submissionDate: true, status: true,
+        notes: true, nama_ktp: true, jenis_kelamin: true,
+        email: true, no_hp: true, posisi_dilamar: true,
+        statusHistory: { orderBy: { timestamp: 'asc' } },
+        candidate: { select: { name: true, email: true } },
+        jobPosting: { select: { title: true, jobPosition: true } }
+      }
+    }),
+    prisma.jobApplication.count({ where })
+  ]);
+
+  // Bentuk ulang agar identik dengan $project pipeline lama.
+  const applications = rows.map(({ candidate, jobPosting, ...rest }) => ({
+    ...rest,
+    candidateInfo: candidate || undefined,
+    jobPostingId: jobPosting
+      ? { jobPosition: jobPosting.jobPosition, title: jobPosting.title }
+      : undefined
+  }));
+
+  return { applications, totalCount };
 };
 
 /**
  * Get total counts for each main application stage.
- * @returns {Promise<object>} - Object with counts for each stage (pending, interview, technicalTest, accepted, rejected)
  */
 export const getApplicationStageStats = async () => {
-  try {
-    console.log("Fetching application stage statistics...");
-    // Aggregasi untuk menghitung jumlah dokumen per status
-    const statusCountsResult = await JobApplication.aggregate([
-      {
-        $group: {
-          _id: "$status", // Group by status field
-          count: { $sum: 1 } // Count documents in each group
-        }
-      }
-    ]);
+  const grouped = await prisma.jobApplication.groupBy({
+    by: ['status'],
+    _count: { _all: true }
+  });
 
-    // Proses hasil agregasi ke dalam format yang diinginkan
-    const counts = {
-      PENDING: 0, REVIEWING: 0, REVISION: 0,
-      INTERVIEW_SCHEDULED: 0, TECHNICAL_TEST: 0,
-      ACCEPTED: 0, ON_JOB: 0, REJECTED: 0
-    };
+  const counts = {
+    PENDING: 0, REVIEWING: 0, REVISION: 0,
+    INTERVIEW_SCHEDULED: 0, TECHNICAL_TEST: 0,
+    ACCEPTED: 0, ON_JOB: 0, REJECTED: 0
+  };
 
-    statusCountsResult.forEach(item => {
-      if (counts.hasOwnProperty(item._id)) {
-        counts[item._id] = item.count;
-      }
-    });
+  grouped.forEach(item => {
+    if (Object.prototype.hasOwnProperty.call(counts, item.status)) {
+      counts[item.status] = item._count._all;
+    }
+  });
 
-    // Gabungkan hitungan berdasarkan tahapan UI
-    const stageStats = {
-      pending: counts.PENDING + counts.REVIEWING + counts.REVISION,
-      interview: counts.INTERVIEW_SCHEDULED,
-      technicalTest: counts.TECHNICAL_TEST,
-      accepted: counts.ACCEPTED + counts.ON_JOB,
-      rejected: counts.REJECTED // Sertakan jika perlu
-    };
+  // Gabungkan hitungan berdasarkan tahapan UI
+  return {
+    pending: counts.PENDING + counts.REVIEWING + counts.REVISION,
+    interview: counts.INTERVIEW_SCHEDULED,
+    technicalTest: counts.TECHNICAL_TEST,
+    accepted: counts.ACCEPTED + counts.ON_JOB,
+    rejected: counts.REJECTED
+  };
+};
 
-    console.log("Calculated stage stats:", stageStats);
-    return stageStats;
-
-  } catch (error) {
-    console.error("Error getting application stage stats:", error);
-    throw error;
-  }
+// Awal rentang waktu untuk filter periode.
+const startOfPeriod = (period, offsets) => {
+  const today = new Date();
+  const startDate = new Date(today);
+  if (period === 'week') startDate.setDate(today.getDate() - offsets.week);
+  else if (period === 'month') startDate.setMonth(today.getMonth() - offsets.month);
+  else if (period === 'year') startDate.setFullYear(today.getFullYear() - offsets.year);
+  return startDate;
 };
 
 /**
  * Get application counts grouped by status, optionally filtered by time period.
- * @param {string} period - Time period ('week', 'month', 'year', or 'all')
- * @returns {Promise<object>} - Object where keys are statuses and values are counts.
  */
 export const getApplicationStatusDistribution = async (period = 'all') => {
-  try {
-    console.log(`Fetching status distribution for period: ${period}`);
-    const matchStage = {}; // Initialize match stage
-
-    // Build time period filter
-    if (period !== 'all') {
-      const today = new Date();
-      const startDate = new Date(today);
-      if (period === 'week') startDate.setDate(today.getDate() - 7);
-      else if (period === 'month') startDate.setMonth(today.getMonth() - 1);
-      else if (period === 'year') startDate.setFullYear(today.getFullYear() - 1);
-      // Only include applications submitted within the period
-      matchStage.submissionDate = { $gte: startDate };
-    }
-
-    // Aggregation pipeline
-    const statusCountsResult = await JobApplication.aggregate([
-      // Apply time filter if present
-      ...(Object.keys(matchStage).length > 0 ? [{ $match: matchStage }] : []),
-      {
-        $group: {
-          _id: "$status", // Group by status
-          count: { $sum: 1 } // Count documents
-        }
-      },
-      {
-        $project: { // Reshape to { status: count }
-          _id: 0,
-          status: "$_id",
-          count: 1
-        }
-      }
-    ]);
-
-    // Convert array result to a simple key-value object
-    const distribution = {};
-    statusCountsResult.forEach(item => {
-      distribution[item.status] = item.count;
-    });
-
-    console.log("Status distribution results:", distribution);
-    return distribution;
-
-  } catch (error) {
-    console.error("Error getting application status distribution:", error);
-    throw error;
+  const where = {};
+  if (period !== 'all') {
+    where.submissionDate = { gte: startOfPeriod(period, { week: 7, month: 1, year: 1 }) };
   }
+
+  const grouped = await prisma.jobApplication.groupBy({
+    by: ['status'],
+    where,
+    _count: { _all: true }
+  });
+
+  const distribution = {};
+  grouped.forEach(item => {
+    distribution[item.status] = item._count._all;
+  });
+
+  return distribution;
 };
 
 /**
- * Get application counts grouped by time unit (day, week, month) based on the period.
- * @param {string} period - Time period ('week', 'month', 'year')
- * @returns {Promise<object>} - Object where keys are time labels and values are counts.
+ * Get application counts grouped by time unit (day, week, month).
+ *
+ * Dulu memakai $dateToString dengan timezone "+07:00". Padanannya di Postgres
+ * adalah to_char() atas timestamp yang sudah digeser ke Asia/Jakarta. Format
+ * string dipilih dari konstanta di bawah — tidak pernah dari input user —
+ * sehingga tidak bisa jadi jalur SQL injection.
  */
 export const getApplicationTrends = async (period = 'week') => {
-  try {
-    console.log(`Fetching application trends for period: ${period}`);
-    const today = new Date();
-    const startDate = new Date(today);
-    let groupByFormat = "%Y-%m-%d"; // Default: group by day (for weekly view)
-    let dateField = "$submissionDate";
+  const startDate = startOfPeriod(period, { week: 28, month: 6, year: 2 });
 
-    if (period === 'week') {
-      startDate.setDate(today.getDate() - 28); // Last 4 weeks
-      groupByFormat = "%Y-W%U"; // Group by Year-WeekNumber (e.g., 2023-W45)
-    } else if (period === 'month') {
-      startDate.setMonth(today.getMonth() - 6); // Last 6 months
-      groupByFormat = "%Y-%m"; // Group by Year-Month (e.g., 2023-11)
-    } else if (period === 'year') {
-      startDate.setFullYear(today.getFullYear() - 2); // Last 2 years
-       groupByFormat = "%Y"; // Group by Year (e.g., 2023)
-    }
-
-    const matchStage = { submissionDate: { $gte: startDate } };
-
-    const trendsResult = await JobApplication.aggregate([
-      { $match: matchStage }, // Filter by date range first
-      {
-        $group: {
-          _id: { // Group by the calculated time unit
-            $dateToString: { format: groupByFormat, date: dateField, timezone: "+07:00" } // Use appropriate timezone
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }, // Sort by the time unit
-       {
-        $project: { // Reshape to { timeLabel: count }
-          _id: 0,
-          timeLabel: "$_id",
-          count: 1
-        }
-      }
-    ]);
-
-     // Convert array result to a simple key-value object
-    const trends = {};
-    trendsResult.forEach(item => {
-      trends[item.timeLabel] = item.count;
-    });
-
-    console.log("Application trends results:", trends);
-    return trends;
-
-  } catch (error) {
-    console.error("Error getting application trends:", error);
-    throw error;
+  let rows;
+  if (period === 'month') {
+    rows = await prisma.$queryRaw`
+      SELECT to_char("submissionDate" AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM') AS label,
+             count(*)::int AS count
+      FROM "JobApplication" WHERE "submissionDate" >= ${startDate}
+      GROUP BY 1 ORDER BY 1`;
+  } else if (period === 'year') {
+    rows = await prisma.$queryRaw`
+      SELECT to_char("submissionDate" AT TIME ZONE 'Asia/Jakarta', 'YYYY') AS label,
+             count(*)::int AS count
+      FROM "JobApplication" WHERE "submissionDate" >= ${startDate}
+      GROUP BY 1 ORDER BY 1`;
+  } else {
+    // Mongo memakai %U (minggu dimulai Minggu); padanan terdekat di Postgres
+    // adalah WW. Penomoran minggunya bisa berbeda 1 di awal/akhir tahun.
+    rows = await prisma.$queryRaw`
+      SELECT to_char("submissionDate" AT TIME ZONE 'Asia/Jakarta', 'YYYY-"W"WW') AS label,
+             count(*)::int AS count
+      FROM "JobApplication" WHERE "submissionDate" >= ${startDate}
+      GROUP BY 1 ORDER BY 1`;
   }
+
+  const trends = {};
+  rows.forEach(item => {
+    trends[item.label] = item.count;
+  });
+
+  return trends;
 };
 
 /**
  * Hard delete a job application
- * @param {String} uuid - The application UUID to delete
- * @returns {Promise<Object>} - The deleted job application object
  */
 export const hardDeleteApplication = async (uuid) => {
-  try {
-    // Find application by UUID
-    const application = await JobApplication.findOne({ uuid });
-    
-    if (!application) {
-      throw new Error('Application not found');
-    }
-    
-    // Delete all interviews associated with this application
-    console.log(`Checking for interviews associated with application ${uuid}...`);
-    const deletedInterviews = await Interview.deleteMany({ applicationId: uuid });
-    console.log(`Deleted ${deletedInterviews.deletedCount} interview(s) associated with application ${uuid}`);
-    
-    // Delete the application itself
-    const deletedApplication = await JobApplication.findOneAndDelete({ uuid });
-    
-    // Return the deleted application
-    return deletedApplication;
-  } catch (error) {
-    console.error("Error hard deleting application:", error);
-    throw error;
+  const application = await prisma.jobApplication.findUnique({ where: { uuid } });
+  if (!application) {
+    throw new Error('Application not found');
   }
-}; 
+
+  // statusHistory ikut terhapus lewat onDelete: Cascade. Interview dan
+  // TechnicalTest punya foreign key ke aplikasi ini, jadi harus dihapus lebih
+  // dulu. Kode lama hanya menghapus Interview — technical test-nya jadi yatim
+  // di Mongo; di Postgres itu akan menolak penghapusan, dan sekarang ikut
+  // dibersihkan.
+  const [, , deletedApplication] = await prisma.$transaction([
+    prisma.interview.deleteMany({ where: { applicationId: uuid } }),
+    prisma.technicalTest.deleteMany({ where: { applicationId: uuid } }),
+    prisma.jobApplication.delete({ where: { uuid } })
+  ]);
+
+  return deletedApplication;
+};

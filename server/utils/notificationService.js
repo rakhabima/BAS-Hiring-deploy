@@ -1,19 +1,13 @@
-import Notification from "../models/notificationModel.js";
+import prisma from "../db/prisma.js";
 import { sendEmail } from "./emailService.js";
 import { sendSMS } from "./smsService.js";
 
 export const createNotification = async (userId, message, type, relatedId = null, relatedModel = null) => {
     try {
-        const notification = new Notification({
-            userId,
-            message,
-            type,
-            relatedId,
-            relatedModel
+        const notification = await prisma.notification.create({
+            data: { userId, message, type, relatedId, relatedModel }
         });
-        
-        await notification.save();
-        
+
         return {
             success: true,
             notification
@@ -70,11 +64,11 @@ export const sendNotification = async (userId, message, type, options = {}) => {
 
 export const getUnreadNotifications = async (userId) => {
     try {
-        const notifications = await Notification.find({
-            userId,
-            readStatus: false
-        }).sort({ dateCreated: -1 });
-        
+        const notifications = await prisma.notification.findMany({
+            where: { userId, readStatus: false },
+            orderBy: { dateCreated: "desc" }
+        });
+
         return {
             success: true,
             notifications
@@ -88,158 +82,24 @@ export const getUnreadNotifications = async (userId) => {
     }
 };
 
-export const markNotificationAsRead = async (notificationId) => {
+const setReadStatus = async (notificationId, readStatus) => {
     try {
-        console.log(`Attempting to mark notification as read: ${notificationId}`);
-        
-        // Use findOne to check if the notification exists first
-        const notification = await Notification.findOne({ uuid: notificationId });
-        
-        if (!notification) {
-            console.log(`No notification found with uuid: ${notificationId}`);
-            return {
-                success: false,
-                message: "Notification not found"
-            };
-        }
-        
-        console.log(`Found notification with status: ${notification.readStatus}`);
-        
-        // Already marked as read? Return success
-        if (notification.readStatus) {
-            console.log(`Notification ${notificationId} was already marked as read`);
-            return {
-                success: true,
-                notification
-            };
-        }
-        
-        // Directly update with mongoose to ensure it works
-        notification.readStatus = true;
-        notification.markModified('readStatus');
-        
-        try {
-            // Use the save method for more reliable updates
-            const savedNotification = await notification.save();
-            console.log(`Successfully saved notification with updated status: ${savedNotification.readStatus}`);
-            
-            // Double-check that the update worked by querying again
-            const verifiedNotification = await Notification.findOne({ uuid: notificationId });
-            console.log(`Verified notification read status: ${verifiedNotification?.readStatus}`);
-            
-            return {
-                success: true,
-                notification: savedNotification
-            };
-        } catch (saveError) {
-            console.error(`Error saving notification: ${saveError.message}`);
-            
-            // If save fails, try updateOne as a fallback
-            try {
-                console.log(`Trying updateOne as fallback for ${notificationId}`);
-                const updateResult = await Notification.updateOne(
-                    { uuid: notificationId },
-                    { $set: { readStatus: true } }
-                );
-                
-                console.log(`UpdateOne result:`, updateResult);
-                
-                if (updateResult.modifiedCount > 0) {
-                    const updatedNotification = await Notification.findOne({ uuid: notificationId });
-                    return {
-                        success: true,
-                        notification: updatedNotification
-                    };
-                }
-            } catch (updateError) {
-                console.error(`Fallback update also failed: ${updateError.message}`);
-            }
-            
-            throw saveError;
-        }
+        const notification = await prisma.notification.update({
+            where: { uuid: notificationId },
+            data: { readStatus }
+        });
+
+        return { success: true, notification };
     } catch (error) {
-        console.error(`Error marking notification as read: ${notificationId}`, error);
-        return {
-            success: false,
-            message: error.message
-        };
+        // P2025 = baris tidak ada; dulu dibedakan dari error lain lewat findOne dulu.
+        if (error.code === "P2025") {
+            return { success: false, message: "Notification not found" };
+        }
+        console.error(`Error setting read status for ${notificationId}:`, error);
+        return { success: false, message: error.message };
     }
 };
 
-export const markNotificationAsUnread = async (notificationId) => {
-    try {
-        console.log(`Attempting to mark notification as unread: ${notificationId}`);
-        
-        // Use findOne to check if the notification exists first
-        const notification = await Notification.findOne({ uuid: notificationId });
-        
-        if (!notification) {
-            console.log(`No notification found with uuid: ${notificationId}`);
-            return {
-                success: false,
-                message: "Notification not found"
-            };
-        }
-        
-        console.log(`Found notification with status: ${notification.readStatus}`);
-        
-        // Already marked as unread? Return success
-        if (!notification.readStatus) {
-            console.log(`Notification ${notificationId} was already marked as unread`);
-            return {
-                success: true,
-                notification
-            };
-        }
-        
-        // Directly update with mongoose to ensure it works
-        notification.readStatus = false;
-        notification.markModified('readStatus');
-        
-        try {
-            // Use the save method for more reliable updates
-            const savedNotification = await notification.save();
-            console.log(`Successfully saved notification with updated status: ${savedNotification.readStatus}`);
-            
-            // Double-check that the update worked by querying again
-            const verifiedNotification = await Notification.findOne({ uuid: notificationId });
-            console.log(`Verified notification read status: ${verifiedNotification?.readStatus}`);
-            
-            return {
-                success: true,
-                notification: savedNotification
-            };
-        } catch (saveError) {
-            console.error(`Error saving notification: ${saveError.message}`);
-            
-            // If save fails, try updateOne as a fallback
-            try {
-                console.log(`Trying updateOne as fallback for ${notificationId}`);
-                const updateResult = await Notification.updateOne(
-                    { uuid: notificationId },
-                    { $set: { readStatus: false } }
-                );
-                
-                console.log(`UpdateOne result:`, updateResult);
-                
-                if (updateResult.modifiedCount > 0) {
-                    const updatedNotification = await Notification.findOne({ uuid: notificationId });
-                    return {
-                        success: true,
-                        notification: updatedNotification
-                    };
-                }
-            } catch (updateError) {
-                console.error(`Fallback update also failed: ${updateError.message}`);
-            }
-            
-            throw saveError;
-        }
-    } catch (error) {
-        console.error(`Error marking notification as unread: ${notificationId}`, error);
-        return {
-            success: false,
-            message: error.message
-        };
-    }
-}; 
+export const markNotificationAsRead = (notificationId) => setReadStatus(notificationId, true);
+
+export const markNotificationAsUnread = (notificationId) => setReadStatus(notificationId, false);

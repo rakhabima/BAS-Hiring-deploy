@@ -9,31 +9,42 @@ import {
   submitTechnicalTestResultController,
   updateTechnicalTestController
 } from '../controllers/technicalTestController.js';
-import { authenticateUser } from '../middleware/authMiddleware.js';
-import { upload } from '../utils/multer-storage-cloudinary.js';
+import prisma from '../db/prisma.js';
+import { authenticateUser, ownsApplication } from '../utils/authMiddleware.js';
 
 const router = express.Router();
 
-// Single file upload middleware for test submissions
-const uploadSubmission = upload.single('submissionFile');
+// Berkas jawaban diunggah langsung dari browser ke Cloudinary; route ini hanya
+// menerima URL-nya di body (lihat routes/upload.js).
+
+// TechnicalTest menyimpan applicationId; untuk route yang hanya tahu uuid test,
+// kepemilikan ditelusuri lewat aplikasi yang menaunginya.
+const applicationIdFromTest = async (req) => {
+  const test = await prisma.technicalTest.findUnique({
+    where: { uuid: req.params.uuid },
+    select: { applicationId: true }
+  });
+  return test?.applicationId;
+};
+const applicationIdFromParams = (req) => req.params.applicationId;
 
 // Create technical test for an application
 router.post('/:applicationId', authenticateUser, createTechnicalTestController);
 
 // Get technical test by application ID
-router.get('/application/:applicationId', authenticateUser, getTechnicalTestByApplicationIdController);
+router.get('/application/:applicationId', authenticateUser, ownsApplication(applicationIdFromParams), getTechnicalTestByApplicationIdController);
 
 // Get technical test by UUID
-router.get('/:uuid', authenticateUser, getTechnicalTestByIdController);
+router.get('/:uuid', authenticateUser, ownsApplication(applicationIdFromTest), getTechnicalTestByIdController);
 
 // Update technical test
 router.put('/:uuid', authenticateUser, updateTechnicalTestController);
 
 // Submit technical test result (with file upload)
-router.post('/:applicationId/submit', authenticateUser, uploadSubmission, submitTechnicalTestResultController);
+router.post('/:applicationId/submit', authenticateUser, ownsApplication(applicationIdFromParams), submitTechnicalTestResultController);
 
 // Mark technical test as completed
-router.post('/:applicationId/complete', authenticateUser, markTechnicalTestCompletedController);
+router.post('/:applicationId/complete', authenticateUser, ownsApplication(applicationIdFromParams), markTechnicalTestCompletedController);
 
 // Get all technical tests
 router.get('/', authenticateUser, getAllTechnicalTestsController);

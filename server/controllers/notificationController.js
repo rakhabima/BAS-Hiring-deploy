@@ -1,49 +1,53 @@
-import Notification from "../models/notificationModel.js";
+import { $Enums } from "@prisma/client";
+import prisma from "../db/prisma.js";
 import { getUnreadNotifications, markNotificationAsRead as markAsRead, markNotificationAsUnread as markAsUnread } from "../utils/notificationService.js";
 
 // Get all notifications for a user with pagination and filtering
 export const getUserNotifications = async (req, res) => {
   try {
-    const { userId } = req.query;
-    
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-    
+    // userId SELALU dari sesi. Client masih mengirim ?userId=... (api.js:1701),
+    // tapi nilai itu sengaja diabaikan supaya tidak bisa dipakai membaca
+    // notifikasi orang lain.
+    const userId = req.user.uuid;
+
     // Get optional parameters
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const readFilter = req.query.read === 'true'; // true = read, false = unread
     const type = req.query.type || null;
-    
-    // Calculate skip for pagination
-    const skip = (page - 1) * limit;
-    
+
+    // Postgres menolak nilai enum tak dikenal (Mongo dulu diam-diam
+    // mengembalikan array kosong), jadi disaring sebelum menyentuh query.
+    if (type && !(type in $Enums.NotificationType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid notification type: ${type}`
+      });
+    }
+
     // Build query
-    const query = { userId };
+    const where = { userId };
     
     // Add read filter if provided
     if (req.query.read !== undefined) {
-      query.readStatus = readFilter;
+      where.readStatus = readFilter;
     }
     
     // Add type filter if provided
     if (type) {
-      query.type = type;
+      where.type = type;
     }
-    
-    // Get total count for pagination
-    const total = await Notification.countDocuments(query);
-    
-    // Get notifications
-    const notifications = await Notification.find(query)
-      .sort({ dateCreated: -1 })
-      .skip(skip)
-      .limit(limit);
-    
+
+    const [total, notifications] = await Promise.all([
+      prisma.notification.count({ where }),
+      prisma.notification.findMany({
+        where,
+        orderBy: { dateCreated: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit
+      })
+    ]);
+
     return res.status(200).json({
       success: true,
       notifications,
@@ -65,16 +69,7 @@ export const getUserNotifications = async (req, res) => {
 // Get unread notifications for a user
 export const getUnread = async (req, res) => {
   try {
-    const { userId } = req.query;
-    
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-    
-    const result = await getUnreadNotifications(userId);
+    const result = await getUnreadNotifications(req.user.uuid);
     
     return res.status(200).json({
       success: true,
@@ -90,138 +85,78 @@ export const getUnread = async (req, res) => {
   }
 };
 
-// Mark a notification as read
-export const markNotificationAsRead = async (req, res) => {
+// Mark a notification as read / unread.
+// Pengecekan "apakah baris ada" dulu dilakukan dua kali (di controller lalu di
+// service); sekarang cukup sekali lewat hasil update di service.
+const setReadStatus = (markFn, label) => async (req, res) => {
   try {
     const { notificationId } = req.params;
-    
-    console.log(`Received request to mark notification as read: ${notificationId}`);
-    
+
     if (!notificationId) {
-      console.log('No notification ID provided in request');
       return res.status(400).json({
         success: false,
         message: 'Notification ID is required'
       });
     }
-    
-    // First try to find the notification manually to verify it exists
-    const notification = await Notification.findOne({ uuid: notificationId });
-    
-    if (!notification) {
-      console.log(`Manual check - notification not found with ID: ${notificationId}`);
+
+    // Cek kepemilikan: sebelumnya notifikasi mana pun bisa ditandai oleh siapa
+    // pun yang tahu uuid-nya. 404 (bukan 403) supaya tidak membocorkan
+    // keberadaan notifikasi milik orang lain.
+    const owned = await prisma.notification.findFirst({
+      where: { uuid: notificationId, userId: req.user.uuid },
+      select: { uuid: true }
+    });
+
+    if (!owned) {
       return res.status(404).json({
         success: false,
         message: 'Notification not found'
       });
     }
-    
-    console.log(`Found notification before marking as read:`, notification);
-    
-    // Now call the service to mark it as read
-    const result = await markAsRead(notificationId);
-    
+
+    const result = await markFn(notificationId);
+
     if (!result.success) {
-      console.log(`Service call failed to mark notification as read: ${result.message}`);
       return res.status(404).json({
         success: false,
         message: result.message || 'Notification not found'
       });
     }
-    
-    console.log(`Successfully marked notification as read:`, result.notification);
-    
+
     return res.status(200).json({
       success: true,
       notification: result.notification
     });
   } catch (error) {
-    console.error(`Server exception when marking notification as read:`, error);
+    console.error(`Server exception when marking notification as ${label}:`, error);
     return res.status(500).json({
       success: false,
-      message: 'Error marking notification as read',
+      message: `Error marking notification as ${label}`,
       error: error.message
     });
   }
 };
 
-// Mark a notification as unread
-export const markNotificationAsUnread = async (req, res) => {
-  try {
-    const { notificationId } = req.params;
-    
-    console.log(`Received request to mark notification as unread: ${notificationId}`);
-    
-    if (!notificationId) {
-      console.log('No notification ID provided in request');
-      return res.status(400).json({
-        success: false,
-        message: 'Notification ID is required'
-      });
-    }
-    
-    // First try to find the notification manually to verify it exists
-    const notification = await Notification.findOne({ uuid: notificationId });
-    
-    if (!notification) {
-      console.log(`Manual check - notification not found with ID: ${notificationId}`);
-      return res.status(404).json({
-        success: false,
-        message: 'Notification not found'
-      });
-    }
-    
-    console.log(`Found notification before marking as unread:`, notification);
-    
-    // Now call the service to mark it as unread
-    const result = await markAsUnread(notificationId);
-    
-    if (!result.success) {
-      console.log(`Service call failed to mark notification as unread: ${result.message}`);
-      return res.status(404).json({
-        success: false,
-        message: result.message || 'Notification not found'
-      });
-    }
-    
-    console.log(`Successfully marked notification as unread:`, result.notification);
-    
-    return res.status(200).json({
-      success: true,
-      notification: result.notification
-    });
-  } catch (error) {
-    console.error(`Server exception when marking notification as unread:`, error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error marking notification as unread',
-      error: error.message
-    });
-  }
-};
+export const markNotificationAsRead = setReadStatus(markAsRead, 'read');
+
+export const markNotificationAsUnread = setReadStatus(markAsUnread, 'unread');
 
 // Mark all notifications as read for a user
 export const markAllAsRead = async (req, res) => {
   try {
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-    }
-    
+    // Diabaikan kalau client mengirim body.userId — selalu pakai sesi.
+    const userId = req.user.uuid;
+
     // Update all unread notifications for the user
-    const result = await Notification.updateMany(
-      { userId, readStatus: false },
-      { readStatus: true }
-    );
-    
+    const result = await prisma.notification.updateMany({
+      where: { userId, readStatus: false },
+      data: { readStatus: true }
+    });
+
     return res.status(200).json({
       success: true,
-      message: `Marked ${result.modifiedCount} notifications as read`,
-      count: result.modifiedCount
+      message: `Marked ${result.count} notifications as read`,
+      count: result.count
     });
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
@@ -231,4 +166,4 @@ export const markAllAsRead = async (req, res) => {
       error: error.message
     });
   }
-}; 
+};

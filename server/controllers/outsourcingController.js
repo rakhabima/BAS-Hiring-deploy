@@ -1,19 +1,18 @@
-import OutsourcingRequest from "../models/outsourcingRequestModel.js";
-import User from "../models/userModel.js";
+import prisma from "../db/prisma.js";
 import { createOutsourcingService, deleteOutsourcingRequest as deleteOutsourcingRequestService, getAllOutsourcingRequests as fetchAllOutsourcingRequests, getAllOutsourcingServices, getOutsourcingServiceById, softDeleteOutsourcingService, updateOutsourcingRequestData, updateOutsourcingRequestStatus, updateOutsourcingService, getOutsourcingRequestByIdService } from "../services/outsourcingService.js";
 import { sendNotification } from "../utils/notificationService.js";
 
 export const createOutsourcing = async (req, res) => {
     try {
         // Get data from request body
-        const { serviceName, serviceType, description, createdBy, location, capacity, price, availabilityStatus } = req.body;
+        const { serviceName, serviceType, description, location, capacity, price, availabilityStatus } = req.body;
+
+        // Pembuat diambil dari sesi, bukan dari body.
+        const createdBy = req.user.uuid;
         
-        // Handle file upload if present
-        let imageUrl = null;
-        if (req.file) {
-            // If using multer, the file is available in req.file
-            imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        }
+        // imageUrl kini berupa URL Cloudinary dari client. Sebelumnya berkas
+        // dijadikan data URI base64 dan disimpan utuh di kolom database.
+        const imageUrl = req.body.imageUrl || null;
 
         // Convert string boolean to actual boolean
         const parsedAvailabilityStatus = availabilityStatus === 'true' || availabilityStatus === true;
@@ -57,11 +56,8 @@ export const updateOutsourcing = async (req, res) => {
         
         console.log('Update request received with data:', updateData);
         
-        // Handle file upload if present
-        if (req.file) {
-            updateData.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        }
-        
+        // imageUrl sudah berupa URL Cloudinary di dalam req.body.
+
         // Convert availabilityStatus string to boolean no matter what
         if ('availabilityStatus' in updateData) {
             // Ensure proper conversion to boolean - handle various string representations
@@ -220,24 +216,24 @@ export const createOutsourcingRequest = async (req, res) => {
     }
 
     // Create outsourcing request in database
-    const outsourcingRequest = new OutsourcingRequest({
-      vendorName,
-      contactInfo,
-      email,
-      location,
-      message,
-      serviceType,
-      quantity: parseInt(quantity) || 1,
-      submission: new Date(), // Use current date as submission date
-      status: "PENDING"
+    const outsourcingRequest = await prisma.outsourcingRequest.create({
+      data: {
+        vendorName,
+        contactInfo,
+        email,
+        location,
+        message,
+        serviceType,
+        quantity: parseInt(quantity) || 1,
+        submission: new Date(), // Use current date as submission date
+        status: "PENDING"
+      }
     });
-
-    await outsourcingRequest.save();
 
     // Send notification to all General Managers
     try {
       // Find all users with role GENERAL_MANAGER
-      const generalManagers = await User.find({ role: "GENERAL_MANAGER" });
+      const generalManagers = await prisma.user.findMany({ where: { role: "GENERAL_MANAGER", isDeleted: false } });
       
       if (generalManagers && generalManagers.length > 0) {
         // Create notification message with the required details

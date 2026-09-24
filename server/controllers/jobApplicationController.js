@@ -1,7 +1,6 @@
-import JobApplication from "../models/jobApplicationModel.js";
+import prisma from "../db/prisma.js";
 import { getAllApplications, getApplicationById, getApplicationStageStats, getApplicationStatusDistribution, getApplicationTrends, getCandidateApplications, hardDeleteApplication, submitApplication, updateApplication } from "../services/jobApplicationService.js";
 import { checkUserRole } from "../utils/roleValidator.js";
-import Notification from "../models/notificationModel.js";
 import { sendNotification } from "../utils/notificationService.js";
 
 
@@ -19,11 +18,12 @@ export const submitApplicationController = async (req, res) => {
     console.log("INI MASUK KE CONTROLLER SUBMIT APPLICATION 2");
 
     console.log("req.body:", req.body);
-    console.log("req.files:", req.files);
 
-    const existingApplication = await JobApplication.findOne({
-      candidateId: applicationData.candidateId,
-      jobPostingId: applicationData.jobPostingId
+    const existingApplication = await prisma.jobApplication.findFirst({
+      where: {
+        candidateId: applicationData.candidateId,
+        jobPostingId: applicationData.jobPostingId
+      }
     });
 
     if (existingApplication) {
@@ -32,12 +32,8 @@ export const submitApplicationController = async (req, res) => {
       });
     }
 
-    if (req.files) {
-      for (const fieldName in req.files) {
-        const file = req.files[fieldName][0];
-        applicationData[fieldName] = file.path;
-      }
-    }
+    // Field foto_* kini berisi URL Cloudinary yang dikirim client sebagai
+    // JSON biasa; berkasnya tidak lagi melewati server ini.
 
     console.log("🧾 Final applicationData:", applicationData);
 
@@ -142,13 +138,8 @@ export const updateApplicationController = async (req, res) => {
 
     const updateData = { ...req.body };
 
-    // ✅ Ambil URL file hasil upload dari Cloudinary (via multer)
-    if (req.files) {
-      for (const fieldName in req.files) {
-        const file = req.files[fieldName][0];
-        updateData[fieldName] = file.path; // URL langsung dari Cloudinary
-      }
-    }
+    // Field foto_* kini berisi URL Cloudinary yang dikirim client sebagai
+    // JSON biasa; berkasnya tidak lagi melewati server ini.
 
     const updatedApplication = await updateApplication(uuid, updateData);
 
@@ -398,14 +389,9 @@ export const updateEmployeeByStaffController = async (req, res) => {
     const { uuid } = req.params;
     const updateData = { ...req.body };
     
-    // Add file paths if files were uploaded
-    if (req.files) {
-      for (const fieldName in req.files) {
-        const file = req.files[fieldName][0];
-        updateData[fieldName] = file.path;
-      }
-    }
-    
+    // Field foto_* kini berisi URL Cloudinary yang dikirim client sebagai
+    // JSON biasa; berkasnya tidak lagi melewati server ini.
+
     // Add updatedBy information
     updateData.updatedBy = req.user.uuid;
     
@@ -488,16 +474,21 @@ export const getEmployeeStatsController = async (req, res) => {
       });
     }
     
-    // Get all employees (accepted and on-job candidates)
-    const employeeCandidates = await JobApplication.find({
-      status: { $in: ['ACCEPTED', 'ON_JOB'] },
-      hidden_from_employee_list: { $ne: true } // Don't count hidden employees
+    // Get employee counts (accepted and on-job candidates). Dulu semua baris
+    // ditarik ke memori lalu di-filter; sekarang dihitung di database.
+    const grouped = await prisma.jobApplication.groupBy({
+      by: ['status'],
+      where: {
+        status: { in: ['ACCEPTED', 'ON_JOB'] },
+        hidden_from_employee_list: false // Don't count hidden employees
+      },
+      _count: { _all: true }
     });
-    
-    // Calculate statistics
-    const total = employeeCandidates.length;
-    const active = employeeCandidates.filter(app => app.status === 'ON_JOB').length;
-    const inactive = employeeCandidates.filter(app => app.status === 'ACCEPTED').length;
+
+    const countFor = (status) => grouped.find(g => g.status === status)?._count._all || 0;
+    const active = countFor('ON_JOB');
+    const inactive = countFor('ACCEPTED');
+    const total = active + inactive;
     
     res.status(200).json({
       data: { total, active, inactive }

@@ -5,10 +5,9 @@ import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 // Import API routes
-import connectDB from './server/db/connectDb.js';
 import authRoute from './server/routes/auth.js';
 import guestRoute from './server/routes/guest.js';
 import interviewRoute from './server/routes/interview.js';
@@ -17,6 +16,7 @@ import jobVacancyRoute from './server/routes/jobVacancy.js';
 import notificationRoute from './server/routes/notification.js';
 import outsourceRoute from './server/routes/outsourcing.js';
 import technicalTestRoute from './server/routes/technicalTest.js';
+import uploadRoute from './server/routes/upload.js';
 import userRoute from './server/routes/user.js';
 
 // Initialize Express
@@ -52,6 +52,7 @@ app.use('/api/user', userRoute);
 app.use('/api/jobApplication', jobApplicationRoute);
 app.use('/api/interviews', interviewRoute);
 app.use('/api/technicalTest', technicalTestRoute);
+app.use('/api/upload', uploadRoute);
 
 // API root for checking connectivity
 app.get('/api', (req, res) => {
@@ -61,14 +62,6 @@ app.get('/api', (req, res) => {
     time: new Date().toISOString()
   });
 });
-
-// Connect to MongoDB
-try {
-  connectDB();
-  console.log('MongoDB connected');
-} catch (error) {
-  console.error('MongoDB connection error:', error);
-}
 
 // Check if frontend build exists
 const frontendBuildPath = path.join(__dirname, 'client/build');
@@ -129,11 +122,17 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Health check available at http://localhost:${PORT}/health`);
-  console.log(`API available at http://localhost:${PORT}/api`);
-});
+// listen() hanya kalau file ini dijalankan langsung (`node monolithic.js`).
+// Saat diimpor — oleh api/index.js di Vercel, atau oleh security.check.js yang
+// menyalakan servernya sendiri di port acak — app cukup diekspor, karena
+// listener kedua akan menahan proses tetap hidup selamanya.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Health check available at http://localhost:${PORT}/health`);
+    console.log(`API available at http://localhost:${PORT}/api`);
+  });
+}
+
 
 export default app; 

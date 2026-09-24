@@ -1,11 +1,11 @@
 import bcrypt from "bcryptjs";
-import User from "../models/userModel.js";
+import prisma from "../db/prisma.js";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import { logActivity } from "../utils/loggingService.js";
 
 export const signup = async (req, res) => {
     try {
-        const { name, email, password, role, isPublicRegistration } = req.body;
+        const { name, email, password } = req.body;
 
         // Validasi format email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -14,13 +14,13 @@ export const signup = async (req, res) => {
         }
 
         // Mengecek email yang sudah terdaftar
-        const existingEmail = await User.findOne({ email });
+        const existingEmail = await prisma.user.findUnique({ where: { email } });
         if (existingEmail) {
             return res.status(400).json({ error: "Email is already taken" });
         }
 
         // Validasi panjang password
-        if (password.length < 6) {
+        if (!password || password.length < 6) {
             return res.status(400).json({ error: "Password must be at least 6 characters long" });
         }
 
@@ -28,36 +28,36 @@ export const signup = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Determine role based on registration source
-        let assignedRole;
-        if (isPublicRegistration) {
-            // Public registration always gets CANDIDATE role
-            assignedRole = "CANDIDATE";
-        } else {
-            // Admin-created accounts can have specified roles
-            assignedRole = role || "GUEST";
-        }
+        // Endpoint ini HANYA untuk registrasi mandiri, jadi rolenya selalu
+        // CANDIDATE. Sebelumnya `role` dari body dipakai apa adanya, sehingga
+        // siapa pun bisa mendaftarkan dirinya sebagai ADMIN lewat API.
+        // Pembuatan akun staff oleh admin memakai POST /api/user yang digate.
+        const assignedRole = "CANDIDATE";
 
         // Buat user baru dan simpan
-        const newUser = new User({
-            name,
-            email,
-            password: hashedPassword,
-            role: assignedRole,
-            status: true
+        const newUser = await prisma.user.create({
+            data: {
+                name,
+                email,
+                password: hashedPassword,
+                role: assignedRole,
+                status: true
+            }
         });
-        await newUser.save();
 
         // Log the activity
         await logActivity(
             "User Registration", 
             newUser.uuid, 
-            { email: newUser.email, role: newUser.role, isPublicRegistration },
+            { email: newUser.email, role: newUser.role },
             "INFO",
             req
         );
 
-        // Hasilkan token JWT dan set cookie
+        // Registrasi mandiri langsung membuat sesi untuk pendaftarnya. Ini aman
+        // sekarang karena endpoint ini tidak lagi dipakai admin untuk membuat
+        // akun orang lain — dulu hal itu menimpa cookie admin dengan token akun
+        // baru, sehingga admin diam-diam berubah jadi akun yang baru dibuat.
         generateTokenAndSetCookie(newUser.uuid, newUser.role, res);
 
         res.status(201).json({
@@ -69,6 +69,11 @@ export const signup = async (req, res) => {
             createdAt: newUser.createdAt
         });
     } catch (error) {
+        // Postgres menegakkan keunikan email di level kolom; ini menutup celah
+        // balapan antara findUnique di atas dan create.
+        if (error.code === "P2002") {
+            return res.status(400).json({ error: "Email is already taken" });
+        }
         console.log("Error in signup controller", error.message);
         res.status(500).json({ error: `Internal Server Error ${error.message}` });
     }
@@ -77,9 +82,7 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email });
-        console.log("ini login");
-        console.log(user);
+        const user = await prisma.user.findUnique({ where: { email } });
 
         const isPasswordCorrect = await bcrypt.compare(password, user?.password || "");
 
@@ -107,7 +110,7 @@ export const login = async (req, res) => {
         }
 
         // Check if user account is active
-        if (!user.status) {
+        if (!user.status || user.isDeleted) {
             await logActivity(
                 "Failed Login Attempt", 
                 user.uuid, 
@@ -120,8 +123,10 @@ export const login = async (req, res) => {
         }
 
         // Update lastLogin timestamp
-        user.lastLogin = new Date();
-        await user.save();
+        const loggedIn = await prisma.user.update({
+            where: { uuid: user.uuid },
+            data: { lastLogin: new Date() }
+        });
 
         // Log successful login
         await logActivity(
@@ -137,13 +142,13 @@ export const login = async (req, res) => {
         res.status(200).json({ 
             message: "Logged in successfully",
             user: {
-                uuid: user.uuid,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                status: user.status,
-                lastLogin: user.lastLogin,
-                createdAt: user.createdAt
+                uuid: loggedIn.uuid,
+                name: loggedIn.name,
+                email: loggedIn.email,
+                role: loggedIn.role,
+                status: loggedIn.status,
+                lastLogin: loggedIn.lastLogin,
+                createdAt: loggedIn.createdAt
             }
         });
     } catch (error) {

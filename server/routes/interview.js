@@ -8,115 +8,60 @@ import {
   updateInterviewController,
   updateInterviewResponseController
 } from '../controllers/interviewController.js';
-import { protect as authenticateUser } from '../utils/authMiddleware.js';
-import { checkUserRole } from '../utils/roleValidator.js';
+import prisma from '../db/prisma.js';
+import { authorize, ownsApplication, protect } from '../utils/authMiddleware.js';
 
 const router = express.Router();
 
-// Middleware to check if user has access to interview data
-const checkInterviewAccess = (req, res, next) => {
-  const user = req.user;
-  
-  // Allow access for recruiters, general managers, and admins
-  if (checkUserRole(user, ['RECRUITER', 'GENERAL_MANAGER', 'ADMIN'])) {
-    return next();
-  }
-  
-  // For candidates, check if they own the interview/application in the specific endpoints
-  if (checkUserRole(user, ['CANDIDATE'])) {
-    // Note: For candidate-specific access, we'll check in individual routes
-    return next();
-  }
-  
-  return res.status(403).json({
-    message: 'Unauthorized: You do not have permission to access interview data'
+// Interview tidak menyimpan candidateId, hanya applicationId — jadi
+// kepemilikannya ditelusuri lewat aplikasi yang menaunginya.
+const applicationIdFromInterview = async (req) => {
+  const interview = await prisma.interview.findUnique({
+    where: { id: req.params.id },
+    select: { applicationId: true }
   });
+  return interview?.applicationId;
 };
 
+const staffOnly = [protect, authorize('RECRUITER', 'ADMIN')];
+
 // Create a new interview (recruiter only)
-router.post('/', authenticateUser, (req, res, next) => {
-  if (!checkUserRole(req.user, ['RECRUITER', 'ADMIN'])) {
-    return res.status(403).json({
-      message: 'Unauthorized: Only recruiters can schedule interviews'
-    });
-  }
-  next();
-}, createInterviewController);
+router.post('/', ...staffOnly, createInterviewController);
 
-// Get interview by ID
-router.get('/:id', authenticateUser, checkInterviewAccess, getInterviewByIdController);
+// Get interview by ID.
+// Sebelumnya checkInterviewAccess meloloskan SEMUA kandidat dengan catatan
+// "we'll check in individual routes" — cek itu tidak pernah ada, jadi kandidat
+// mana pun bisa membaca wawancara kandidat lain.
+router.get('/:id', protect, ownsApplication(applicationIdFromInterview), getInterviewByIdController);
 
-// Get interview by application ID
-router.get('/application/:applicationId', authenticateUser, async (req, res, next) => {
-  // For candidates, check if they own the application
-  if (checkUserRole(req.user, ['CANDIDATE'])) {
-    // For now, we'll skip this check to allow candidates to access their interviews.
-    // In a production environment, you should implement a proper check here by:
-    // 1. Fetching the application by applicationId
-    // 2. Checking if the application's candidateId matches req.user.uuid
-    
-    // Removing the problematic check for now
-    /*
-    const applicationId = req.params.applicationId;
-    
-    // Allow if the candidate is requesting their own application's interview
-    if (applicationId !== req.user.uuid) {
-      return res.status(403).json({
-        message: 'Unauthorized: You can only access your own interviews'
-      });
-    }
-    */
-  }
-  next();
-}, getInterviewByApplicationIdController);
+// Get interview by application ID.
+// Cek kepemilikannya dulu dikomentari total. Kode lama juga membandingkan
+// applicationId dengan req.user.uuid, yang memang tidak pernah cocok —
+// yang benar adalah membandingkan candidateId milik aplikasinya.
+router.get(
+  '/application/:applicationId',
+  protect,
+  ownsApplication((req) => req.params.applicationId),
+  getInterviewByApplicationIdController
+);
 
 // Update an interview (recruiter only)
-router.put('/:id', authenticateUser, (req, res, next) => {
-  if (!checkUserRole(req.user, ['RECRUITER', 'ADMIN'])) {
-    return res.status(403).json({
-      message: 'Unauthorized: Only recruiters can update interviews'
-    });
-  }
-  next();
-}, updateInterviewController);
+router.put('/:id', ...staffOnly, updateInterviewController);
 
-// Update candidate response
-router.put('/:id/response', authenticateUser, async (req, res, next) => {
-  // Allow recruiters to update responses
-  if (checkUserRole(req.user, ['RECRUITER', 'ADMIN'])) {
-    return next();
-  }
-  
-  // For candidates, check if they own the interview
-  if (checkUserRole(req.user, ['CANDIDATE'])) {
-    // Note: In a real implementation, you'd check the application/interview owner here
-    // For now, we'll let candidates proceed (the proper check would be in the service)
-    return next();
-  }
-  
-  return res.status(403).json({
-    message: 'Unauthorized: You do not have permission to update this interview'
-  });
-}, updateInterviewResponseController);
+// Update candidate response.
+// Kandidat hanya boleh menjawab wawancaranya sendiri; sebelumnya semua kandidat
+// diloloskan ("we'll let candidates proceed").
+router.put(
+  '/:id/response',
+  protect,
+  ownsApplication(applicationIdFromInterview),
+  updateInterviewResponseController
+);
 
-// Get all interviews (recruiter only)
-router.get('/', authenticateUser, (req, res, next) => {
-  if (!checkUserRole(req.user, ['RECRUITER', 'ADMIN', 'GENERAL_MANAGER'])) {
-    return res.status(403).json({
-      message: 'Unauthorized: Only staff can view all interviews'
-    });
-  }
-  next();
-}, getAllInterviewsController);
+// Get all interviews (staff only)
+router.get('/', protect, authorize('RECRUITER', 'ADMIN', 'GENERAL_MANAGER'), getAllInterviewsController);
 
 // Delete an interview (recruiter only)
-router.delete('/:id', authenticateUser, (req, res, next) => {
-  if (!checkUserRole(req.user, ['RECRUITER', 'ADMIN'])) {
-    return res.status(403).json({
-      message: 'Unauthorized: Only recruiters can delete interviews'
-    });
-  }
-  next();
-}, deleteInterviewController);
+router.delete('/:id', ...staffOnly, deleteInterviewController);
 
-export default router; 
+export default router;
