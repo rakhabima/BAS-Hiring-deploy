@@ -160,7 +160,7 @@ const CreateAccountPage = () => {
         console.error('Error response:', error.response.data);
         console.error('Status code:', error.response.status);
         
-        if (error.response.data && error.response.data.error) {
+        if (typeof error.response.data?.error === 'string') {
           errorMsg = error.response.data.error;
         } else if (error.response.data && error.response.data.message) {
           errorMsg = error.response.data.message;

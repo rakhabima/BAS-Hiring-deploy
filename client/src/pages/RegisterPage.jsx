@@ -110,7 +110,7 @@ const RegisterPage = () => {
     } catch (error) {
       console.error('Registration error:', error);
       setError(true);
-      if (error.response && error.response.data && error.response.data.error) {
+      if (typeof error.response?.data?.error === 'string') {
         setErrorMessage(error.response.data.error);
       } else {
         setErrorMessage('Terjadi kesalahan saat mendaftar. Silakan coba lagi.');

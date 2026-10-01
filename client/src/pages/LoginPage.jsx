@@ -84,7 +84,9 @@ const LoginPage = () => {
     } catch (error) {
       console.error('Login error:', error);
       setError(true);
-      if (error.response && error.response.data && error.response.data.error) {
+      // Error platform Vercel (404/504) mengirim `error` berupa objek; merender
+      // objek membuat React crash dan halaman jadi putih.
+      if (typeof error.response?.data?.error === 'string') {
         setErrorMessage(error.response.data.error);
       } else {
         setErrorMessage('Akun belum terdaftar pada sistem');
